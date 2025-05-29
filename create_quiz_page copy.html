@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Quiz - Admin Panel</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .question-card {
+            margin-bottom: 2rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            transition: box-shadow 0.15s ease-in-out;
+        }
+        
+        .question-card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border: 2px dashed #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            text-align: center;
+            background-color: #f8f9fa;
+        }
+        
+        .image-preview img {
+            max-width: 100%;
+            max-height: 150px;
+            border-radius: 0.25rem;
+        }
+        
+        .correct-answer {
+            background-color: #d1edff;
+            border-color: #0d6efd;
+        }
+        
+        .datetime-section {
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .submit-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 0.5rem;
+            padding: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .preview-modal .modal-dialog {
+            max-width: 900px;
+        }
+        
+        .preview-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 0.5rem 0.5rem 0 0;
+        }
+        
+        .quiz-preview {
+            background: #f8f9fa;
+            min-height: 400px;
+        }
+        
+        .preview-question {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            margin-bottom: 1.5rem;
+            transition: transform 0.2s;
+        }
+        
+        .preview-question:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        .preview-option {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 0.375rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .preview-option:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .preview-option.selected {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1976d2;
+        }
+        
+        .quiz-timer {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 0.375rem;
+            position: sticky;
+            top: 20px;
+        }
+        
+        .question-counter {
+            background: linear-gradient(45deg, #007bff, #6f42c1);
+            color: white;
+            border-radius: 50%;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.875rem;
+        }
+        
+        .btn-add-question {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            border: none;
+            transition: transform 0.2s;
+        }
+        
+        .btn-add-question:hover {
+            transform: translateY(-2px);
+        }
+        
+        .question-number {
+            background: linear-gradient(45deg, #007bff, #6f42c1);
+            color: white;
+            border-radius: 50%;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center mb-4">
+                    <h1 class="display-5 fw-bold text-primary">
+                        <i class="fas fa-plus-circle me-2"></i>Create New Quiz
+                    </h1>
+                    <p class="lead text-muted">Design and configure your quiz with questions and settings</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Information Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Quiz Information
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="quizTitle" class="form-label fw-semibold">Quiz Title *</label>
+                                    <input type="text" class="form-control" id="quizTitle" placeholder="Enter quiz title" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="quizMode" class="form-label fw-semibold">Quiz Mode *</label>
+                                    <select class="form-select" id="quizMode" onchange="toggleDateTimeSection()">
+                                        <option value="online">Online</option>
+                                        <option value="offline">Offline</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="quizLanguage" class="form-label fw-semibold">Language *</label>
+                                    <select class="form-select" id="quizLanguage">
+                                        <option value="vietnamese">Vietnamese</option>
+                                        <option value="english">English</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="dateTimeSection" class="datetime-section" style="display: none;">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-clock me-2"></i>Schedule Settings
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="startTime" class="form-label fw-semibold">Start Time</label>
+                                        <input type="datetime-local" class="form-control" id="startTime">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="endTime" class="form-label fw-semibold">End Time</label>
+                                        <input type="datetime-local" class="form-control" id="endTime">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="text-primary">
+                        <i class="fas fa-question-circle me-2"></i>Questions
+                    </h3>
+                    <button type="button" class="btn btn-success btn-add-question" onclick="addQuestion()">
+                        <i class="fas fa-plus me-2"></i>Add Another Question
+                    </button>
+                </div>
+                
+                <div id="questionsContainer">
+                    <!-- Question 1 -->
+                    <div class="card question-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="question-number me-3">1</div>
+                                <h5 class="mb-0">Question 1</h5>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="translateContent(1)">
+                                <i class="fas fa-language me-1"></i>Translate
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="question1Content" class="form-label fw-semibold">Question Content *</label>
+                                        <textarea class="form-control" id="question1Content" rows="3" placeholder="Enter your question here..."></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="question1Type" class="form-label fw-semibold">Question Type *</label>
+                                        <select class="form-select" id="question1Type" onchange="toggleAnswerOptions(1)">
+                                            <option value="multiple_choice">Multiple Choice A/B/C/D</option>
+                                            <option value="text_input">Text Input</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="question1Image" class="form-label fw-semibold">Question Image</label>
+                                        <input type="file" class="form-control" id="question1Image" accept="image/*" onchange="previewImage(1)">
+                                    </div>
+                                    <div id="imagePreview1" class="image-preview">
+                                        <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                                        <div class="text-muted small">Image preview will appear here</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="answerOptions1">
+                                <h6 class="text-primary mb-3">Answer Options</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <input type="radio" name="correctAnswer1" value="A" class="form-check-input">
+                                            </span>
+                                            <span class="input-group-text fw-bold">A</span>
+                                            <input type="text" class="form-control" placeholder="Option A" id="question1OptionA">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <input type="radio" name="correctAnswer1" value="B" class="form-check-input">
+                                            </span>
+                                            <span class="input-group-text fw-bold">B</span>
+                                            <input type="text" class="form-control" placeholder="Option B" id="question1OptionB">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <input type="radio" name="correctAnswer1" value="C" class="form-check-input">
+                                            </span>
+                                            <span class="input-group-text fw-bold">C</span>
+                                            <input type="text" class="form-control" placeholder="Option C" id="question1OptionC">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <input type="radio" name="correctAnswer1" value="D" class="form-check-input">
+                                            </span>
+                                            <span class="input-group-text fw-bold">D</span>
+                                            <input type="text" class="form-control" placeholder="Option D" id="question1OptionD">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>Select the radio button next to the correct answer
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Question 2 -->
+                    <div class="card question-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="question-number me-3">2</div>
+                                <h5 class="mb-0">Question 2</h5>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="translateContent(2)">
+                                <i class="fas fa-language me-1"></i>Translate
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="question2Content" class="form-label fw-semibold">Question Content *</label>
+                                        <textarea class="form-control" id="question2Content" rows="3" placeholder="Enter your question here..."></textarea>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="question2Type" class="form-label fw-semibold">Question Type *</label>
+                                        <select class="form-select" id="question2Type" onchange="toggleAnswerOptions(2)">
+                                            <option value="multiple_choice">Multiple Choice A/B/C/D</option>
+                                            <option value="text_input">Text Input</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="question2Image" class="form-label fw-semibold">Question Image</label>
+                                        <input type="file" class="form-control" id="question2Image" accept="image/*" onchange="previewImage(2)">
+                                    </div>
+                                    <div id="imagePreview2" class="image-preview">
+                                        <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                                        <div class="text-muted small">Image preview will appear here</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="answerOptions2">
+                                <h6 class="text-primary mb-3">Answer Options</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <input type="radio" name="correctAnswer2" value="A" class="form-check-input">
+                                            </span>
+                                            <span class="input-group-text fw-bold">A</span>
+                                            <input type="text" class="form-control" placeholder="Option A" id="question2OptionA">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <input type="radio" name="correctAnswer2" value="B" class="form-check-input">
+                                            </span>
+                                            <span class="input-group-text fw-bold">B</span>
+                                            <input type="text" class="form-control" placeholder="Option B" id="question2OptionB">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <input type="radio" name="correctAnswer2" value="C" class="form-check-input">
+                                            </span>
+                                            <span class="input-group-text fw-bold">C</span>
+                                            <input type="text" class="form-control" placeholder="Option C" id="question2OptionC">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <input type="radio" name="correctAnswer2" value="D" class="form-check-input">
+                                            </span>
+                                            <span class="input-group-text fw-bold">D</span>
+                                            <input type="text" class="form-control" placeholder="Option D" id="question2OptionD">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>Select the radio button next to the correct answer
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Section -->
+        <div class="row">
+            <div class="col-12">
+                <div class="submit-section text-center">
+                    <h4 class="text-white mb-3">Ready to Create Your Quiz?</h4>
+                    <p class="text-white-50 mb-4">Review all questions and settings before submitting</p>
+                    <div class="d-flex gap-3 justify-content-center">
+                        <button type="button" class="btn btn-outline-light btn-lg px-4" onclick="previewQuiz()">
+                            <i class="fas fa-eye me-2"></i>Preview Quiz
+                        </button>
+                        <button type="button" class="btn btn-light btn-lg px-5" onclick="submitQuiz()">
+                            <i class="fas fa-check-circle me-2"></i>Submit Quiz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal fade preview-modal" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header preview-header">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-eye me-3 fa-lg"></i>
+                        <div>
+                            <h4 class="modal-title mb-1" id="previewModalLabel">Quiz Preview</h4>
+                            <small class="opacity-75">Student View</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body quiz-preview p-0">
+                    <div class="container-fluid">
+                        <div class="row">
+                            <!-- Quiz Content -->
+                            <div class="col-lg-9 p-4">
+                                <div class="quiz-header mb-4">
+                                    <h2 class="text-primary mb-2" id="previewQuizTitle">Sample Quiz Title</h2>
+                                    <div class="row text-muted small">
+                                        <div class="col-md-4">
+                                            <i class="fas fa-globe me-1"></i>
+                                            <span id="previewMode">Online</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <i class="fas fa-language me-1"></i>
+                                            <span id="previewLanguage">English</span>
+                                        </div>
+                                        <div class="col-md-4" id="previewDateTime" style="display: none;">
+                                            <i class="fas fa-clock me-1"></i>
+                                            <span id="previewSchedule">Scheduled</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="previewQuestionsContainer">
+                                    <!-- Preview questions will be inserted here -->
+                                </div>
+                                
+                                <div class="text-center mt-4">
+                                    <button class="btn btn-success btn-lg px-5" disabled>
+                                        <i class="fas fa-paper-plane me-2"></i>Submit Answers
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Sidebar -->
+                            <div class="col-lg-3 bg-light border-start p-4">
+                                <div class="quiz-timer p-3 mb-4">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-stopwatch me-2 text-warning"></i>
+                                        <strong>Time Remaining</strong>
+                                    </div>
+                                    <div class="h4 text-center text-warning mb-0">
+                                        <span id="previewTimer">45:00</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-list-ol me-1"></i>Question Navigator
+                                    </h6>
+                                    <div id="questionNavigator" class="d-flex flex-wrap gap-2">
+                                        <!-- Question navigation buttons will be inserted here -->
+                                    </div>
+                                </div>
+                                
+                                <div class="small text-muted">
+                                    <p><strong>Instructions:</strong></p>
+                                    <ul class="list-unstyled">
+                                        <li><i class="fas fa-check-circle text-success me-1"></i> Select your answers</li>
+                                        <li><i class="fas fa-clock text-warning me-1"></i> Watch the timer</li>
+                                        <li><i class="fas fa-save text-info me-1"></i> Answers auto-save</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Close Preview
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="editQuiz()">
+                        <i class="fas fa-edit me-1"></i>Continue Editing
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let questionCount = 2;
+
+        function toggleDateTimeSection() {
+            const mode = document.getElementById('quizMode').value;
+            const dateTimeSection = document.getElementById('dateTimeSection');
+            
+            if (mode === 'offline') {
+                dateTimeSection.style.display = 'block';
+            } else {
+                dateTimeSection.style.display = 'none';
+            }
+        }
+
+        function toggleAnswerOptions(questionNum) {
+            const questionType = document.getElementById(`question${questionNum}Type`).value;
+            const answerOptions = document.getElementById(`answerOptions${questionNum}`);
+            
+            if (questionType === 'text_input') {
+                answerOptions.style.display = 'none';
+            } else {
+                answerOptions.style.display = 'block';
+            }
+        }
+
+        function previewImage(questionNum) {
+            const fileInput = document.getElementById(`question${questionNum}Image`);
+            const preview = document.getElementById(`imagePreview${questionNum}`);
+            
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            }
+        }
+
+        function translateContent(questionNum) {
+            // Mock translate function - in real implementation would call translation API
+            alert(`Translation feature for question ${questionNum} would be implemented here`);
+        }
+
+        function addQuestion() {
+            questionCount++;
+            const container = document.getElementById('questionsContainer');
+            
+            const newQuestionHTML = `
+                <div class="card question-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="question-number me-3">${questionCount}</div>
+                            <h5 class="mb-0">Question ${questionCount}</h5>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="translateContent(${questionCount})">
+                            <i class="fas fa-language me-1"></i>Translate
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="question${questionCount}Content" class="form-label fw-semibold">Question Content *</label>
+                                    <textarea class="form-control" id="question${questionCount}Content" rows="3" placeholder="Enter your question here..."></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="question${questionCount}Type" class="form-label fw-semibold">Question Type *</label>
+                                    <select class="form-select" id="question${questionCount}Type" onchange="toggleAnswerOptions(${questionCount})">
+                                        <option value="multiple_choice">Multiple Choice A/B/C/D</option>
+                                        <option value="text_input">Text Input</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="question${questionCount}Image" class="form-label fw-semibold">Question Image</label>
+                                    <input type="file" class="form-control" id="question${questionCount}Image" accept="image/*" onchange="previewImage(${questionCount})">
+                                </div>
+                                <div id="imagePreview${questionCount}" class="image-preview">
+                                    <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                                    <div class="text-muted small">Image preview will appear here</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="answerOptions${questionCount}">
+                            <h6 class="text-primary mb-3">Answer Options</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <input type="radio" name="correctAnswer${questionCount}" value="A" class="form-check-input">
+                                        </span>
+                                        <span class="input-group-text fw-bold">A</span>
+                                        <input type="text" class="form-control" placeholder="Option A" id="question${questionCount}OptionA">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <input type="radio" name="correctAnswer${questionCount}" value="B" class="form-check-input">
+                                        </span>
+                                        <span class="input-group-text fw-bold">B</span>
+                                        <input type="text" class="form-control" placeholder="Option B" id="question${questionCount}OptionB">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <input type="radio" name="correctAnswer${questionCount}" value="C" class="form-check-input">
+                                        </span>
+                                        <span class="input-group-text fw-bold">C</span>
+                                        <input type="text" class="form-control" placeholder="Option C" id="question${questionCount}OptionC">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <input type="radio" name="correctAnswer${questionCount}" value="D" class="form-check-input">
+                                        </span>
+                                        <span class="input-group-text fw-bold">D</span>
+                                        <input type="text" class="form-control" placeholder="Option D" id="question${questionCount}OptionD">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>Select the radio button next to the correct answer
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', newQuestionHTML);
+        }
+
+        function previewQuiz() {
+            // Collect quiz data
+            const quizTitle = document.getElementById('quizTitle').value || 'Untitled Quiz';
+            const quizMode = document.getElementById('quizMode').value;
+            const quizLanguage = document.getElementById('quizLanguage').value;
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            
+            // Update preview header
+            document.getElementById('previewQuizTitle').textContent = quizTitle;
+            document.getElementById('previewMode').textContent = quizMode.charAt(0).toUpperCase() + quizMode.slice(1);
+            document.getElementById('previewLanguage').textContent = quizLanguage.charAt(0).toUpperCase() + quizLanguage.slice(1);
+            
+            // Show/hide datetime info
+            const previewDateTime = document.getElementById('previewDateTime');
+            if (quizMode === 'offline' && (startTime || endTime)) {
+                previewDateTime.style.display = 'block';
+                const schedule = startTime && endTime ? 
+                    `${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}` : 
+                    'Scheduled';
+                document.getElementById('previewSchedule').textContent = schedule;
+            } else {
+                previewDateTime.style.display = 'none';
+            }
+            
+            // Generate preview questions
+            generatePreviewQuestions();
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+            modal.show();
+            
+            // Start mock timer
+            startMockTimer();
+        }
+        
+        function generatePreviewQuestions() {
+            const container = document.getElementById('previewQuestionsContainer');
+            const navigator = document.getElementById('questionNavigator');
+            container.innerHTML = '';
+            navigator.innerHTML = '';
+            
+            let previewQuestions = [];
+            
+            // Collect all questions from the form
+            for (let i = 1; i <= questionCount; i++) {
+                const questionContent = document.getElementById(`question${i}Content`);
+                const questionType = document.getElementById(`question${i}Type`);
+                
+                if (questionContent && questionContent.value.trim()) {
+                    const question = {
+                        number: i,
+                        content: questionContent.value,
+                        type: questionType.value,
+                        image: null,
+                        options: []
+                    };
+                    
+                    // Get image if exists
+                    const imageInput = document.getElementById(`question${i}Image`);
+                    if (imageInput && imageInput.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            question.image = e.target.result;
+                        };
+                        reader.readAsDataURL(imageInput.files[0]);
+                    }
+                    
+                    // Get options for multiple choice
+                    if (question.type === 'multiple_choice') {
+                        ['A', 'B', 'C', 'D'].forEach(letter => {
+                            const optionInput = document.getElementById(`question${i}Option${letter}`);
+                            if (optionInput && optionInput.value.trim()) {
+                                question.options.push({
+                                    letter: letter,
+                                    text: optionInput.value
+                                });
+                            }
+                        });
+                    }
+                    
+                    previewQuestions.push(question);
+                }
+            }
+            
+            // Generate HTML for preview questions
+            previewQuestions.forEach((question, index) => {
+                const questionHTML = generatePreviewQuestionHTML(question, index);
+                container.insertAdjacentHTML('beforeend', questionHTML);
+                
+                // Add to navigator
+                const navButton = `
+                    <button class="btn btn-outline-primary btn-sm question-nav-btn" onclick="scrollToPreviewQuestion(${index + 1})">
+                        ${index + 1}
+                    </button>
+                `;
+                navigator.insertAdjacentHTML('beforeend', navButton);
+            });
+            
+            if (previewQuestions.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="fas fa-question-circle fa-3x mb-3"></i>
+                        <h5>No questions added yet</h5>
+                        <p>Add some questions to see the preview</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function generatePreviewQuestionHTML(question, index) {
+            let optionsHTML = '';
+            
+            if (question.type === 'multiple_choice' && question.options.length > 0) {
+                optionsHTML = question.options.map(option => `
+                    <div class="preview-option" onclick="selectPreviewOption(this)">
+                        <div class="d-flex align-items-center">
+                            <div class="form-check me-3">
+                                <input class="form-check-input" type="radio" name="previewQuestion${question.number}" disabled>
+                            </div>
+                            <div class="flex-grow-1">
+                                <strong class="me-2">${option.letter}.</strong>
+                                ${option.text}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } else if (question.type === 'text_input') {
+                optionsHTML = `
+                    <div class="mt-3">
+                        <textarea class="form-control" rows="3" placeholder="Type your answer here..." disabled></textarea>
+                    </div>
+                `;
+            }
+            
+            const imageHTML = question.image ? `
+                <div class="mb-3 text-center">
+                    <img src="${question.image}" alt="Question Image" class="img-fluid rounded" style="max-height: 300px;">
+                </div>
+            ` : '';
+            
+            return `
+                <div class="preview-question p-4" id="previewQuestion${index + 1}">
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="question-counter me-3">${index + 1}</div>
+                        <div class="flex-grow-1">
+                            <h5 class="mb-3">${question.content}</h5>
+                            ${imageHTML}
+                            ${optionsHTML}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function selectPreviewOption(element) {
+            // Remove selection from siblings
+            const siblings = element.parentNode.querySelectorAll('.preview-option');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            
+            // Add selection to clicked option
+            element.classList.add('selected');
+            
+            // Check the radio button
+            const radio = element.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+            }
+        }
+        
+        function scrollToPreviewQuestion(questionNumber) {
+            const question = document.getElementById(`previewQuestion${questionNumber}`);
+            if (question) {
+                question.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Highlight the question briefly
+                question.style.border = '2px solid #007bff';
+                setTimeout(() => {
+                    question.style.border = '';
+                }, 2000);
+            }
+        }
+        
+        function startMockTimer() {
+            let timeLeft = 45 * 60; // 45 minutes in seconds
+            const timerElement = document.getElementById('previewTimer');
+            
+            const timer = setInterval(() => {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    timerElement.textContent = '00:00';
+                    timerElement.classList.add('text-danger');
+                }
+                timeLeft--;
+            }, 1000);
+            
+            // Clear timer when modal is closed
+            document.getElementById('previewModal').addEventListener('hidden.bs.modal', () => {
+                clearInterval(timer);
+            }, { once: true });
+        }
+        
+        function editQuiz() {
+            // Close the preview modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('previewModal'));
+            modal.hide();
+            
+            // Scroll back to the top of the form
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function submitQuiz() {
+            // Basic validation
+            const title = document.getElementById('quizTitle').value.trim();
+            if (!title) {
+                alert('Please enter a quiz title');
+                return;
+            }
+            
+            // In real implementation, would collect all form data and submit to backend
+            alert('Quiz would be submitted to backend for processing');
+        }
+
+        // Add smooth scrolling when adding new questions
+        function addQuestion() {
+            questionCount++;
+            const container = document.getElementById('questionsContainer');
+            
+            const newQuestionHTML = `
+                <div class="card question-card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            <div class="question-number me-3">${questionCount}</div>
+                            <h5 class="mb-0">Question ${questionCount}</h5>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="translateContent(${questionCount})">
+                            <i class="fas fa-language me-1"></i>Translate
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="question${questionCount}Content" class="form-label fw-semibold">Question Content *</label>
+                                    <textarea class="form-control" id="question${questionCount}Content" rows="3" placeholder="Enter your question here..."></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="question${questionCount}Type" class="form-label fw-semibold">Question Type *</label>
+                                    <select class="form-select" id="question${questionCount}Type" onchange="toggleAnswerOptions(${questionCount})">
+                                        <option value="multiple_choice">Multiple Choice A/B/C/D</option>
+                                        <option value="text_input">Text Input</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="question${questionCount}Image" class="form-label fw-semibold">Question Image</label>
+                                    <input type="file" class="form-control" id="question${questionCount}Image" accept="image/*" onchange="previewImage(${questionCount})">
+                                </div>
+                                <div id="imagePreview${questionCount}" class="image-preview">
+                                    <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                                    <div class="text-muted small">Image preview will appear here</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="answerOptions${questionCount}">
+                            <h6 class="text-primary mb-3">Answer Options</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <input type="radio" name="correctAnswer${questionCount}" value="A" class="form-check-input">
+                                        </span>
+                                        <span class="input-group-text fw-bold">A</span>
+                                        <input type="text" class="form-control" placeholder="Option A" id="question${questionCount}OptionA">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <input type="radio" name="correctAnswer${questionCount}" value="B" class="form-check-input">
+                                        </span>
+                                        <span class="input-group-text fw-bold">B</span>
+                                        <input type="text" class="form-control" placeholder="Option B" id="question${questionCount}OptionB">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <input type="radio" name="correctAnswer${questionCount}" value="C" class="form-check-input">
+                                        </span>
+                                        <span class="input-group-text fw-bold">C</span>
+                                        <input type="text" class="form-control" placeholder="Option C" id="question${questionCount}OptionC">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <input type="radio" name="correctAnswer${questionCount}" value="D" class="form-check-input">
+                                        </span>
+                                        <span class="input-group-text fw-bold">D</span>
+                                        <input type="text" class="form-control" placeholder="Option D" id="question${questionCount}OptionD">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>Select the radio button next to the correct answer
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', newQuestionHTML);
+            
+            // Smooth scroll to new question
+            setTimeout(() => {
+                const newQuestion = container.lastElementChild;
+                newQuestion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 200);
+        }
+    </script>
+</body>
+</html>

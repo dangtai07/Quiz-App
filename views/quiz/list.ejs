@@ -1,0 +1,103 @@
+<%- contentFor('style') %>
+<link href="/css/quiz_list.css" rel="stylesheet">
+
+<%- contentFor('body') %>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="display-5 fw-bold text-primary">
+                <i class="fas fa-list-ul me-2"></i>All Quizzes
+            </h1>
+            <a href="/quizzes/create" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Create New Quiz
+            </a>
+        </div>
+        <p class="lead text-muted">Manage and monitor all your quizzes</p>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="searchQuiz" placeholder="Search quizzes...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterMode">
+                            <option value="">All Modes</option>
+                            <option value="online">Online</option>
+                            <option value="offline">Offline</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterLanguage">
+                            <option value="">All Languages</option>
+                            <option value="vietnamese">Vietnamese</option>
+                            <option value="english">English</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="applyFilters()">
+                            <i class="fas fa-filter me-2"></i>Apply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quizzes List -->
+<div class="row g-4" id="quizzesList">
+    <% quizzes.forEach(quiz => { %>
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 quiz-card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span class="badge bg-light text-primary">
+                        <i class="fas <%= quiz.mode === 'online' ? 'fa-globe' : 'fa-desktop' %> me-1"></i>
+                        <%= quiz.mode.charAt(0).toUpperCase() + quiz.mode.slice(1) %>
+                    </span>
+                    <div class="dropdown">
+                        <button class="btn btn-link text-white" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/quizzes/<%= quiz._id %>/preview"><i class="fas fa-eye me-2"></i>View</a></li>
+                            <li><a class="dropdown-item" href="/quizzes/<%= quiz._id %>/edit"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                            <li><a class="dropdown-item" href="/quizzes/<%= quiz._id %>/duplicate"><i class="fas fa-copy me-2"></i>Duplicate</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deleteQuiz('<%= quiz._id %>')"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title mb-3"><%= quiz.title %></h5>
+                    <div class="small text-muted mb-3">
+                        <div><i class="fas fa-question-circle me-2"></i><%= quiz.questions.length %> Questions</div>
+                        <div><i class="fas fa-language me-2"></i><%= quiz.language.charAt(0).toUpperCase() + quiz.language.slice(1) %></div>
+                        <% if(quiz.scheduleSettings) { %>
+                            <div><i class="fas fa-clock me-2"></i>Scheduled</div>
+                        <% } %>
+                    </div>
+                    <div class="progress mb-2" style="height: 5px;">
+                        <div class="progress-bar" role="progressbar" style="width: <%= (quiz.completedCount/quiz.totalCount)*100 %>%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span><%= quiz.completedCount %>/<%= quiz.totalCount %> Completed</span>
+                        <span>Last updated: <%= new Date(quiz.updatedAt).toLocaleDateString() %></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <% }); %>
+</div>
+
+<%- contentFor('script') %>
+<script src="/js/quiz_list.js"></script>

@@ -1,0 +1,415 @@
+<%- contentFor('body') %>
+
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-4">
+            <h1 class="display-5 fw-bold text-primary">
+                <i class="fas fa-plus-circle me-2"></i>Create New Quiz
+            </h1>
+            <p class="lead text-muted">Design and configure your quiz with questions and settings</p>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Information Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Quiz Information
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="quizTitle" class="form-label fw-semibold">Quiz Title *</label>
+                            <input type="text" class="form-control" id="quizTitle" placeholder="Enter quiz title" required>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="quizMode" class="form-label fw-semibold">Quiz Mode *</label>
+                            <select class="form-select" id="quizMode" onchange="toggleDateTimeSection()">
+                                <option value="online">Online</option>
+                                <option value="offline">Offline</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="quizLanguage" class="form-label fw-semibold">Language *</label>
+                            <select class="form-select" id="quizLanguage">
+                                <option value="vietnamese">Vietnamese</option>
+                                <option value="english">English</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="dateTimeSection" class="datetime-section" style="display: none;">
+                    <h6 class="text-primary mb-3">
+                        <i class="fas fa-clock me-2"></i>Schedule Settings
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="startTime" class="form-label fw-semibold">Start Time</label>
+                                <input type="datetime-local" class="form-control" id="startTime">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="endTime" class="form-label fw-semibold">End Time</label>
+                                <input type="datetime-local" class="form-control" id="endTime">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Questions Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="text-primary">
+                <i class="fas fa-question-circle me-2"></i>Questions
+            </h3>
+            <button type="button" class="btn btn-success btn-add-question" onclick="addQuestion()">
+                <i class="fas fa-plus me-2"></i>Add Another Question
+            </button>
+        </div>
+        
+        <div id="questionsContainer">
+            <!-- Question 1 -->
+            <div class="card question-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="question-number me-3">1</div>
+                        <h5 class="mb-0">Question 1</h5>
+                    </div>
+                    <div class="question-actions">
+                        <div class="btn-group-vertical action-buttons">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="moveQuestion(1, 'up')" title="Move Up">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="moveQuestion(1, 'down')" title="Move Down">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="translateContent(1)" title="Translate">
+                                <i class="fas fa-language"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deleteQuestion(1)" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="question1Content" class="form-label fw-semibold">Question Content *</label>
+                                <textarea class="form-control" id="question1Content" rows="3" placeholder="Enter your question here..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="question1Type" class="form-label fw-semibold">Question Type *</label>
+                                <select class="form-select" id="question1Type" onchange="toggleAnswerOptions(1)">
+                                    <option value="multiple_choice">Multiple Choice A/B/C/D</option>
+                                    <option value="text_input">Text Input</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="question1Image" class="form-label fw-semibold">Question Image</label>
+                                <input type="file" class="form-control" id="question1Image" accept="image/*" onchange="previewImage(1)">
+                            </div>
+                            <div id="imagePreview1" class="image-preview">
+                                <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                                <div class="text-muted small">Image preview will appear here</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="answerOptions1">
+                        <h6 class="text-primary mb-3">Answer Options</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <input type="radio" name="correctAnswer1" value="A" class="form-check-input">
+                                    </span>
+                                    <span class="input-group-text fw-bold">A</span>
+                                    <input type="text" class="form-control" placeholder="Option A" id="question1OptionA">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <input type="radio" name="correctAnswer1" value="B" class="form-check-input">
+                                    </span>
+                                    <span class="input-group-text fw-bold">B</span>
+                                    <input type="text" class="form-control" placeholder="Option B" id="question1OptionB">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <input type="radio" name="correctAnswer1" value="C" class="form-check-input">
+                                    </span>
+                                    <span class="input-group-text fw-bold">C</span>
+                                    <input type="text" class="form-control" placeholder="Option C" id="question1OptionC">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <input type="radio" name="correctAnswer1" value="D" class="form-check-input">
+                                    </span>
+                                    <span class="input-group-text fw-bold">D</span>
+                                    <input type="text" class="form-control" placeholder="Option D" id="question1OptionD">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Select the radio button next to the correct answer
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question 2 -->
+            <div class="card question-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="question-number me-3">2</div>
+                        <h5 class="mb-0">Question 2</h5>
+                    </div>
+                    <div class="question-actions">
+                        <div class="btn-group-vertical action-buttons">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="moveQuestion(2, 'up')" title="Move Up">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="moveQuestion(2, 'down')" title="Move Down">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="translateContent(2)" title="Translate">
+                                <i class="fas fa-language"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deleteQuestion(2)" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="question2Content" class="form-label fw-semibold">Question Content *</label>
+                                <textarea class="form-control" id="question2Content" rows="3" placeholder="Enter your question here..."></textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="question2Type" class="form-label fw-semibold">Question Type *</label>
+                                <select class="form-select" id="question2Type" onchange="toggleAnswerOptions(2)">
+                                    <option value="multiple_choice">Multiple Choice A/B/C/D</option>
+                                    <option value="text_input">Text Input</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="question2Image" class="form-label fw-semibold">Question Image</label>
+                                <input type="file" class="form-control" id="question2Image" accept="image/*" onchange="previewImage(2)">
+                            </div>
+                            <div id="imagePreview2" class="image-preview">
+                                <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                                <div class="text-muted small">Image preview will appear here</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="answerOptions2">
+                        <h6 class="text-primary mb-3">Answer Options</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <input type="radio" name="correctAnswer2" value="A" class="form-check-input">
+                                    </span>
+                                    <span class="input-group-text fw-bold">A</span>
+                                    <input type="text" class="form-control" placeholder="Option A" id="question2OptionA">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <input type="radio" name="correctAnswer2" value="B" class="form-check-input">
+                                    </span>
+                                    <span class="input-group-text fw-bold">B</span>
+                                    <input type="text" class="form-control" placeholder="Option B" id="question2OptionB">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <input type="radio" name="correctAnswer2" value="C" class="form-check-input">
+                                    </span>
+                                    <span class="input-group-text fw-bold">C</span>
+                                    <input type="text" class="form-control" placeholder="Option C" id="question2OptionC">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <input type="radio" name="correctAnswer2" value="D" class="form-check-input">
+                                    </span>
+                                    <span class="input-group-text fw-bold">D</span>
+                                    <input type="text" class="form-control" placeholder="Option D" id="question2OptionD">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Select the radio button next to the correct answer
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submit Section -->
+<div class="row">
+    <div class="col-12">
+        <div class="submit-section text-center">
+            <h4 class="text-white mb-3">Ready to Create Your Quiz?</h4>
+            <p class="text-white-50 mb-4">Review all questions and settings before submitting</p>
+            <div class="d-flex gap-3 justify-content-center">
+                <button type="button" class="btn btn-outline-light btn-lg px-4" 
+                        data-bs-toggle="modal" data-bs-target="#previewModal" 
+                        onclick="previewQuiz()">
+                    <i class="fas fa-eye me-2"></i>Preview Quiz
+                </button>
+                <button type="button" class="btn btn-light btn-lg px-5" onclick="submitQuiz()">
+                    <i class="fas fa-check-circle me-2"></i>Submit Quiz
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade preview-modal" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-body p-0">
+                <div class="container-fluid">
+                    <div class="row">
+                        <!-- Quiz Content -->
+                        <div class="col-lg-9 p-4">
+                            <div class="quiz-header mb-4">
+                                <h3 class="text-primary mb-3" id="previewTitle"></h3>
+                                <div class="row text-muted small">
+                                    <div class="col-md-4">
+                                        <i class="fas fa-globe me-1"></i>
+                                        <span id="previewMode"></span>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <i class="fas fa-language me-1"></i>
+                                        <span id="previewLanguage"></span>
+                                    </div>
+                                    <div class="col-md-4" id="previewSchedule">
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="previewQuestionsContainer">
+                                <!-- Questions will be inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- Sticky Sidebar -->
+                        <div class="col-lg-3 bg-light">
+                            <div class="quiz-sidebar preview-sidebar">
+                                <!-- Timer Section -->
+                                <div class="quiz-timer p-3 mb-4">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-stopwatch me-2 text-warning"></i>
+                                        <strong>Time Remaining</strong>
+                                    </div>
+                                    <div class="h4 text-center text-warning mb-0">
+                                        <span id="previewTimer">45:00</span>
+                                    </div>
+                                </div>
+
+                                <!-- Navigator Section -->
+                                <div class="mb-3">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-list-ol me-1"></i>Question Navigator
+                                    </h6>
+                                    <div id="previewNavigator" class="d-flex flex-wrap gap-2">
+                                        <!-- Navigation buttons will be inserted here -->
+                                    </div>
+                                </div>
+
+                                <!-- Progress Section -->
+                                <div class="progress mb-3" style="height: 5px;">
+                                    <div class="progress-bar" role="progressbar" style="width: 0%" 
+                                            id="previewProgress" aria-valuenow="0" aria-valuemin="0" 
+                                            aria-valuemax="100"></div>
+                                </div>
+
+                                <!-- Instructions Section -->
+                                <div class="small text-muted mb-4">
+                                    <p class="mb-2"><strong>Instructions:</strong></p>
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="mb-2">
+                                            <i class="fas fa-check-circle text-success me-1"></i> 
+                                            Select your answers
+                                        </li>
+                                        <li class="mb-2">
+                                            <i class="fas fa-clock text-warning me-1"></i> 
+                                            Watch the timer
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-save text-info me-1"></i> 
+                                            Answers auto-save
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Modal Actions -->
+                                <div class="mt-4">
+                                    <button type="button" class="btn btn-secondary w-100 mb-2" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-2"></i>Close Preview
+                                    </button>
+                                    <button type="button" class="btn btn-primary w-100" onclick="editQuiz()">
+                                        <i class="fas fa-edit me-2"></i>Continue Editing
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- contentFor('script') %>
+<script src="/js/quiz_create.js"></script>
+<!-- Add any page specific scripts here -->
+<script>
+    // Add any page specific JavaScript here
+</script>
