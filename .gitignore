@@ -21,3 +21,6 @@ package-lock.json
 .vscode/
 *.swp
 *.swo
+
+/public/uploads/*
+!/public/uploads/.gitkeep
