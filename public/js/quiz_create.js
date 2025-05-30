@@ -575,5 +575,22 @@ function updateQuestionNumbers() {
         radios.forEach(radio => {
             radio.name = `correctAnswer${index + 1}`;
         });
+
+        // 4. Cập nhật onclick cho các nút
+        const actionButtons = question.querySelectorAll('.action-buttons button');
+        actionButtons.forEach(button => {
+            const icon = button.querySelector('i');
+            if (!icon) return;
+
+            if (icon.classList.contains('fa-arrow-up')) {
+                button.setAttribute('onclick', `moveQuestion(${index + 1}, 'up')`);
+            } else if (icon.classList.contains('fa-arrow-down')) {
+                button.setAttribute('onclick', `moveQuestion(${index + 1}, 'down')`);
+            } else if (icon.classList.contains('fa-language')) {
+                button.setAttribute('onclick', `translateContent(${index + 1})`);
+            } else if (icon.classList.contains('fa-trash')) {
+                button.setAttribute('onclick', `deleteQuestion(${index + 1})`);
+            }
+        });
     });
 }
