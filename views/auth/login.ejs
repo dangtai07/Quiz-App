@@ -176,7 +176,7 @@
         });
         
         // Show error message with SweetAlert if error exists
-        <% if (typeof error !== 'undefined' && error) { %>
+        "<% if (typeof error !== 'undefined' && error) { %>"
             // Auto-hide error alert after 5 seconds
             setTimeout(() => {
                 const errorAlert = document.querySelector('.alert-danger');
@@ -185,7 +185,7 @@
                     setTimeout(() => errorAlert.remove(), 300);
                 }
             }, 5000);
-        <% } %>
+        "<% } %>"
     </script>
 </body>
 </html>

@@ -53,7 +53,7 @@
                                         <% question.options.forEach(option => { %>
                                             <div class="preview-option" 
                                                  data-letter="<%= option.letter %>"
-                                                 onclick="selectOption(this, <%= index + 1 %>)">
+                                                 onclick="selectOption(this, '<%= index + 1 %>')">
                                                 <div class="d-flex align-items-center">
                                                     <div class="option-indicator me-3"><%= option.letter %></div>
                                                     <div class="flex-grow-1"><%= option.text %></div>
@@ -65,7 +65,7 @@
                                     <div class="mt-3">
                                         <textarea class="form-control" rows="3" 
                                                   placeholder="Type your answer here..."
-                                                  onchange="saveTextAnswer(<%= index + 1 %>, this.value)"></textarea>
+                                                  onchange="saveTextAnswer('<%= index + 1 %>', this.value)"></textarea>
                                     </div>
                                 <% } %>
                             </div>
@@ -97,7 +97,7 @@
                     <div class="d-flex flex-wrap gap-2">
                         <% quiz.questions.forEach((_, index) => { %>
                             <button class="btn btn-outline-primary" 
-                                    onclick="scrollToQuestion(<%= index + 1 %>)">
+                                    onclick="scrollToQuestion('<%= index + 1 %>')">
                                 <%= index + 1 %>
                             </button>
                         <% }); %>
