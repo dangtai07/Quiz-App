@@ -134,7 +134,7 @@ async function updateQuiz() {
     }
 }
 
-let questionCount = 0; // Will be set from template
+// let questionCount = 0; // Will be set from template
 let previewTimer;
 
 function toggleDateTimeSection() {

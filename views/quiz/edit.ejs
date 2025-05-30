@@ -72,7 +72,14 @@
             </div>
         </div>
     </div>
-
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary">
+            <i class="fas fa-question-circle me-2"></i>Questions
+        </h3>
+        <button type="button" class="btn btn-success btn-add-question" onclick="addQuestion()">
+            <i class="fas fa-plus me-2"></i>Add Another Question
+        </button>
+    </div>
     <!-- Questions Section -->
     <div id="questionsContainer">
         <% quiz.questions.forEach((question, index) => { %>
@@ -201,5 +208,6 @@
 <%- contentFor('script') %>
 <script>
 const quizId = '<%= quiz._id %>';
+let questionCount = <%= quiz.questions.length %>;
 </script>
 <script src="/js/quiz_edit.js"></script>
