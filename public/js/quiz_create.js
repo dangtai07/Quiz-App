@@ -232,7 +232,11 @@ function submitQuiz() {
     // Validate required fields
     const title = document.getElementById('quizTitle').value.trim();
     if (!title) {
-        alert('Please enter a quiz title');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Title',
+            text: 'Please enter a quiz title'
+        });
         return;
     }
 
@@ -289,11 +293,19 @@ function submitQuiz() {
 
                 // Validate multiple choice
                 if (questionData.options.length < 2) {
-                    alert(`Question ${index + 1} must have at least 2 options`);
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Invalid Options',
+                        text: `Question ${index + 1} must have at least 2 options`
+                    });
                     return;
                 }
                 if (!questionData.correctAnswer) {
-                    alert(`Please select correct answer for question ${index + 1}`);
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Missing Answer',
+                        text: `Please select correct answer for question ${index + 1}`
+                    });
                     return;
                 }
             }
@@ -304,7 +316,11 @@ function submitQuiz() {
 
     // Validate questions array
     if (questionsData.length === 0) {
-        alert('Please add at least one question');
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Questions',
+            text: 'Please add at least one question'
+        });
         return;
     }
 
@@ -355,34 +371,22 @@ function submitFormData(formData) {
         return response.json();
     })
     .then(data => {
-        // Show success message
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: 'Quiz created successfully',
-                timer: 2000,
-                showConfirmButton: false
-            }).then(() => {
-               window.location.href = '/quizzes';
-            });
-        } else {
-            alert('Quiz created successfully!');
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: 'Quiz created successfully',
+            timer: 2000,
+            showConfirmButton: false
+        }).then(() => {
             window.location.href = '/quizzes';
-        }
+        });
     })
     .catch(error => {
-        console.error('Error:', error);
-        // Show error message
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: error.message || 'Failed to create quiz. Please try again.'
-            });
-        } else {
-            alert(error.message || 'Failed to create quiz. Please try again.');
-        }
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: error.message || 'Failed to create quiz. Please try again.'
+        });
     })
     .finally(() => {
         // Reset button state

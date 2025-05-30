@@ -3,7 +3,11 @@ async function updateQuiz() {
         // Validate required fields
         const title = document.getElementById('quizTitle').value.trim();
         if (!title) {
-            alert('Please enter a quiz title');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Missing Title',
+                text: 'Please enter a quiz title'
+            });
             return;
         }
 
@@ -60,11 +64,19 @@ async function updateQuiz() {
 
                     // Validate multiple choice
                     if (questionData.options.length < 2) {
-                        alert(`Question ${index + 1} must have at least 2 options`);
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Invalid Options',
+                            text: `Question ${index + 1} must have at least 2 options`
+                        });
                         return;
                     }
                     if (!questionData.correctAnswer) {
-                        alert(`Please select correct answer for question ${index + 1}`);
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Missing Answer',
+                            text: `Please select correct answer for question ${index + 1}`
+                        });
                         return;
                     }
                 }
@@ -75,7 +87,11 @@ async function updateQuiz() {
 
         // Validate questions array
         if (questionsData.length === 0) {
-            alert('Please add at least one question');
+            Swal.fire({
+                icon: 'warning',
+                title: 'No Questions',
+                text: 'Please add at least one question'
+            });
             return;
         }
 
@@ -172,7 +188,11 @@ function previewImage(questionNum) {
     
     // Kiểm tra file type
     if (!file.type.startsWith('image/')) {
-        alert('Please select an image file');
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid File',
+            text: 'Please select an image file'
+        });
         fileInput.value = ''; // Reset input
         return;
     }
@@ -207,8 +227,11 @@ function deleteImage(questionNum) {
 }
 
 function translateContent(questionNum) {
-    // Mock translate function - in real implementation would call translation API
-    alert(`Translation feature for question ${questionNum} would be implemented here`);
+    Swal.fire({
+        icon: 'info',
+        title: 'Translation Feature',
+        text: `Translation feature for question ${questionNum} would be implemented here`
+    });
 }
 
 function previewQuiz() {
@@ -368,7 +391,11 @@ function submitQuiz() {
     // Validate required fields
     const title = document.getElementById('quizTitle').value.trim();
     if (!title) {
-        alert('Please enter a quiz title');
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Title',
+            text: 'Please enter a quiz title'
+        });
         return;
     }
 
@@ -425,11 +452,19 @@ function submitQuiz() {
 
                 // Validate multiple choice
                 if (questionData.options.length < 2) {
-                    alert(`Question ${index + 1} must have at least 2 options`);
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Invalid Options',
+                        text: `Question ${index + 1} must have at least 2 options`
+                    });
                     return;
                 }
                 if (!questionData.correctAnswer) {
-                    alert(`Please select correct answer for question ${index + 1}`);
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Missing Answer',
+                        text: `Please select correct answer for question ${index + 1}`
+                    });
                     return;
                 }
             }
@@ -440,7 +475,11 @@ function submitQuiz() {
 
     // Validate questions array
     if (questionsData.length === 0) {
-        alert('Please add at least one question');
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Questions',
+            text: 'Please add at least one question'
+        });
         return;
     }
 
@@ -669,14 +708,21 @@ function moveQuestion(questionNum, direction) {
 }
 
 function deleteQuestion(questionNum) {
-    if (confirm(`Are you sure you want to delete question ${questionNum}?`)) {
-        const questionCard = document.querySelector(`#questionsContainer .card:nth-child(${questionNum})`);
-        questionCard.remove();
-        questionCount--;
-        
-        // Cập nhật lại số thứ tự các câu hỏi
-        updateQuestionNumbers();
-    }
+    Swal.fire({
+        icon: 'warning',
+        title: 'Delete Question',
+        text: `Are you sure you want to delete question ${questionNum}?`,
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it',
+        cancelButtonText: 'No, keep it'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const questionCard = document.querySelector(`#questionsContainer .card:nth-child(${questionNum})`);
+            questionCard.remove();
+            questionCount--;
+            updateQuestionNumbers();
+        }
+    });
 }
 
 function updateQuestionNumbers() {
