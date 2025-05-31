@@ -7,6 +7,7 @@ const app = express();
 const connectDB = require('./config/db.mongdb.cloud');
 const multer = require('multer');
 const AuthService = require('./services/auth.service'); // Add this import
+const PlayerService = require('./services/player.service'); // Add this line
 require('dotenv').config();
 
 // Body parser middleware
@@ -83,162 +84,7 @@ app.get('/', (req, res) => {
 });
 
 // Player routes
-app.get('/player/dashboard', requireAuth, (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes'); // Redirect admins to quiz management
-    }
-    
-    const user = req.session.user;
-    res.send(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Player Dashboard - Quiz App</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            font-family: 'Inter', sans-serif;
-            padding: 2rem 0;
-        }
-        .dashboard-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-        .welcome-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-            text-align: center;
-        }
-        .action-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            margin-bottom: 1rem;
-            transition: transform 0.3s ease;
-        }
-        .action-card:hover {
-            transform: translateY(-5px);
-        }
-        .action-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 1rem;
-            font-size: 1.5rem;
-            color: white;
-        }
-        .join-icon { background: linear-gradient(135deg, #10b981, #059669); }
-        .history-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
-        .profile-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-        .logout-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
-        .btn-action {
-            border: none;
-            border-radius: 10px;
-            padding: 1rem 2rem;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-        .btn-primary-custom {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-        }
-        .btn-secondary-custom {
-            background: linear-gradient(135deg, #6b7280, #4b5563);
-            color: white;
-        }
-        .btn-action:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <div class="welcome-card">
-            <div class="action-icon join-icon mb-3">
-                <i class="fas fa-user-circle"></i>
-            </div>
-            <h1 class="h2 mb-2">Welcome back, ${user.name}!</h1>
-            <p class="text-muted mb-0">${user.email}</p>
-            <p class="text-muted">Ready to join a quiz or check your progress?</p>
-        </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <div class="action-card">
-                    <div class="action-icon join-icon">
-                        <i class="fas fa-gamepad"></i>
-                    </div>
-                    <h5 class="mb-2">Join a Quiz</h5>
-                    <p class="text-muted mb-3">Enter a quiz PIN code to join a live quiz session.</p>
-                    <a href="/player/join-quiz" class="btn btn-action btn-primary-custom">
-                        <i class="fas fa-play me-2"></i>Join Quiz
-                    </a>
-                </div>
-            </div>
-            
-            <div class="col-md-6 mb-3">
-                <div class="action-card">
-                    <div class="action-icon history-icon">
-                        <i class="fas fa-history"></i>
-                    </div>
-                    <h5 class="mb-2">Quiz History</h5>
-                    <p class="text-muted mb-3">View your past quiz results and scores.</p>
-                    <a href="/player/history" class="btn btn-action btn-secondary-custom">
-                        <i class="fas fa-chart-line me-2"></i>View History
-                    </a>
-                </div>
-            </div>
-            
-            <div class="col-md-6 mb-3">
-                <div class="action-card">
-                    <div class="action-icon profile-icon">
-                        <i class="fas fa-user-cog"></i>
-                    </div>
-                    <h5 class="mb-2">Profile Settings</h5>
-                    <p class="text-muted mb-3">Update your profile information and preferences.</p>
-                    <a href="/player/profile" class="btn btn-action btn-secondary-custom">
-                        <i class="fas fa-cog me-2"></i>Settings
-                    </a>
-                </div>
-            </div>
-            
-            <div class="col-md-6 mb-3">
-                <div class="action-card">
-                    <div class="action-icon logout-icon">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </div>
-                    <h5 class="mb-2">Logout</h5>
-                    <p class="text-muted mb-3">Sign out of your account securely.</p>
-                    <a href="/auth/logout" class="btn btn-action btn-secondary-custom">
-                        <i class="fas fa-sign-out-alt me-2"></i>Logout
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
-    `);
-});
 
 app.get('/player/join-quiz', requireAuth, (req, res) => {
     if (req.session.user.role !== 'player') {
@@ -654,41 +500,242 @@ app.post('/player/join-quiz', requireAuth, async (req, res) => {
     }
 });
 
-// Additional player routes (placeholders for now)
-app.get('/player/history', requireAuth, (req, res) => {
+app.get('/player/dashboard', requireAuth, async (req, res) => {
     if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes');
+        return res.redirect('/quizzes'); // Redirect admins to quiz management
     }
     
-    res.send(`
-        <!DOCTYPE html>
-        <html><head><title>Quiz History</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head><body class="bg-light">
-        <div class="container mt-5 text-center">
-            <h1>🚧 Quiz History</h1>
-            <p class="lead">This feature is coming soon!</p>
-            <a href="/player/dashboard" class="btn btn-primary">Back to Dashboard</a>
-        </div></body></html>
-    `);
+    try {
+        const user = req.session.user;
+        
+        // Fetch player statistics
+        const stats = await PlayerService.getPlayerStats(user.id);
+        
+        // Fetch recent quiz history
+        const recentQuizzes = await PlayerService.getRecentQuizzes(user.id, 5);
+        
+        // Fetch player achievements
+        const achievements = await PlayerService.getPlayerAchievements(user.id);
+        
+        // Additional dashboard data
+        const dashboardData = {
+            welcomeMessage: getWelcomeMessage(),
+            quickActions: getQuickActions(),
+            notifications: [], // TODO: Implement notifications system
+            upcomingQuizzes: [], // TODO: Implement scheduled quizzes
+        };
+        
+        res.render('player/dashboard', {
+            title: 'Player Dashboard',
+            user: user,
+            stats: stats,
+            recentQuizzes: recentQuizzes,
+            achievements: achievements,
+            dashboardData: dashboardData,
+            layout: false // Use custom layout in the template
+        });
+        
+    } catch (error) {
+        console.error('Player dashboard error:', error);
+        res.status(500).render('error/500', {
+            title: 'Server Error',
+            message: 'Unable to load dashboard. Please try again later.',
+            layout: false
+        });
+    }
 });
 
-app.get('/player/profile', requireAuth, (req, res) => {
+// Helper function to get time-based welcome message
+function getWelcomeMessage() {
+    const hour = new Date().getHours();
+    
+    if (hour < 12) {
+        return "Good morning! Ready to start your day with a quiz?";
+    } else if (hour < 17) {
+        return "Good afternoon! How about a quick knowledge check?";
+    } else {
+        return "Good evening! End your day with some learning!";
+    }
+}
+
+// Helper function to get available quick actions
+function getQuickActions() {
+    return [
+        {
+            name: 'Join Quiz',
+            icon: 'fas fa-play',
+            url: '/player/join-quiz',
+            description: 'Enter a quiz PIN to join',
+            primary: true
+        },
+        {
+            name: 'View History',
+            icon: 'fas fa-chart-line',
+            url: '/player/history',
+            description: 'See your past performance'
+        },
+        {
+            name: 'Leaderboard',
+            icon: 'fas fa-trophy',
+            url: '/player/leaderboard',
+            description: 'Check your ranking'
+        },
+        {
+            name: 'Achievements',
+            icon: 'fas fa-medal',
+            url: '/player/achievements',
+            description: 'View your badges'
+        },
+        {
+            name: 'Study Guide',
+            icon: 'fas fa-book',
+            url: '/player/study-guide',
+            description: 'Review topics'
+        }
+    ];
+}
+
+// Additional player routes that integrate with the new dashboard
+
+// Player profile route
+app.get('/player/profile', requireAuth, async (req, res) => {
     if (req.session.user.role !== 'player') {
         return res.redirect('/quizzes');
     }
     
-    res.send(`
-        <!DOCTYPE html>
-        <html><head><title>Player Profile</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head><body class="bg-light">
-        <div class="container mt-5 text-center">
-            <h1>🚧 Player Profile</h1>
-            <p class="lead">Profile settings coming soon!</p>
-            <a href="/player/dashboard" class="btn btn-primary">Back to Dashboard</a>
-        </div></body></html>
-    `);
+    try {
+        const user = req.session.user;
+        const stats = await PlayerService.getPlayerStats(user.id);
+        
+        res.render('player/profile', {
+            title: 'Player Profile',
+            user: user,
+            stats: stats,
+            layout: false
+        });
+    } catch (error) {
+        console.error('Player profile error:', error);
+        res.redirect('/player/dashboard');
+    }
+});
+
+// Player history route
+app.get('/player/history', requireAuth, async (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.redirect('/quizzes');
+    }
+    
+    try {
+        const user = req.session.user;
+        const page = parseInt(req.query.page) || 1;
+        const limit = 20;
+        
+        const quizHistory = await PlayerService.getRecentQuizzes(user.id, limit);
+        const analytics = await PlayerService.getPlayerAnalytics(user.id);
+        
+        res.render('player/history', {
+            title: 'Quiz History',
+            user: user,
+            quizHistory: quizHistory,
+            analytics: analytics,
+            currentPage: page,
+            layout: false
+        });
+    } catch (error) {
+        console.error('Player history error:', error);
+        res.redirect('/player/dashboard');
+    }
+});
+
+// Player achievements route
+app.get('/player/achievements', requireAuth, async (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.redirect('/quizzes');
+    }
+    
+    try {
+        const user = req.session.user;
+        const achievements = await PlayerService.getPlayerAchievements(user.id);
+        
+        res.render('player/achievements', {
+            title: 'Achievements',
+            user: user,
+            achievements: achievements,
+            layout: false
+        });
+    } catch (error) {
+        console.error('Player achievements error:', error);
+        res.redirect('/player/dashboard');
+    }
+});
+
+// Player leaderboard route
+app.get('/player/leaderboard', requireAuth, async (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.redirect('/quizzes');
+    }
+    
+    try {
+        const user = req.session.user;
+        const leaderboard = await PlayerService.getLeaderboard(50);
+        const userStats = await PlayerService.getPlayerStats(user.id);
+        
+        res.render('player/leaderboard', {
+            title: 'Leaderboard',
+            user: user,
+            leaderboard: leaderboard,
+            userStats: userStats,
+            layout: false
+        });
+    } catch (error) {
+        console.error('Player leaderboard error:', error);
+        res.redirect('/player/dashboard');
+    }
+});
+
+// API endpoint for updating player stats (for AJAX calls)
+app.get('/api/player/stats', requireAuth, async (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    try {
+        const stats = await PlayerService.getPlayerStats(req.session.user.id);
+        res.json({ success: true, stats: stats });
+    } catch (error) {
+        console.error('API stats error:', error);
+        res.status(500).json({ error: 'Failed to fetch stats' });
+    }
+});
+
+// API endpoint for updating player profile
+app.put('/api/player/profile', requireAuth, async (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    try {
+        const updatedUser = await PlayerService.updatePlayerProfile(
+            req.session.user.id, 
+            req.body
+        );
+        
+        // Update session data
+        req.session.user.name = updatedUser.name;
+        req.session.user.email = updatedUser.email;
+        
+        res.json({ 
+            success: true, 
+            message: 'Profile updated successfully',
+            user: {
+                name: updatedUser.name,
+                email: updatedUser.email
+            }
+        });
+    } catch (error) {
+        console.error('API profile update error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
 });
 
 // Error handling for file uploads
