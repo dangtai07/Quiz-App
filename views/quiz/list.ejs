@@ -14,6 +14,7 @@
 </head>
 <body>
     <!-- Navigation -->
+    <!-- Update the navigation section in views/quiz/list.ejs -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="/quizzes">
@@ -25,17 +26,9 @@
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Remove redundant navigation items since we're on Quiz Management page -->
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="/quizzes">
-                            <i class="fas fa-list me-1"></i>All Quizzes
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/quizzes/create">
-                            <i class="fas fa-plus me-1"></i>Create Quiz
-                        </a>
-                    </li>
+                    <!-- Keep empty or add other high-level navigation if needed -->
                 </ul>
                 
                 <div class="navbar-nav ms-auto">

@@ -24,12 +24,41 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <!-- COMPLETELY REMOVE ALL NAVIGATION LINKS -->
-                <!-- The modern quiz interface has its own navigation -->
+            <!-- <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <!-- Empty - no duplicate navigation needed -->
-                </ul>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/quizzes">
+                            <i class="fas fa-list me-1"></i>All Quizzes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/quizzes/create">
+                            <i class="fas fa-plus me-1"></i>Create Quiz
+                        </a>
+                    </li>
+                </ul> -->
+                <ul class="navbar-nav me-auto">
+                <!-- REMOVE or COMMENT OUT these duplicate links -->
+                <!--
+                <li class="nav-item">
+                    <a class="nav-link" href="/quizzes">
+                        <i class="fas fa-list me-1"></i>All Quizzes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/quizzes/create">
+                        <i class="fas fa-plus me-1"></i>Create Quiz
+                    </a>
+                </li>
+                -->
+                
+                <!-- Keep only essential navigation if needed -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/quizzes">
+                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                    </a>
+                </li>
+            </ul>
                 
                 <div class="d-flex">
                     <div class="dropdown">
@@ -98,7 +127,7 @@
                 </div>
             </div>
         </div>
-    </header>
+    </footer>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <!-- Add SweetAlert2 JS before your scripts -->
