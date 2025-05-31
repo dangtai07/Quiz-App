@@ -9,15 +9,30 @@ class QuizService {
             const questionsData = JSON.parse(quizData.questionsData);
             
             // Process images and save paths
+            // In your createQuiz method, replace the image processing section with this:
+
+            // Process images and save paths
             const processedQuestions = questionsData.map(question => {
                 const imageKey = `questionImage_${question.number}`;
                 // Find file where fieldname matches imageKey
                 const imageFile = files ? Object.values(files).flat().find(f => f.fieldname === imageKey) : null;
                 let imagePath = null;
                 
-                if (imageFile) {
-                    // Use the path from multer
-                    imagePath = '/' + imageFile.path.split('public\\')[1].replace(/\\/g, '/');
+                if (imageFile && imageFile.path) {
+                    try {
+                        // Use the path from multer - handle both Windows and Unix paths
+                        const pathParts = imageFile.path.split('public');
+                        if (pathParts.length > 1) {
+                            imagePath = '/' + pathParts[1].replace(/\\/g, '/');
+                            // Remove leading slash if it exists
+                            if (imagePath.startsWith('//')) {
+                                imagePath = imagePath.substring(1);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error processing image path:', error);
+                        imagePath = null;
+                    }
                 }
                 
                 return {
