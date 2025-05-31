@@ -27,13 +27,16 @@ body {
     color: var(--dark-color);
 }
 
-/* Navigation */
+/* Navigation - FIXED Z-INDEX */
 .navbar {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
     backdrop-filter: blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding: 1rem 0;
     box-shadow: var(--shadow-sm);
+    /* FIX: Ensure navbar stays on top */
+    position: relative;
+    z-index: 1030;
 }
 
 .navbar-brand {
@@ -62,19 +65,26 @@ body {
     border-radius: var(--border-radius-sm);
 }
 
-/* Dropdown Styling */
+/* Dropdown Styling - FIXED Z-INDEX */
 .navbar .dropdown-menu {
     border: none;
     box-shadow: var(--shadow);
     border-radius: var(--border-radius);
     padding: 0.5rem 0;
     min-width: 200px;
+    max-width: 250px;
     margin-top: 0.5rem;
+    /* FIX: Ensure dropdown appears above all other content */
+    z-index: 1050 !important;
+    position: absolute !important;
 }
 
 .navbar .dropdown-item {
     padding: 0.75rem 1.5rem;
     transition: var(--transition-fast);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .navbar .dropdown-item:hover {
@@ -82,13 +92,35 @@ body {
     color: var(--primary-color);
 }
 
-/* Main Container */
+.navbar .dropdown-header {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.navbar .dropdown-toggle::after {
+    margin-left: 0.5rem;
+}
+
+/* FIX: Dropdown positioning */
+.navbar .dropdown {
+    position: relative;
+}
+
+/* Main Container - FIXED Z-INDEX */
 .main-container {
     min-height: calc(100vh - 120px);
     padding-bottom: 2rem;
+    /* FIX: Ensure main content doesn't interfere with dropdown */
+    position: relative;
+    z-index: 1;
 }
 
-/* Page Header */
+/* Page Header - FIXED Z-INDEX */
 .page-header {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
     backdrop-filter: blur(10px);
@@ -97,6 +129,8 @@ body {
     margin-bottom: 2rem;
     position: relative;
     overflow: hidden;
+    /* FIX: Ensure page header doesn't interfere with dropdown */
+    z-index: 1;
 }
 
 .page-header::before {
@@ -194,9 +228,12 @@ body {
     color: var(--dark-color);
 }
 
-/* Filter Section */
+/* Filter Section - FIXED Z-INDEX */
 .filter-section {
     margin-bottom: 2rem;
+    /* FIX: Ensure filter section doesn't interfere with dropdown */
+    position: relative;
+    z-index: 1;
 }
 
 .filter-card {
@@ -296,6 +333,13 @@ body {
     box-shadow: var(--shadow-sm);
 }
 
+/* Quizzes Section - FIXED Z-INDEX */
+.quizzes-section {
+    /* FIX: Ensure quiz section doesn't interfere with dropdown */
+    position: relative;
+    z-index: 1;
+}
+
 /* Quiz Grid */
 .quiz-grid {
     display: grid;
@@ -378,6 +422,11 @@ body {
     background: var(--primary-color);
     color: white;
     border-color: var(--primary-color);
+}
+
+/* FIX: Ensure card action dropdowns work properly */
+.card-actions .dropdown-menu {
+    z-index: 1040 !important;
 }
 
 .card-body {
