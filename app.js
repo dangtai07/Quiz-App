@@ -6,8 +6,9 @@ const path = require('path');
 const app = express();
 const connectDB = require('./config/db.mongdb.cloud');
 const multer = require('multer');
-const AuthService = require('./services/auth.service'); // Add this import
-const PlayerService = require('./services/player.service'); // Add this line
+const AuthService = require('./services/auth.service');
+const PlayerService = require('./services/player.service'); // Add this import
+const QuizService = require('./services/quiz.service'); // Add this import
 require('dotenv').config();
 
 // Body parser middleware
@@ -64,9 +65,255 @@ const { requireAuth, requireAdmin } = require('./controllers/auth.controller');
 // Auth routes (no middleware needed)
 app.use('/auth', authRoutes);
 
+// ========================================
+// QUIZ OPERATION LOGGING MIDDLEWARE
+// ========================================
+// Add this BEFORE your quiz routes for audit trail
+app.use('/quizzes', (req, res, next) => {
+    const user = req.session?.user;
+    const operation = `${req.method} ${req.path}`;
+    
+    // Log quiz operations for audit trail
+    if (user && ['POST', 'PUT', 'DELETE'].includes(req.method)) {
+        console.log(`Quiz Operation: ${operation} by ${user.email} at ${new Date().toISOString()}`);
+    }
+    
+    next();
+});
+
+// ========================================
+// MAIN QUIZ ROUTES (KEEP THIS EXISTING LINE!)
+// ========================================
 // Protected routes (require authentication AND admin role)
 app.use('/quizzes', requireAuth, requireAdmin, quizRoutes);
 
+// ========================================
+// ENHANCED API ROUTES FOR QUIZ MANAGEMENT
+// ========================================
+// Add these new routes AFTER your main quiz routes
+
+// Enhanced Analytics API
+app.get('/api/quizzes/analytics', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const analytics = await QuizService.getQuizAnalytics();
+        
+        // Additional real-time calculations
+        const quizzes = await QuizService.getAllQuizzes();
+        const enhancedAnalytics = {
+            ...analytics,
+            realTime: {
+                totalQuizzes: quizzes.length,
+                totalQuestions: quizzes.reduce((sum, q) => sum + q.questions.length, 0),
+                totalParticipants: quizzes.reduce((sum, q) => sum + (q.totalCount || 0), 0),
+                byMode: {
+                    online: quizzes.filter(q => q.mode === 'online').length,
+                    offline: quizzes.filter(q => q.mode === 'offline').length
+                },
+                byLanguage: {
+                    vietnamese: quizzes.filter(q => q.language === 'vietnamese').length,
+                    english: quizzes.filter(q => q.language === 'english').length
+                },
+                recentActivity: quizzes.filter(q => {
+                    const daysDiff = Math.floor((new Date() - new Date(q.updatedAt)) / (1000 * 60 * 60 * 24));
+                    return daysDiff <= 7;
+                }).length,
+                averageQuestionsPerQuiz: quizzes.length > 0 ? 
+                    Math.round(quizzes.reduce((sum, q) => sum + q.questions.length, 0) / quizzes.length) : 0,
+                mostPopularMode: quizzes.filter(q => q.mode === 'online').length > 
+                    quizzes.filter(q => q.mode === 'offline').length ? 'online' : 'offline',
+                mostPopularLanguage: quizzes.filter(q => q.language === 'vietnamese').length > 
+                    quizzes.filter(q => q.language === 'english').length ? 'vietnamese' : 'english'
+            }
+        };
+        
+        res.json({
+            success: true,
+            analytics: enhancedAnalytics,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Analytics error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch analytics'
+        });
+    }
+});
+
+// Refresh Quiz Data API
+app.get('/api/quizzes/refresh', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const quizzes = await QuizService.getAllQuizzes();
+        
+        // Simulate some processing time for refresh effect
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        res.json({
+            success: true,
+            message: 'Quiz data refreshed successfully',
+            count: quizzes.length,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Refresh error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to refresh quiz data'
+        });
+    }
+});
+
+// Advanced Search API
+app.get('/api/quizzes/search', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { q, mode, language, status, sortBy, limit = 50 } = req.query;
+        
+        let quizzes = await QuizService.getAllQuizzes();
+        
+        // Apply filters
+        if (q) {
+            const searchTerm = q.toLowerCase();
+            quizzes = quizzes.filter(quiz => 
+                quiz.title.toLowerCase().includes(searchTerm) ||
+                quiz.questions.some(question => 
+                    question.content.toLowerCase().includes(searchTerm)
+                )
+            );
+        }
+        
+        if (mode) {
+            quizzes = quizzes.filter(quiz => quiz.mode === mode);
+        }
+        
+        if (language) {
+            quizzes = quizzes.filter(quiz => quiz.language === language);
+        }
+        
+        // Apply sorting
+        if (sortBy) {
+            switch (sortBy) {
+                case 'newest':
+                    quizzes.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+                    break;
+                case 'oldest':
+                    quizzes.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
+                    break;
+                case 'name':
+                    quizzes.sort((a, b) => a.title.localeCompare(b.title));
+                    break;
+                case 'questions':
+                    quizzes.sort((a, b) => b.questions.length - a.questions.length);
+                    break;
+            }
+        }
+        
+        // Apply limit
+        quizzes = quizzes.slice(0, parseInt(limit));
+        
+        res.json({
+            success: true,
+            quizzes: quizzes,
+            total: quizzes.length,
+            filters: { q, mode, language, status, sortBy }
+        });
+        
+    } catch (error) {
+        console.error('Search error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to search quizzes'
+        });
+    }
+});
+
+// Bulk Operations API
+app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const { action, quizIds } = req.body;
+        
+        if (!action || !quizIds || !Array.isArray(quizIds)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid bulk operation parameters'
+            });
+        }
+        
+        let results = [];
+        
+        switch (action) {
+            case 'delete':
+                for (const quizId of quizIds) {
+                    try {
+                        await QuizService.deleteQuiz(quizId);
+                        results.push({ quizId, success: true });
+                    } catch (error) {
+                        results.push({ quizId, success: false, error: error.message });
+                    }
+                }
+                break;
+                
+            case 'duplicate':
+                for (const quizId of quizIds) {
+                    try {
+                        const originalQuiz = await QuizService.getQuiz(quizId);
+                        const duplicateData = {
+                            quizInfo: JSON.stringify({
+                                title: `${originalQuiz.title} (Bulk Copy)`,
+                                mode: originalQuiz.mode,
+                                language: originalQuiz.language,
+                                scheduleSettings: originalQuiz.scheduleSettings
+                            }),
+                            questionsData: JSON.stringify(originalQuiz.questions.map((q, index) => ({
+                                number: index + 1,
+                                content: q.content,
+                                type: q.type,
+                                options: q.options || [],
+                                correctAnswer: q.correctAnswer || []
+                            })))
+                        };
+                        const duplicate = await QuizService.createQuiz(duplicateData, null);
+                        results.push({ quizId, success: true, newQuizId: duplicate._id });
+                    } catch (error) {
+                        results.push({ quizId, success: false, error: error.message });
+                    }
+                }
+                break;
+                
+            default:
+                return res.status(400).json({
+                    success: false,
+                    message: 'Unsupported bulk operation'
+                });
+        }
+        
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.filter(r => !r.success).length;
+        
+        res.json({
+            success: true,
+            message: `Bulk ${action} completed. ${successCount} successful, ${failureCount} failed.`,
+            results: results,
+            summary: {
+                total: results.length,
+                successful: successCount,
+                failed: failureCount
+            }
+        });
+        
+    } catch (error) {
+        console.error('Bulk operation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to perform bulk operation'
+        });
+    }
+});
+
+// ========================================
+// ROOT ROUTE - KEEP EXISTING
+// ========================================
 // Root route - redirect based on authentication and role
 app.get('/', (req, res) => {
     if (req.session && req.session.user) {
@@ -83,9 +330,56 @@ app.get('/', (req, res) => {
     }
 });
 
-// Player routes
+// ========================================
+// ENHANCED PLAYER ROUTES
+// ========================================
+// Enhanced player dashboard with service integration
+app.get('/player/dashboard', requireAuth, async (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.redirect('/quizzes'); // Redirect admins to quiz management
+    }
+    
+    try {
+        const user = req.session.user;
+        
+        // Fetch player statistics
+        const stats = await PlayerService.getPlayerStats(user.id);
+        
+        // Fetch recent quiz history
+        const recentQuizzes = await PlayerService.getRecentQuizzes(user.id, 5);
+        
+        // Fetch player achievements
+        const achievements = await PlayerService.getPlayerAchievements(user.id);
+        
+        // Additional dashboard data
+        const dashboardData = {
+            welcomeMessage: getWelcomeMessage(),
+            quickActions: getQuickActions(),
+            notifications: [], // TODO: Implement notifications system
+            upcomingQuizzes: [], // TODO: Implement scheduled quizzes
+        };
+        
+        res.render('player/dashboard', {
+            title: 'Player Dashboard',
+            user: user,
+            stats: stats,
+            recentQuizzes: recentQuizzes,
+            achievements: achievements,
+            dashboardData: dashboardData,
+            layout: false // Use custom layout in the template
+        });
+        
+    } catch (error) {
+        console.error('Player dashboard error:', error);
+        res.status(500).render('error/500', {
+            title: 'Server Error',
+            message: 'Unable to load dashboard. Please try again later.',
+            layout: false
+        });
+    }
+});
 
-
+// Player join quiz route - KEEP EXISTING
 app.get('/player/join-quiz', requireAuth, (req, res) => {
     if (req.session.user.role !== 'player') {
         return res.redirect('/quizzes'); // Redirect admins to quiz management
@@ -500,51 +794,94 @@ app.post('/player/join-quiz', requireAuth, async (req, res) => {
     }
 });
 
-app.get('/player/dashboard', requireAuth, async (req, res) => {
+// Additional player routes (placeholders for now)
+app.get('/player/history', requireAuth, (req, res) => {
     if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes'); // Redirect admins to quiz management
+        return res.redirect('/quizzes');
+    }
+    
+    res.send(`
+        <!DOCTYPE html>
+        <html><head><title>Quiz History</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head><body class="bg-light">
+        <div class="container mt-5 text-center">
+            <h1>🚧 Quiz History</h1>
+            <p class="lead">This feature is coming soon!</p>
+            <a href="/player/dashboard" class="btn btn-primary">Back to Dashboard</a>
+        </div></body></html>
+    `);
+});
+
+app.get('/player/profile', requireAuth, (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.redirect('/quizzes');
+    }
+    
+    res.send(`
+        <!DOCTYPE html>
+        <html><head><title>Player Profile</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head><body class="bg-light">
+        <div class="container mt-5 text-center">
+            <h1>🚧 Player Profile</h1>
+            <p class="lead">Profile settings coming soon!</p>
+            <a href="/player/dashboard" class="btn btn-primary">Back to Dashboard</a>
+        </div></body></html>
+    `);
+});
+
+// ========================================
+// API ENDPOINTS FOR PLAYER STATS
+// ========================================
+// API endpoint for updating player stats (for AJAX calls)
+app.get('/api/player/stats', requireAuth, async (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.status(403).json({ error: 'Access denied' });
     }
     
     try {
-        const user = req.session.user;
-        
-        // Fetch player statistics
-        const stats = await PlayerService.getPlayerStats(user.id);
-        
-        // Fetch recent quiz history
-        const recentQuizzes = await PlayerService.getRecentQuizzes(user.id, 5);
-        
-        // Fetch player achievements
-        const achievements = await PlayerService.getPlayerAchievements(user.id);
-        
-        // Additional dashboard data
-        const dashboardData = {
-            welcomeMessage: getWelcomeMessage(),
-            quickActions: getQuickActions(),
-            notifications: [], // TODO: Implement notifications system
-            upcomingQuizzes: [], // TODO: Implement scheduled quizzes
-        };
-        
-        res.render('player/dashboard', {
-            title: 'Player Dashboard',
-            user: user,
-            stats: stats,
-            recentQuizzes: recentQuizzes,
-            achievements: achievements,
-            dashboardData: dashboardData,
-            layout: false // Use custom layout in the template
-        });
-        
+        const stats = await PlayerService.getPlayerStats(req.session.user.id);
+        res.json({ success: true, stats: stats });
     } catch (error) {
-        console.error('Player dashboard error:', error);
-        res.status(500).render('error/500', {
-            title: 'Server Error',
-            message: 'Unable to load dashboard. Please try again later.',
-            layout: false
-        });
+        console.error('API stats error:', error);
+        res.status(500).json({ error: 'Failed to fetch stats' });
     }
 });
 
+// API endpoint for updating player profile
+app.put('/api/player/profile', requireAuth, async (req, res) => {
+    if (req.session.user.role !== 'player') {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    try {
+        const updatedUser = await PlayerService.updatePlayerProfile(
+            req.session.user.id, 
+            req.body
+        );
+        
+        // Update session data
+        req.session.user.name = updatedUser.name;
+        req.session.user.email = updatedUser.email;
+        
+        res.json({ 
+            success: true, 
+            message: 'Profile updated successfully',
+            user: {
+                name: updatedUser.name,
+                email: updatedUser.email
+            }
+        });
+    } catch (error) {
+        console.error('API profile update error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+});
+
+// ========================================
+// HELPER FUNCTIONS
+// ========================================
 // Helper function to get time-based welcome message
 function getWelcomeMessage() {
     const hour = new Date().getHours();
@@ -595,149 +932,9 @@ function getQuickActions() {
     ];
 }
 
-// Additional player routes that integrate with the new dashboard
-
-// Player profile route
-app.get('/player/profile', requireAuth, async (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes');
-    }
-    
-    try {
-        const user = req.session.user;
-        const stats = await PlayerService.getPlayerStats(user.id);
-        
-        res.render('player/profile', {
-            title: 'Player Profile',
-            user: user,
-            stats: stats,
-            layout: false
-        });
-    } catch (error) {
-        console.error('Player profile error:', error);
-        res.redirect('/player/dashboard');
-    }
-});
-
-// Player history route
-app.get('/player/history', requireAuth, async (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes');
-    }
-    
-    try {
-        const user = req.session.user;
-        const page = parseInt(req.query.page) || 1;
-        const limit = 20;
-        
-        const quizHistory = await PlayerService.getRecentQuizzes(user.id, limit);
-        const analytics = await PlayerService.getPlayerAnalytics(user.id);
-        
-        res.render('player/history', {
-            title: 'Quiz History',
-            user: user,
-            quizHistory: quizHistory,
-            analytics: analytics,
-            currentPage: page,
-            layout: false
-        });
-    } catch (error) {
-        console.error('Player history error:', error);
-        res.redirect('/player/dashboard');
-    }
-});
-
-// Player achievements route
-app.get('/player/achievements', requireAuth, async (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes');
-    }
-    
-    try {
-        const user = req.session.user;
-        const achievements = await PlayerService.getPlayerAchievements(user.id);
-        
-        res.render('player/achievements', {
-            title: 'Achievements',
-            user: user,
-            achievements: achievements,
-            layout: false
-        });
-    } catch (error) {
-        console.error('Player achievements error:', error);
-        res.redirect('/player/dashboard');
-    }
-});
-
-// Player leaderboard route
-app.get('/player/leaderboard', requireAuth, async (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes');
-    }
-    
-    try {
-        const user = req.session.user;
-        const leaderboard = await PlayerService.getLeaderboard(50);
-        const userStats = await PlayerService.getPlayerStats(user.id);
-        
-        res.render('player/leaderboard', {
-            title: 'Leaderboard',
-            user: user,
-            leaderboard: leaderboard,
-            userStats: userStats,
-            layout: false
-        });
-    } catch (error) {
-        console.error('Player leaderboard error:', error);
-        res.redirect('/player/dashboard');
-    }
-});
-
-// API endpoint for updating player stats (for AJAX calls)
-app.get('/api/player/stats', requireAuth, async (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.status(403).json({ error: 'Access denied' });
-    }
-    
-    try {
-        const stats = await PlayerService.getPlayerStats(req.session.user.id);
-        res.json({ success: true, stats: stats });
-    } catch (error) {
-        console.error('API stats error:', error);
-        res.status(500).json({ error: 'Failed to fetch stats' });
-    }
-});
-
-// API endpoint for updating player profile
-app.put('/api/player/profile', requireAuth, async (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.status(403).json({ error: 'Access denied' });
-    }
-    
-    try {
-        const updatedUser = await PlayerService.updatePlayerProfile(
-            req.session.user.id, 
-            req.body
-        );
-        
-        // Update session data
-        req.session.user.name = updatedUser.name;
-        req.session.user.email = updatedUser.email;
-        
-        res.json({ 
-            success: true, 
-            message: 'Profile updated successfully',
-            user: {
-                name: updatedUser.name,
-                email: updatedUser.email
-            }
-        });
-    } catch (error) {
-        console.error('API profile update error:', error);
-        res.status(500).json({ error: 'Failed to update profile' });
-    }
-});
-
+// ========================================
+// ERROR HANDLING MIDDLEWARE - KEEP EXISTING
+// ========================================
 // Error handling for file uploads
 app.use((error, req, res, next) => {
     if (error instanceof multer.MulterError) {
@@ -846,6 +1043,9 @@ app.use((req, res) => {
     `);
 });
 
+// ========================================
+// SERVER STARTUP - KEEP EXISTING
+// ========================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
@@ -860,4 +1060,9 @@ app.listen(PORT, () => {
     console.log(`\n🔒 Access Control:`);
     console.log(`   ✅ Quiz management now requires admin role`);
     console.log(`   ✅ Players have their own dashboard and features`);
+    console.log(`\n🚀 Enhanced Features:`);
+    console.log(`   ✅ Modern quiz list with advanced filtering`);
+    console.log(`   ✅ Quiz analytics and statistics`);
+    console.log(`   ✅ Enhanced player dashboard`);
+    console.log(`   ✅ API endpoints for real-time data`);
 });

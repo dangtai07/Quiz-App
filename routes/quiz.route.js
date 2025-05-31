@@ -6,7 +6,7 @@ const upload = require('../config/multer.config');
 // Add new route for rendering create page
 router.get('/create', QuizController.renderCreateQuiz);
 
-// New route for getting all quizzes
+// Enhanced route for getting all quizzes (now includes enhanced data)
 router.get('/', QuizController.getQuizzes);
 
 // Existing routes
@@ -15,6 +15,14 @@ router.get('/:id', QuizController.getQuiz);
 router.get('/:id/preview', QuizController.previewQuiz);
 router.get('/:id/edit', QuizController.renderEditQuiz);
 router.put('/:id', upload.any(), QuizController.updateQuiz);
-router.delete('/:id', QuizController.deleteQuiz);
+
+// Enhanced delete route - using the enhanced method
+router.delete('/:id', QuizController.deleteQuizEnhanced);
+
+// New route for quiz duplication
+router.post('/:id/duplicate', QuizController.duplicateQuiz);
+
+// New route for analytics
+router.get('/api/analytics', QuizController.getAnalytics);
 
 module.exports = router;
