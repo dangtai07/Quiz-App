@@ -1011,10 +1011,6 @@ body::before {
     }
 }
 
-/* Ensure question cards have enough margin for buttons */
-.modern-card {
-    margin-right: 80px; /* Increased space for action buttons */
-}
 
 @media (max-width: 768px) {
     .modern-card {

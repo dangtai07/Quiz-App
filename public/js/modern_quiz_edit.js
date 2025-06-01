@@ -6,7 +6,7 @@ let previewTimer;
 document.addEventListener('DOMContentLoaded', function() {
     setupAutoSave();
     updateQuestionCount();
-    initializeTooltips();
+    //initializeTooltips();
     
     // Log initialization info
     console.log('Quiz edit initialized with', questionCount, 'questions');
@@ -37,12 +37,104 @@ function setupAutoSave() {
         triggerAutoSave();
     });
 }
-
+function renumberQuestions() {
+    const questionElements = document.querySelectorAll('.question-card-modern');
+    questionElements.forEach((element, index) => {
+        const newNum = index + 1;
+        
+        // Update element ID
+        element.id = `question-${newNum}`;
+        
+        // Update question number display
+        const numberDisplay = element.querySelector('.question-number');
+        if (numberDisplay) numberDisplay.textContent = newNum;
+        
+        // Update heading
+        const heading = element.querySelector('h5');
+        if (heading) heading.textContent = `Question ${newNum}`;
+        
+        // Update all form element IDs and event handlers
+        updateQuestionElementIds(element, newNum);
+        
+        // Update questions array
+        if (questions[index]) {
+            questions[index].id = newNum;
+        }
+    });
+    
+    questionCount = questionElements.length;
+}
 function triggerAutoSave() {
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => {
         saveDraft();
     }, 2000);
+}
+function updateQuestionElementIds(element, newNum) {
+    // Update textarea
+    const textarea = element.querySelector('textarea');
+    if (textarea) {
+        textarea.id = `question-${newNum}-content`;
+        textarea.setAttribute('oninput', `updateQuestion(${newNum}, 'content', this.value)`);
+    }
+    
+    // Update select
+    const select = element.querySelector('select');
+    if (select) {
+        select.id = `question-${newNum}-type`;
+        select.setAttribute('onchange', `toggleQuestionType(${newNum}, this.value)`);
+    }
+    
+    // Update file input
+    const fileInput = element.querySelector('input[type="file"]');
+    if (fileInput) {
+        fileInput.id = `image-${newNum}`;
+        fileInput.setAttribute('onchange', `handleImageUpload(${newNum}, this)`);
+    }
+    
+    // Update image upload zone
+    const uploadZone = element.querySelector('.image-upload-zone');
+    if (uploadZone) {
+        uploadZone.setAttribute('onclick', `document.getElementById('image-${newNum}').click()`);
+    }
+    
+    // Update action buttons
+    const actionButtons = element.querySelectorAll('.action-btn');
+    actionButtons.forEach(button => {
+        const icon = button.querySelector('i');
+        if (icon) {
+            if (icon.classList.contains('fa-arrow-up')) {
+                button.setAttribute('onclick', `moveQuestion(${newNum}, 'up')`);
+            } else if (icon.classList.contains('fa-arrow-down')) {
+                button.setAttribute('onclick', `moveQuestion(${newNum}, 'down')`);
+            } else if (icon.classList.contains('fa-copy')) {
+                button.setAttribute('onclick', `duplicateQuestion(${newNum})`);
+            } else if (icon.classList.contains('fa-trash')) {
+                button.setAttribute('onclick', `deleteQuestion(${newNum})`);
+            }
+        }
+    });
+    
+    // Update options container
+    const optionsContainer = element.querySelector('.answer-options');
+    if (optionsContainer) {
+        optionsContainer.id = `options-${newNum}`;
+        
+        // Update option inputs and radios
+        const optionInputs = optionsContainer.querySelectorAll('input[type="text"]');
+        optionInputs.forEach((input, index) => {
+            const letter = String.fromCharCode(65 + index); // A, B, C, D
+            input.id = `option-${newNum}-${letter}`;
+            input.setAttribute('oninput', `updateQuestion(${newNum}, 'option${letter}', this.value)`);
+        });
+        
+        const radioButtons = optionsContainer.querySelectorAll('.option-radio');
+        radioButtons.forEach((radio, index) => {
+            const letter = String.fromCharCode(65 + index); // A, B, C, D
+            radio.id = `radio-${newNum}-${letter}`;
+            radio.setAttribute('onclick', `selectCorrectAnswer(${newNum}, '${letter}')`);
+        });
+    }
 }
 
 function saveDraft() {
@@ -413,7 +505,7 @@ function renderAllQuestions() {
                          style="max-width: 100%; max-height: 200px; border-radius: 8px;">
                     <div class="mt-2">
                         <button class="btn btn-sm btn-outline-danger" 
-                                onclick="removeImage(${id})" type="button">
+                                onclick="removeImage(${id}, event)" type="button">
                             <i class="fas fa-trash me-1"></i> Remove
                         </button>
                     </div>
@@ -856,7 +948,48 @@ async function updateQuiz() {
 }
 
 // =================== UTILITY FUNCTIONS ===================
-
+function deleteQuestion(num) {
+    Swal.fire({
+        title: 'Delete Question?',
+        text: `Are you sure you want to delete Question ${num}? This action cannot be undone.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, Delete Question',
+        cancelButtonText: 'Cancel',
+        customClass: {
+            popup: 'swal-modern'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const element = document.getElementById(`question-${num}`);
+            if (element) {
+                // Add exit animation
+                element.style.animation = 'fadeOut 0.3s ease-out';
+                
+                setTimeout(() => {
+                    element.remove();
+                    questions = questions.filter(q => q.id !== num);
+                    renumberQuestions();
+                    updateQuestionCount();
+                    triggerAutoSave();
+                }, 300);
+                
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'Question has been deleted successfully.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    customClass: {
+                        popup: 'swal-modern'
+                    }
+                });
+            }
+        }
+    });
+}
 // function initializeTooltips() {
 //     // Initialize tooltips for action buttons
 //     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
@@ -901,7 +1034,7 @@ function handleImageUpload(num, input) {
                     uploadZone.innerHTML = `
                         <img src="${e.target.result}" alt="Question Image" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
                         <div class="mt-2">
-                            <button class="btn btn-sm btn-outline-danger" onclick="removeImage(${num})" type="button">
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeImage(${num}, event)" type="button">
                                 <i class="fas fa-trash me-1"></i> Remove
                             </button>
                         </div>
@@ -914,7 +1047,10 @@ function handleImageUpload(num, input) {
     }
 }
 
-function removeImage(num) {
+function removeImage(num, event) {
+    if (event) {
+        event.stopPropagation(); // Prevent click from triggering upload zone
+    }
     const question = questions.find(q => q.id === num);
     if (question) {
         question.image = null;

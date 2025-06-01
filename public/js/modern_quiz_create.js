@@ -31,7 +31,210 @@ function previousStep() {
         showCurrentSection();
     }
 }
+function handleImageUpload(num, input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Find the question and set image
+            const question = questions.find(q => q.id === num);
+            if (question) {
+                question.image = {
+                    file: file,
+                    preview: e.target.result
+                };
+                // Show preview in UI
+                const uploadZone = document.querySelector(`#question-${num} .image-upload-zone`);
+                if (uploadZone) {
+                    uploadZone.classList.add('has-image');
+                    uploadZone.innerHTML = `
+                        <img src="${e.target.result}" alt="Question Image" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeImage(${num}, event)" type="button">
+                                <i class="fas fa-trash me-1"></i> Remove
+                            </button>
+                        </div>
+                    `;
+                }
+                triggerAutoSave();
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+function removeImage(num, event) {
+    if (event) event.stopPropagation();
 
+    const question = questions.find(q => q.id === num);
+    if (question) {
+        question.image = null;
+        // Restore upload UI with input and event handler
+        const uploadZone = document.querySelector(`#question-${num} .image-upload-zone`);
+        if (uploadZone) {
+            uploadZone.classList.remove('has-image');
+            uploadZone.innerHTML = `
+                <input type="file"
+                       id="image-${num}"
+                       accept="image/*"
+                       style="display: none;"
+                       onchange="handleImageUpload(${num}, this)">
+                <div class="upload-content">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h6>Upload Image</h6>
+                    <p class="text-muted small mb-0">Click to select image</p>
+                </div>
+            `;
+        }
+        triggerAutoSave();
+    }
+}
+function renderAllQuestions() {
+    const container = document.getElementById('questionsContainer');
+    
+    // Store scroll position
+    const scrollPosition = window.scrollY;
+    
+    container.innerHTML = '';
+    
+    questions.forEach((q, idx) => {
+        q.id = idx + 1;
+        container.insertAdjacentHTML('beforeend', createQuestionHtml(q.id));
+    });
+    
+    // Restore values for each question
+    questions.forEach((q, idx) => {
+        const id = idx + 1;
+        const contentEl = document.getElementById(`question-${id}-content`);
+        if (contentEl) contentEl.value = q.content;
+        
+        const typeEl = document.getElementById(`question-${id}-type`);
+        if (typeEl) {
+            typeEl.value = q.type;
+            toggleQuestionType(id, q.type);
+        }
+        
+        // Restore options
+        if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
+            ['A', 'B', 'C', 'D'].forEach((letter, i) => {
+                const optEl = document.getElementById(`option-${id}-${letter}`);
+                if (optEl) optEl.value = q.options[i] || '';
+            });
+            if (q.correctAnswer) selectCorrectAnswer(id, q.correctAnswer);
+        }
+        
+        // Restore image preview if available
+        if (q.image && q.image.preview) {
+            const uploadZone = document.querySelector(`#question-${id} .image-upload-zone`);
+            if (uploadZone) {
+                uploadZone.classList.add('has-image');
+                uploadZone.innerHTML = `
+                    <img src="${q.image.preview}" alt="Question Image" 
+                         style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="removeImage(${id}, event)" type="button">
+                            <i class="fas fa-trash me-1"></i> Remove
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    });
+    
+    questionCount = questions.length;
+    updateQuestionCount();
+    
+    // Restore approximate scroll position
+    window.scrollTo(0, scrollPosition);
+}
+function moveQuestion(num, direction) {
+    const idx = questions.findIndex(q => q.id === num);
+    if (idx === -1) return;
+
+    let newIdx = idx;
+    if (direction === 'up' && idx > 0) {
+        newIdx = idx - 1;
+    } else if (direction === 'down' && idx < questions.length - 1) {
+        newIdx = idx + 1;
+    } else {
+        showNotification(
+            `Cannot move ${direction}. Question is already at the ${direction === 'up' ? 'top' : 'bottom'}.`,
+            'warning'
+        );
+        return;
+    }
+
+    // Add transitioning class to maintain button visibility
+    const allCards = document.querySelectorAll('.question-card-modern');
+    allCards.forEach(card => card.classList.add('transitioning'));
+
+    // Swap in array
+    const temp = questions[idx];
+    questions[idx] = questions[newIdx];
+    questions[newIdx] = temp;
+
+    // Re-render all questions in new order
+    renderAllQuestions();
+
+    // Scroll and highlight the moved question
+    setTimeout(() => {
+        // Remove transitioning class
+        const updatedCards = document.querySelectorAll('.question-card-modern');
+        updatedCards.forEach(card => {
+            card.classList.remove('transitioning', 'active-question', 'recently-moved');
+        });
+
+        const movedCard = document.getElementById(`question-${newIdx + 1}`);
+        if (movedCard) {
+            // Add visual feedback classes
+            movedCard.classList.add('recently-moved', 'active-question');
+            
+            // Scroll so the moved question's header is visible
+            const header = movedCard.querySelector('.question-header');
+            if (header) {
+                const rect = header.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                window.scrollTo({
+                    top: rect.top + scrollTop - 20, // Small offset from top
+                    behavior: 'smooth'
+                });
+            }
+
+            // Keep the action buttons visible for longer
+            setTimeout(() => {
+                movedCard.classList.remove('recently-moved');
+            }, 2000);
+
+            // Remove active state after a delay
+            setTimeout(() => {
+                movedCard.classList.remove('active-question');
+            }, 3000);
+        }
+    }, 100);
+
+    triggerAutoSave();
+    showNotification(`Question moved ${direction} successfully!`, 'success');
+}
+function updateQuestionCount() {
+    const countElement = document.getElementById('questionCount');
+    const countDisplayElement = document.getElementById('questionCountDisplay');
+    
+    if (countElement) {
+        countElement.textContent = questions.length;
+    }
+    if (countDisplayElement) {
+        countDisplayElement.textContent = questions.length;
+    }
+    
+    // Update estimated duration
+    const estimatedElement = document.getElementById('estimatedDuration');
+    if (estimatedElement) {
+        const minutes = Math.round(questions.length * 1.5);
+        estimatedElement.textContent = minutes < 60 ? `${minutes} min` : `${Math.floor(minutes/60)}h ${minutes%60}m`;
+    }
+}
 function updateStepIndicator() {
     document.querySelectorAll('.step').forEach((step, index) => {
         const stepNum = index + 1;
@@ -396,68 +599,43 @@ function deleteQuestion(num) {
     });
 }
 
+// Enhanced duplicate function with better visibility
 function duplicateQuestion(num) {
-    const originalQuestion = questions.find(q => q.id === num);
-    if (originalQuestion) {
-        questionCount++;
-        const newQuestion = {
-            ...originalQuestion,
-            id: questionCount,
-            content: originalQuestion.content + ' (Copy)'
-        };
-        questions.push(newQuestion);
-        
-        const questionHtml = createQuestionHtml(questionCount);
-        const originalElement = document.getElementById(`question-${num}`);
-        originalElement.insertAdjacentHTML('afterend', questionHtml);
-        
-        // Populate the duplicated question data
-        setTimeout(() => {
-            const contentElement = document.getElementById(`question-${questionCount}-content`);
-            if (contentElement) {
-                contentElement.value = newQuestion.content;
-                contentElement.dispatchEvent(new Event('input'));
-            }
+    const idx = questions.findIndex(q => q.id === num);
+    if (idx === -1) return;
+    
+    questionCount++;
+    const original = questions[idx];
+    // Deep clone options
+    const newQuestion = {
+        ...JSON.parse(JSON.stringify(original)),
+        id: questionCount,
+        content: original.content + ' (Copy)'
+    };
+    
+    questions.splice(idx + 1, 0, newQuestion);
+    renderAllQuestions();
+    updateQuestionCount();
+    triggerAutoSave();
+    
+    showNotification('Question duplicated successfully!', 'success');
+    
+    // Highlight the duplicated question
+    setTimeout(() => {
+        const duplicatedCard = document.getElementById(`question-${idx + 2}`);
+        if (duplicatedCard) {
+            duplicatedCard.classList.add('recently-moved', 'active-question');
+            duplicatedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            // Set question type
-            const typeElement = document.getElementById(`question-${questionCount}-type`);
-            if (typeElement) {
-                typeElement.value = originalQuestion.type;
-                toggleQuestionType(questionCount, originalQuestion.type);
-            }
+            setTimeout(() => {
+                duplicatedCard.classList.remove('recently-moved');
+            }, 2000);
             
-            // Copy options if multiple choice
-            if (originalQuestion.type === 'multiple_choice') {
-                ['A', 'B', 'C', 'D'].forEach((letter, index) => {
-                    const optionInput = document.getElementById(`option-${questionCount}-${letter}`);
-                    if (optionInput && originalQuestion.options[index]) {
-                        optionInput.value = originalQuestion.options[index];
-                        updateQuestion(questionCount, `option${letter}`, originalQuestion.options[index]);
-                    }
-                });
-                
-                if (originalQuestion.correctAnswer) {
-                    selectCorrectAnswer(questionCount, originalQuestion.correctAnswer);
-                }
-            }
-        }, 100);
-        
-        updateQuestionCount();
-        triggerAutoSave();
-        
-        showNotification('Question duplicated successfully!', 'success');
-        
-        // Scroll to new question
-        setTimeout(() => {
-            const element = document.getElementById(`question-${questionCount}`);
-            if (element) {
-                element.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }
-        }, 200);
-    }
+            setTimeout(() => {
+                duplicatedCard.classList.remove('active-question');
+            }, 4000);
+        }
+    }, 200);
 }
 
 // Function to renumber questions after reordering
@@ -764,7 +942,7 @@ function restoreDraft(quizData) {
                              style="max-width: 100%; max-height: 200px; border-radius: 8px;">
                         <div class="mt-2">
                             <button class="btn btn-sm btn-outline-danger" 
-                                    onclick="removeImage(${question.id})" type="button">
+                                    onclick="removeImage(${question.id}, event)" type="button">
                                 <i class="fas fa-trash me-1"></i> Remove
                             </button>
                         </div>

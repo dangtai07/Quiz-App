@@ -652,7 +652,7 @@ body::before {
 .question-actions {
     position: absolute;
     right: -60px; /* Position outside the card */
-    top: 50%;
+    top: 200%;
     transform: translateY(-50%);
     display: flex;
     flex-direction: column;
@@ -774,11 +774,6 @@ body::before {
     .action-btn::after {
         display: none; /* Hide tooltips on mobile */
     }
-}
-
-/* Ensure question cards have enough margin for buttons */
-.modern-card {
-    margin-right: 70px; /* Add space for action buttons */
 }
 
 @media (max-width: 768px) {
