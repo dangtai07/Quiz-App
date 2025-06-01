@@ -164,7 +164,6 @@ class QuizService {
 
     async updateQuiz(id, quizData, files) {
         try {
-            console.log('quizData:', quizData);
             const quiz = await Quiz.findById(id);
             if (!quiz) {
                 throw new Error('Quiz not found');
@@ -176,26 +175,58 @@ class QuizService {
             // Process images and save paths
             const processedQuestions = questionsData.map(question => {
                 const imageKey = `questionImage_${question.number}`;
-                // Find file where fieldname matches imageKey
-                const imageFile = files ? Object.values(files).flat().find(f => f.fieldname === imageKey) : null;
+                let imageFile = null;
+                if (files && Array.isArray(files)) {
+                    imageFile = files.find(f => f.fieldname === imageKey);
+                } else if (files && typeof files === 'object') {
+                    imageFile = Object.values(files).flat().find(f => f.fieldname === imageKey);
+                }
+
                 let imagePath = null;
 
-                // If there's a new image uploaded
-                if (imageFile) {
-                    imagePath = '/' + imageFile.path.split('public\\')[1].replace(/\\/g, '/');
-                    
-                    // Delete old image if exists
-                    const oldQuestion = quiz.questions.find(q => q.number === question.number);
-                    if (oldQuestion?.image) {
-                        const oldImagePath = path.join(__dirname, '../public', oldQuestion.image);
-                        fs.unlink(oldImagePath, err => {
-                            if (err) console.error('Error deleting old image:', err);
-                        });
+                // If imageFile exists, process new upload
+                if (imageFile && imageFile.path) {
+                    try {
+                        const pathParts = imageFile.path.split('public');
+                        if (pathParts.length > 1 && pathParts[1]) {
+                            imagePath = pathParts[1].replace(/\\/g, '/');
+                            if (!imagePath.startsWith('/')) {
+                                imagePath = '/' + imagePath;
+                            }
+                            imagePath = imagePath.replace(/\/+/g, '/');
+                        } else {
+                            const filename = path.basename(imageFile.path);
+                            imagePath = `/uploads/quiz_images/${filename}`;
+                        }
+                        // Delete old image if exists
+                        const oldQuestion = quiz.questions.find(q => q.number === question.number);
+                        if (oldQuestion?.image) {
+                            const oldImagePath = path.join(__dirname, '../public', oldQuestion.image);
+                            fs.unlink(oldImagePath, err => {
+                                if (err) console.log('Note: Could not delete old image:', err.message);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error processing image path:', error);
+                        imagePath = null;
                     }
                 } else {
-                    // Keep existing image if no new image uploaded
+                    // Check if the image should be removed (frontend sends image: null or empty)
                     const existingQuestion = quiz.questions.find(q => q.number === question.number);
-                    imagePath = existingQuestion?.image || null;
+                    // If the incoming question.image is null/empty and there was an old image, remove it
+                    if (
+                        (!question.image || question.image === '' || question.image === null) &&
+                        existingQuestion?.image
+                    ) {
+                        const oldImagePath = path.join(__dirname, '../public', existingQuestion.image);
+                        fs.unlink(oldImagePath, err => {
+                            if (err) console.log('Note: Could not delete removed image:', err.message);
+                        });
+                        imagePath = null;
+                    } else {
+                        // Otherwise, keep the existing image
+                        imagePath = existingQuestion?.image || null;
+                    }
                 }
 
                 return {

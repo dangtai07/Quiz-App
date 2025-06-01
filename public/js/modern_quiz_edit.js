@@ -87,8 +87,19 @@ function toggleScheduleSettings() {
 function updateQuestion(num, field, value) {
     const question = questions.find(q => q.id === num);
     if (question) {
+        // Ensure options is always an array of 4 strings for multiple_choice
+        if (question.type === 'multiple_choice') {
+            if (!Array.isArray(question.options) || question.options.length !== 4) {
+                question.options = Array.isArray(question.options)
+                    ? [...question.options, '', '', '', ''].slice(0, 4)
+                    : ['', '', '', ''];
+            }
+        }
         if (field.startsWith('option')) {
             const index = field.charCodeAt(6) - 65; // Convert A,B,C,D to 0,1,2,3
+            if (!Array.isArray(question.options)) {
+                question.options = ['', '', '', ''];
+            }
             question.options[index] = value;
         } else {
             question[field] = value;
@@ -177,18 +188,17 @@ function addQuestion() {
         correctAnswer: '',
         image: null
     };
-    
     questions.push(newQuestion);
-    
     const questionHtml = createQuestionHtml(questionCount);
     const container = document.getElementById('questionsContainer');
     const addButton = container.querySelector('.add-question-btn');
-    addButton.insertAdjacentHTML('beforebegin', questionHtml);
-    
+    if (addButton) {
+        addButton.insertAdjacentHTML('beforebegin', questionHtml);
+    } else {
+        container.insertAdjacentHTML('beforeend', questionHtml);
+    }
     updateQuestionCount();
     triggerAutoSave();
-    
-    // Scroll to new question
     setTimeout(() => {
         const element = document.getElementById(`question-${questionCount}`);
         if (element) {
@@ -232,7 +242,6 @@ function createQuestionHtml(num) {
                                       oninput="updateQuestion(${num}, 'content', this.value)"></textarea>
                             <label class="form-label-modern">Question Content</label>
                         </div>
-                        
                         <div class="form-floating-modern">
                             <select class="form-control-modern" id="question-${num}-type" 
                                     onchange="toggleQuestionType(${num}, this.value)">
@@ -256,7 +265,6 @@ function createQuestionHtml(num) {
                         </div>
                     </div>
                 </div>
-                
                 <div class="answer-options" id="options-${num}">
                     <h6 class="text-primary mb-3">Answer Options</h6>
                     ${createOptionsHtml(num)}
@@ -306,33 +314,24 @@ function renumberQuestions() {
     const questionElements = document.querySelectorAll('.question-card-modern');
     questionElements.forEach((element, index) => {
         const newNum = index + 1;
-        const oldId = element.id;
-        
-        // Update element ID
         element.id = `question-${newNum}`;
-        
-        // Update question number display
         const numberDisplay = element.querySelector('.question-number');
-        if (numberDisplay) {
-            numberDisplay.textContent = newNum;
-        }
-        
-        // Update heading
+        if (numberDisplay) numberDisplay.textContent = newNum;
         const heading = element.querySelector('h5');
-        if (heading) {
-            heading.textContent = `Question ${newNum}`;
-        }
-        
-        // Update all IDs and onclick handlers within this question
+        if (heading) heading.textContent = `Question ${newNum}`;
         updateQuestionElementIds(element, newNum);
-        
-        // Update the question object ID
+        // Normalize options array
         if (questions[index]) {
             questions[index].id = newNum;
+            if (questions[index].type === 'multiple_choice') {
+                if (!Array.isArray(questions[index].options) || questions[index].options.length !== 4) {
+                    questions[index].options = Array.isArray(questions[index].options)
+                        ? [...questions[index].options, '', '', '', ''].slice(0, 4)
+                        : ['', '', '', ''];
+                }
+            }
         }
     });
-    
-    // Update global question count
     questionCount = questionElements.length;
 }
 
@@ -407,32 +406,30 @@ function duplicateQuestion(num) {
     const originalQuestion = questions.find(q => q.id === num);
     if (originalQuestion) {
         questionCount++;
+        // Deep clone options array
         const newQuestion = {
             ...originalQuestion,
-            id: questionCount
+            id: questionCount,
+            options: Array.isArray(originalQuestion.options)
+                ? [...originalQuestion.options, '', '', '', ''].slice(0, 4)
+                : ['', '', '', '']
         };
         questions.push(newQuestion);
-        
         const questionHtml = createQuestionHtml(questionCount);
         const originalElement = document.getElementById(`question-${num}`);
         originalElement.insertAdjacentHTML('afterend', questionHtml);
-        
-        // Populate the duplicated question data
         setTimeout(() => {
             const contentElement = document.getElementById(`question-${questionCount}-content`);
             if (contentElement) {
                 contentElement.value = originalQuestion.content;
                 contentElement.dispatchEvent(new Event('input'));
             }
-            
-            // Set question type
             const typeElement = document.getElementById(`question-${questionCount}-type`);
             if (typeElement) {
                 typeElement.value = originalQuestion.type;
                 toggleQuestionType(questionCount, originalQuestion.type);
             }
         }, 100);
-        
         updateQuestionCount();
         triggerAutoSave();
     }
