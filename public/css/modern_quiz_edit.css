@@ -199,6 +199,11 @@ body::before {
     transform: translateY(-4px);
     box-shadow: var(--shadow-medium);
 }
+.align-avatar-image {
+    position: absolute;
+    top: 0%;
+    left: 0%;
+}
 .rounded-circle {
     border-radius: 50% !important;
     width: 40px !important;

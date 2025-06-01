@@ -140,6 +140,16 @@
     border-color: #28a745;
     background-color: #d4edda;
 }
+.align-avatar-image {
+    position: absolute;
+    top: 0%;
+    left: 0%;
+}
+.align-avatar-image {
+    position: absolute;
+    top: 0%;
+    left: 0%;
+}
 .rounded-circle {
     border-radius: 50% !important;
     width: 40px !important;

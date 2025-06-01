@@ -63,7 +63,11 @@ body::before {
     transform: translateX(0);
     opacity: 1;
 }
-
+.align-avatar-image {
+    position: absolute;
+    top: 0%;
+    left: 0%;
+}
 .rounded-circle {
     border-radius: 50% !important;
     width: 40px !important;
