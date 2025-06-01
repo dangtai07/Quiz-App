@@ -219,7 +219,7 @@
                                     </div>
                                 </div>
                                 <div class="col-lg-4">
-                                    <div class="image-upload-zone" onclick="document.getElementById('image-<%= index + 1 %>').click()">
+                                    <div class="image-upload-zone <% if (question.image) { %>has-image<% } %>" onclick="document.getElementById('image-<%= index + 1 %>').click()">
                                         <input type="file" id="image-<%= index + 1 %>" accept="image/*" style="display: none;" 
                                                onchange="handleImageUpload(<%= index + 1 %>, this)">
                                         <% if (question.image) { %>
@@ -391,29 +391,40 @@
     </div>
 </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-    const quizId = '<%= quiz._id %>';
-    let questionCount = <%= quiz.questions.length %>;
-    let questions = [
-        <% quiz.questions.forEach((question, index) => { %>
-        {
-            id: <%= index + 1 %>,
-            type: '<%= question.type %>',
-            content: `<%= question.content.replace(/`/g, '\\`') %>`,
-            options: [
-                <% ['A', 'B', 'C', 'D'].forEach(letter => { %>
-                    '<%= question.options.find(opt => opt.letter === letter)?.text || '' %>',
-                <% }); %>
-            ],
-            correctAnswer: '<%= question.correctAnswer && question.correctAnswer.length > 0 ? question.correctAnswer[0] : '' %>',
-            image: <%= question.image ? `'${question.image}'` : 'null' %>
-        }<%= index < quiz.questions.length - 1 ? ',' : '' %>
-        <% }); %>
-    ];
-    </script>
-    <script src="/js/modern_quiz_edit.js"></script>
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Initialize quiz data safely -->
+<script>
+// Initialize quiz data safely to avoid syntax errors
+window.quizData = {
+    id: '<%= quiz._id %>',
+    title: <%- JSON.stringify(quiz.title) %>,
+    mode: '<%= quiz.mode %>',
+    language: '<%= quiz.language %>',
+    scheduleSettings: <%- JSON.stringify(quiz.scheduleSettings || null) %>,
+    questions: <%- JSON.stringify(quiz.questions.map((question, index) => ({
+        id: index + 1,
+        type: question.type,
+        content: question.content,
+        options: ['A', 'B', 'C', 'D'].map(letter => 
+            question.options.find(opt => opt.letter === letter)?.text || ''
+        ),
+        correctAnswer: question.correctAnswer && question.correctAnswer.length > 0 ? question.correctAnswer[0] : '',
+        image: question.image || null
+    }))) %>
+};
+
+// Set global variables
+const quizId = window.quizData.id;
+let questionCount = window.quizData.questions.length;
+let questions = window.quizData.questions;
+
+console.log('Quiz edit initialized with', questionCount, 'questions');
+console.log('Quiz ID:', quizId);
+</script>
+
+<script src="/js/modern_quiz_edit.js"></script>
 </body>
 </html>

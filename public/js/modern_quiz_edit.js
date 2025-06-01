@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setupAutoSave();
     updateQuestionCount();
     initializeTooltips();
+    
+    // Log initialization info
+    console.log('Quiz edit initialized with', questionCount, 'questions');
+    console.log('Quiz ID:', quizId);
 });
 
 // =================== AUTO-SAVE FUNCTIONALITY ===================
@@ -277,7 +281,13 @@ function deleteQuestion(num) {
             if (element) {
                 element.remove();
             }
+            
+            // Remove from questions array
             questions = questions.filter(q => q.id !== num);
+            
+            // Update question numbers and renumber remaining questions
+            renumberQuestions();
+            
             updateQuestionCount();
             triggerAutoSave();
             
@@ -290,6 +300,107 @@ function deleteQuestion(num) {
             });
         }
     });
+}
+
+function renumberQuestions() {
+    const questionElements = document.querySelectorAll('.question-card-modern');
+    questionElements.forEach((element, index) => {
+        const newNum = index + 1;
+        const oldId = element.id;
+        
+        // Update element ID
+        element.id = `question-${newNum}`;
+        
+        // Update question number display
+        const numberDisplay = element.querySelector('.question-number');
+        if (numberDisplay) {
+            numberDisplay.textContent = newNum;
+        }
+        
+        // Update heading
+        const heading = element.querySelector('h5');
+        if (heading) {
+            heading.textContent = `Question ${newNum}`;
+        }
+        
+        // Update all IDs and onclick handlers within this question
+        updateQuestionElementIds(element, newNum);
+        
+        // Update the question object ID
+        if (questions[index]) {
+            questions[index].id = newNum;
+        }
+    });
+    
+    // Update global question count
+    questionCount = questionElements.length;
+}
+
+function updateQuestionElementIds(element, newNum) {
+    // Update content textarea
+    const contentTextarea = element.querySelector('textarea');
+    if (contentTextarea) {
+        contentTextarea.id = `question-${newNum}-content`;
+        contentTextarea.setAttribute('oninput', `updateQuestion(${newNum}, 'content', this.value)`);
+    }
+    
+    // Update type select
+    const typeSelect = element.querySelector('select');
+    if (typeSelect) {
+        typeSelect.id = `question-${newNum}-type`;
+        typeSelect.setAttribute('onchange', `toggleQuestionType(${newNum}, this.value)`);
+    }
+    
+    // Update image input
+    const imageInput = element.querySelector('input[type="file"]');
+    if (imageInput) {
+        imageInput.id = `image-${newNum}`;
+        imageInput.setAttribute('onchange', `handleImageUpload(${newNum}, this)`);
+    }
+    
+    // Update image upload zone
+    const uploadZone = element.querySelector('.image-upload-zone');
+    if (uploadZone) {
+        uploadZone.setAttribute('onclick', `document.getElementById('image-${newNum}').click()`);
+    }
+    
+    // Update action buttons
+    const actionButtons = element.querySelectorAll('.action-btn');
+    actionButtons.forEach(button => {
+        const icon = button.querySelector('i');
+        if (icon) {
+            if (icon.classList.contains('fa-arrow-up')) {
+                button.setAttribute('onclick', `moveQuestion(${newNum}, 'up')`);
+            } else if (icon.classList.contains('fa-arrow-down')) {
+                button.setAttribute('onclick', `moveQuestion(${newNum}, 'down')`);
+            } else if (icon.classList.contains('fa-copy')) {
+                button.setAttribute('onclick', `duplicateQuestion(${newNum})`);
+            } else if (icon.classList.contains('fa-trash')) {
+                button.setAttribute('onclick', `deleteQuestion(${newNum})`);
+            }
+        }
+    });
+    
+    // Update options container
+    const optionsContainer = element.querySelector('.answer-options');
+    if (optionsContainer) {
+        optionsContainer.id = `options-${newNum}`;
+        
+        // Update option radios and inputs
+        const optionRadios = optionsContainer.querySelectorAll('.option-radio');
+        optionRadios.forEach((radio, index) => {
+            const letter = String.fromCharCode(65 + index); // A, B, C, D
+            radio.id = `radio-${newNum}-${letter}`;
+            radio.setAttribute('onclick', `selectCorrectAnswer(${newNum}, '${letter}')`);
+        });
+        
+        const optionInputs = optionsContainer.querySelectorAll('input[type="text"]');
+        optionInputs.forEach((input, index) => {
+            const letter = String.fromCharCode(65 + index); // A, B, C, D
+            input.id = `option-${newNum}-${letter}`;
+            input.setAttribute('oninput', `updateQuestion(${newNum}, 'option${letter}', this.value)`);
+        });
+    }
 }
 
 function duplicateQuestion(num) {
@@ -354,6 +465,9 @@ function moveQuestion(num, direction) {
         container.insertBefore(questionElement, targetElement.nextSibling);
     }
     
+    // Renumber questions after moving
+    renumberQuestions();
+    
     triggerAutoSave();
 }
 
@@ -411,6 +525,9 @@ function removeImage(num) {
             <p class="text-muted small mb-0">Click to select image</p>
         </div>
     `;
+    
+    // Update onclick handler
+    uploadZone.setAttribute('onclick', `document.getElementById('image-${num}').click()`);
     
     if (fileInput) {
         fileInput.value = '';
