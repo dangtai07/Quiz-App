@@ -210,6 +210,7 @@ function addQuestion() {
     }, 100);
 }
 
+// Enhanced Create Question Function with Action Buttons
 function createQuestionHtml(num) {
     return `
         <div class="question-card-modern animate-slide-up" id="question-${num}">
@@ -218,32 +219,51 @@ function createQuestionHtml(num) {
                     <div class="question-number">${num}</div>
                     <h5 class="mb-0">Question ${num}</h5>
                 </div>
+                
+                <!-- Action Buttons - Positioned outside the card -->
                 <div class="question-actions">
-                    <button class="action-btn" onclick="moveQuestion(${num}, 'up')" title="Move Up">
+                    <button class="action-btn" 
+                            onclick="moveQuestion(${num}, 'up')" 
+                            title="Move Up"
+                            type="button">
                         <i class="fas fa-arrow-up"></i>
                     </button>
-                    <button class="action-btn" onclick="moveQuestion(${num}, 'down')" title="Move Down">
+                    <button class="action-btn" 
+                            onclick="moveQuestion(${num}, 'down')" 
+                            title="Move Down"
+                            type="button">
                         <i class="fas fa-arrow-down"></i>
                     </button>
-                    <button class="action-btn" onclick="duplicateQuestion(${num})" title="Duplicate">
+                    <button class="action-btn" 
+                            onclick="duplicateQuestion(${num})" 
+                            title="Duplicate Question"
+                            type="button">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button class="action-btn danger" onclick="deleteQuestion(${num})" title="Delete">
+                    <button class="action-btn danger" 
+                            onclick="deleteQuestion(${num})" 
+                            title="Delete Question"
+                            type="button">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             </div>
+            
             <div class="card-body-modern">
                 <div class="row">
                     <div class="col-lg-8">
                         <div class="form-floating-modern">
-                            <textarea class="form-control-modern" id="question-${num}-content" 
-                                      placeholder=" " rows="3" 
+                            <textarea class="form-control-modern" 
+                                      id="question-${num}-content" 
+                                      placeholder=" " 
+                                      rows="3" 
                                       oninput="updateQuestion(${num}, 'content', this.value)"></textarea>
                             <label class="form-label-modern">Question Content</label>
                         </div>
+                        
                         <div class="form-floating-modern">
-                            <select class="form-control-modern" id="question-${num}-type" 
+                            <select class="form-control-modern" 
+                                    id="question-${num}-type" 
                                     onchange="toggleQuestionType(${num}, this.value)">
                                 <option value="multiple_choice">Multiple Choice A/B/C/D</option>
                                 <option value="text_input">Text Input</option>
@@ -251,9 +271,13 @@ function createQuestionHtml(num) {
                             <label class="form-label-modern">Question Type</label>
                         </div>
                     </div>
+                    
                     <div class="col-lg-4">
                         <div class="image-upload-zone" onclick="document.getElementById('image-${num}').click()">
-                            <input type="file" id="image-${num}" accept="image/*" style="display: none;" 
+                            <input type="file" 
+                                   id="image-${num}" 
+                                   accept="image/*" 
+                                   style="display: none;" 
                                    onchange="handleImageUpload(${num}, this)">
                             <div class="upload-content">
                                 <div class="upload-icon">
@@ -265,6 +289,7 @@ function createQuestionHtml(num) {
                         </div>
                     </div>
                 </div>
+                
                 <div class="answer-options" id="options-${num}">
                     <h6 class="text-primary mb-3">Answer Options</h6>
                     ${createOptionsHtml(num)}
@@ -277,84 +302,207 @@ function createQuestionHtml(num) {
 function deleteQuestion(num) {
     Swal.fire({
         title: 'Delete Question?',
-        text: "This action cannot be undone.",
+        text: `Are you sure you want to delete Question ${num}? This action cannot be undone.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, delete it!'
+        confirmButtonText: 'Yes, Delete Question',
+        cancelButtonText: 'Cancel',
+        customClass: {
+            popup: 'swal-modern'
+        }
     }).then((result) => {
         if (result.isConfirmed) {
             const element = document.getElementById(`question-${num}`);
             if (element) {
-                element.remove();
+                // Add exit animation
+                element.style.animation = 'fadeOut 0.3s ease-out';
+                
+                setTimeout(() => {
+                    element.remove();
+                    questions = questions.filter(q => q.id !== num);
+                    renumberQuestions();
+                    updateQuestionCount();
+                    triggerAutoSave();
+                }, 300);
+                
+                Swal.fire({
+                    title: 'Deleted!',
+                    text: 'Question has been deleted successfully.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    customClass: {
+                        popup: 'swal-modern'
+                    }
+                });
             }
-            
-            // Remove from questions array
-            questions = questions.filter(q => q.id !== num);
-            
-            // Update question numbers and renumber remaining questions
-            renumberQuestions();
-            
-            updateQuestionCount();
-            triggerAutoSave();
-            
-            Swal.fire({
-                title: 'Deleted!',
-                text: 'Question has been deleted.',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-            });
         }
     });
 }
 
+function moveQuestion(num, direction) {
+    const questionElement = document.getElementById(`question-${num}`);
+    if (!questionElement) return;
+
+    const container = document.getElementById('questionsContainer');
+    const allQuestions = Array.from(container.children).filter(child =>
+        child.classList.contains('question-card-modern')
+    );
+    const currentIndex = allQuestions.indexOf(questionElement);
+
+    let targetIndex;
+    if (direction === 'up' && currentIndex > 0) {
+        targetIndex = currentIndex - 1;
+    } else if (direction === 'down' && currentIndex < allQuestions.length - 1) {
+        targetIndex = currentIndex + 1;
+    } else {
+        showNotification(
+            `Cannot move ${direction}. Question is already at the ${direction === 'up' ? 'top' : 'bottom'}.`,
+            'warning'
+        );
+        return;
+    }
+
+    // Swap in DOM
+    const targetElement = allQuestions[targetIndex];
+    if (direction === 'up') {
+        container.insertBefore(questionElement, targetElement);
+    } else {
+        container.insertBefore(questionElement, targetElement.nextSibling);
+    }
+
+    // Swap in questions array
+    const idx = questions.findIndex(q => q.id === num);
+    if (idx !== -1) {
+        if (direction === 'up' && idx > 0) {
+            [questions[idx - 1], questions[idx]] = [questions[idx], questions[idx - 1]];
+        } else if (direction === 'down' && idx < questions.length - 1) {
+            [questions[idx], questions[idx + 1]] = [questions[idx + 1], questions[idx]];
+        }
+    }
+
+    // Renumber and save
+    renumberQuestions();
+    triggerAutoSave();
+    showNotification(`Question moved ${direction} successfully!`, 'success');
+}
+
+function duplicateQuestion(num) {
+    const originalQuestion = questions.find(q => q.id === num);
+    if (originalQuestion) {
+        questionCount++;
+        const newQuestion = {
+            ...originalQuestion,
+            id: questionCount,
+            content: originalQuestion.content + ' (Copy)'
+        };
+        questions.push(newQuestion);
+        
+        const questionHtml = createQuestionHtml(questionCount);
+        const originalElement = document.getElementById(`question-${num}`);
+        originalElement.insertAdjacentHTML('afterend', questionHtml);
+        
+        // Populate the duplicated question data
+        setTimeout(() => {
+            const contentElement = document.getElementById(`question-${questionCount}-content`);
+            if (contentElement) {
+                contentElement.value = newQuestion.content;
+                contentElement.dispatchEvent(new Event('input'));
+            }
+            
+            // Set question type
+            const typeElement = document.getElementById(`question-${questionCount}-type`);
+            if (typeElement) {
+                typeElement.value = originalQuestion.type;
+                toggleQuestionType(questionCount, originalQuestion.type);
+            }
+            
+            // Copy options if multiple choice
+            if (originalQuestion.type === 'multiple_choice') {
+                ['A', 'B', 'C', 'D'].forEach((letter, index) => {
+                    const optionInput = document.getElementById(`option-${questionCount}-${letter}`);
+                    if (optionInput && originalQuestion.options[index]) {
+                        optionInput.value = originalQuestion.options[index];
+                        updateQuestion(questionCount, `option${letter}`, originalQuestion.options[index]);
+                    }
+                });
+                
+                if (originalQuestion.correctAnswer) {
+                    selectCorrectAnswer(questionCount, originalQuestion.correctAnswer);
+                }
+            }
+        }, 100);
+        
+        updateQuestionCount();
+        triggerAutoSave();
+        
+        showNotification('Question duplicated successfully!', 'success');
+        
+        // Scroll to new question
+        setTimeout(() => {
+            const element = document.getElementById(`question-${questionCount}`);
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }, 200);
+    }
+}
+
+// Function to renumber questions after reordering
 function renumberQuestions() {
     const questionElements = document.querySelectorAll('.question-card-modern');
     questionElements.forEach((element, index) => {
         const newNum = index + 1;
+        
+        // Update element ID
         element.id = `question-${newNum}`;
+        
+        // Update question number display
         const numberDisplay = element.querySelector('.question-number');
         if (numberDisplay) numberDisplay.textContent = newNum;
+        
+        // Update heading
         const heading = element.querySelector('h5');
         if (heading) heading.textContent = `Question ${newNum}`;
+        
+        // Update all form element IDs and event handlers
         updateQuestionElementIds(element, newNum);
-        // Normalize options array
+        
+        // Update questions array
         if (questions[index]) {
             questions[index].id = newNum;
-            if (questions[index].type === 'multiple_choice') {
-                if (!Array.isArray(questions[index].options) || questions[index].options.length !== 4) {
-                    questions[index].options = Array.isArray(questions[index].options)
-                        ? [...questions[index].options, '', '', '', ''].slice(0, 4)
-                        : ['', '', '', ''];
-                }
-            }
         }
     });
+    
     questionCount = questionElements.length;
 }
 
+// Helper function to update element IDs and handlers
 function updateQuestionElementIds(element, newNum) {
-    // Update content textarea
-    const contentTextarea = element.querySelector('textarea');
-    if (contentTextarea) {
-        contentTextarea.id = `question-${newNum}-content`;
-        contentTextarea.setAttribute('oninput', `updateQuestion(${newNum}, 'content', this.value)`);
+    // Update textarea
+    const textarea = element.querySelector('textarea');
+    if (textarea) {
+        textarea.id = `question-${newNum}-content`;
+        textarea.setAttribute('oninput', `updateQuestion(${newNum}, 'content', this.value)`);
     }
     
-    // Update type select
-    const typeSelect = element.querySelector('select');
-    if (typeSelect) {
-        typeSelect.id = `question-${newNum}-type`;
-        typeSelect.setAttribute('onchange', `toggleQuestionType(${newNum}, this.value)`);
+    // Update select
+    const select = element.querySelector('select');
+    if (select) {
+        select.id = `question-${newNum}-type`;
+        select.setAttribute('onchange', `toggleQuestionType(${newNum}, this.value)`);
     }
     
-    // Update image input
-    const imageInput = element.querySelector('input[type="file"]');
-    if (imageInput) {
-        imageInput.id = `image-${newNum}`;
-        imageInput.setAttribute('onchange', `handleImageUpload(${newNum}, this)`);
+    // Update file input
+    const fileInput = element.querySelector('input[type="file"]');
+    if (fileInput) {
+        fileInput.id = `image-${newNum}`;
+        fileInput.setAttribute('onchange', `handleImageUpload(${newNum}, this)`);
     }
     
     // Update image upload zone
@@ -385,166 +533,81 @@ function updateQuestionElementIds(element, newNum) {
     if (optionsContainer) {
         optionsContainer.id = `options-${newNum}`;
         
-        // Update option radios and inputs
-        const optionRadios = optionsContainer.querySelectorAll('.option-radio');
-        optionRadios.forEach((radio, index) => {
-            const letter = String.fromCharCode(65 + index); // A, B, C, D
-            radio.id = `radio-${newNum}-${letter}`;
-            radio.setAttribute('onclick', `selectCorrectAnswer(${newNum}, '${letter}')`);
-        });
-        
+        // Update option inputs and radios
         const optionInputs = optionsContainer.querySelectorAll('input[type="text"]');
         optionInputs.forEach((input, index) => {
             const letter = String.fromCharCode(65 + index); // A, B, C, D
             input.id = `option-${newNum}-${letter}`;
             input.setAttribute('oninput', `updateQuestion(${newNum}, 'option${letter}', this.value)`);
         });
-    }
-}
-
-function duplicateQuestion(num) {
-    const originalQuestion = questions.find(q => q.id === num);
-    if (originalQuestion) {
-        questionCount++;
-        // Deep clone options array
-        const newQuestion = {
-            ...originalQuestion,
-            id: questionCount,
-            options: Array.isArray(originalQuestion.options)
-                ? [...originalQuestion.options, '', '', '', ''].slice(0, 4)
-                : ['', '', '', '']
-        };
-        questions.push(newQuestion);
-        const questionHtml = createQuestionHtml(questionCount);
-        const originalElement = document.getElementById(`question-${num}`);
-        originalElement.insertAdjacentHTML('afterend', questionHtml);
-        setTimeout(() => {
-            const contentElement = document.getElementById(`question-${questionCount}-content`);
-            if (contentElement) {
-                contentElement.value = originalQuestion.content;
-                contentElement.dispatchEvent(new Event('input'));
-            }
-            const typeElement = document.getElementById(`question-${questionCount}-type`);
-            if (typeElement) {
-                typeElement.value = originalQuestion.type;
-                toggleQuestionType(questionCount, originalQuestion.type);
-            }
-        }, 100);
-        updateQuestionCount();
-        triggerAutoSave();
-    }
-}
-
-function moveQuestion(num, direction) {
-    const questionElement = document.getElementById(`question-${num}`);
-    if (!questionElement) return;
-    
-    const container = document.getElementById('questionsContainer');
-    const allQuestions = Array.from(container.children).filter(child => 
-        child.classList.contains('question-card-modern')
-    );
-    const currentIndex = allQuestions.indexOf(questionElement);
-    
-    let targetIndex;
-    if (direction === 'up' && currentIndex > 0) {
-        targetIndex = currentIndex - 1;
-    } else if (direction === 'down' && currentIndex < allQuestions.length - 1) {
-        targetIndex = currentIndex + 1;
-    } else {
-        return; // Can't move
-    }
-    
-    const targetElement = allQuestions[targetIndex];
-    
-    if (direction === 'up') {
-        container.insertBefore(questionElement, targetElement);
-    } else {
-        container.insertBefore(questionElement, targetElement.nextSibling);
-    }
-    
-    // Renumber questions after moving
-    renumberQuestions();
-    
-    triggerAutoSave();
-}
-
-function handleImageUpload(num, input) {
-    const file = input.files[0];
-    if (file) {
-        // Validate file size (5MB limit)
-        if (file.size > 5 * 1024 * 1024) {
-            Swal.fire({
-                icon: 'error',
-                title: 'File Too Large',
-                text: 'Image must be less than 5MB',
-                confirmButtonColor: '#667eea'
-            });
-            input.value = '';
-            return;
-        }
         
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const uploadZone = input.parentElement;
-            uploadZone.classList.add('has-image');
-            uploadZone.innerHTML = `
-                <img src="${e.target.result}" alt="Question Image" 
-                     style="max-width: 100%; max-height: 200px; border-radius: 8px;">
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-danger" 
-                            onclick="removeImage(${num})" type="button">
-                        <i class="fas fa-trash me-1"></i> Remove
-                    </button>
-                </div>
-            `;
-            updateQuestion(num, 'image', {
-                file: file,
-                preview: e.target.result
-            });
-        };
-        reader.readAsDataURL(file);
+        const radioButtons = optionsContainer.querySelectorAll('.option-radio');
+        radioButtons.forEach((radio, index) => {
+            const letter = String.fromCharCode(65 + index); // A, B, C, D
+            radio.id = `radio-${newNum}-${letter}`;
+            radio.setAttribute('onclick', `selectCorrectAnswer(${newNum}, '${letter}')`);
+        });
     }
 }
 
-function removeImage(num) {
-    const uploadZone = document.querySelector(`#question-${num} .image-upload-zone`);
-    const fileInput = document.getElementById(`image-${num}`);
-    
-    uploadZone.classList.remove('has-image');
-    uploadZone.innerHTML = `
-        <input type="file" id="image-${num}" accept="image/*" style="display: none;" 
-               onchange="handleImageUpload(${num}, this)">
-        <div class="upload-content">
-            <div class="upload-icon">
-                <i class="fas fa-cloud-upload-alt"></i>
-            </div>
-            <h6>Upload Image</h6>
-            <p class="text-muted small mb-0">Click to select image</p>
-        </div>
+// Notification function
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 9999;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        max-width: 300px;
+        animation: slideInRight 0.3s ease-out;
     `;
     
-    // Update onclick handler
-    uploadZone.setAttribute('onclick', `document.getElementById('image-${num}').click()`);
+    const colors = {
+        success: '#10b981',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6'
+    };
     
-    if (fileInput) {
-        fileInput.value = '';
-    }
+    notification.style.background = colors[type] || colors.info;
+    notification.textContent = message;
     
-    updateQuestion(num, 'image', null);
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
 }
 
-function updateQuestionCount() {
-    const countElement = document.getElementById('questionCount');
-    const displayElement = document.getElementById('questionCountDisplay');
-    
-    if (countElement) {
-        countElement.textContent = questions.length;
+// CSS animations for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
     
-    if (displayElement) {
-        displayElement.textContent = questions.length;
+    @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
     }
-}
+    
+    @keyframes fadeOut {
+        from { opacity: 1; transform: scale(1); }
+        to { opacity: 0; transform: scale(0.9); }
+    }
+`;
+document.head.appendChild(style);
 
 // =================== PREVIEW FUNCTIONALITY ===================
 

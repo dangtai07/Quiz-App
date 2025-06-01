@@ -609,3 +609,216 @@ body::before {
 .modern-card .question-card-modern {
     display: block !important;
 }
+
+
+/* Enhanced Action Buttons for Question Cards */
+
+/* Add to the end of modern_quiz_create.css and modern_quiz_edit.css */
+
+/* Question Card Container */
+.question-card-modern {
+    position: relative;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--border-radius-lg);
+    margin-bottom: 2rem;
+    transition: var(--transition);
+    overflow: visible; /* Allow buttons to extend outside */
+}
+
+/* Container for all question cards */
+#questionsContainer {
+    padding-right: 70px; /* Add space for action buttons */
+}
+
+@media (max-width: 768px) {
+    #questionsContainer {
+        padding-right: 0; /* Reset on mobile */
+    }
+}
+
+/* Question Header with Actions */
+.question-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+}
+
+/* Question Actions Container */
+.question-actions {
+    position: absolute;
+    right: -60px; /* Position outside the card */
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 10;
+    background: white;
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e2e8f0;
+}
+
+/* Show actions on hover */
+.question-card-modern:hover .question-actions {
+    opacity: 1;
+    right: -50px;
+}
+
+/* Individual Action Buttons */
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    font-size: 14px;
+    position: relative;
+}
+
+/* Hover effects for different actions */
+.action-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Move Up Button */
+.action-btn:nth-child(1):hover {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
+/* Move Down Button */
+.action-btn:nth-child(2):hover {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
+/* Duplicate Button */
+.action-btn:nth-child(3):hover {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+}
+
+/* Delete Button */
+.action-btn.danger:hover,
+.action-btn:nth-child(4):hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+}
+
+/* Tooltip for buttons */
+.action-btn::after {
+    content: attr(title);
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    margin-right: 8px;
+}
+
+.action-btn:hover::after {
+    opacity: 1;
+}
+
+/* Alternative positioning for mobile */
+@media (max-width: 768px) {
+    .question-actions {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        transform: none;
+        flex-direction: row;
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+    }
+
+    .question-card-modern:hover .question-actions {
+        right: 10px;
+    }
+
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+
+    .action-btn::after {
+        display: none; /* Hide tooltips on mobile */
+    }
+}
+
+/* Ensure question cards have enough margin for buttons */
+.modern-card {
+    margin-right: 70px; /* Add space for action buttons */
+}
+
+@media (max-width: 768px) {
+    .modern-card {
+        margin-right: 0; /* Reset on mobile */
+    }
+}
+
+/* Enhanced question number styling */
+.question-number {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-right: 1rem;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Icon animations */
+.action-btn i {
+    transition: transform 0.2s ease;
+}
+
+.action-btn:hover i {
+    transform: scale(1.1);
+}
+
+/* Focus states for accessibility */
+.action-btn:focus {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Active state */
+.action-btn:active {
+    transform: scale(0.95);
+}
