@@ -299,6 +299,80 @@ function createQuestionHtml(num) {
     `;
 }
 
+function moveQuestion(num, direction) {
+    const idx = questions.findIndex(q => q.id === num);
+    if (idx === -1) return;
+
+    let newIdx = idx;
+    if (direction === 'up' && idx > 0) {
+        newIdx = idx - 1;
+    } else if (direction === 'down' && idx < questions.length - 1) {
+        newIdx = idx + 1;
+    } else {
+        showNotification(
+            `Cannot move ${direction}. Question is already at the ${direction === 'up' ? 'top' : 'bottom'}.`,
+            'warning'
+        );
+        return;
+    }
+
+    // Swap in array
+    const temp = questions[idx];
+    questions[idx] = questions[newIdx];
+    questions[newIdx] = temp;
+
+    // Re-render all questions in new order
+    renderAllQuestions();
+
+    // Scroll so the moved question's header (with actions) is at the top of the viewport
+    setTimeout(() => {
+        const card = document.getElementById(`question-${newIdx + 1}`);
+        if (card) {
+            const header = card.querySelector('.question-header');
+            if (header) {
+                const rect = header.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                window.scrollTo({
+                    top: rect.top + scrollTop - 16, // adjust offset as needed for sticky headers
+                    behavior: 'smooth'
+                });
+            } else {
+                // fallback: scroll to card
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+        // Highlight the moved question
+        document.querySelectorAll('.question-card-modern').forEach(el => el.classList.remove('active-question'));
+        const activeCard = document.getElementById(`question-${newIdx + 1}`);
+        if (activeCard) activeCard.classList.add('active-question');
+    }, 100);
+
+    triggerAutoSave();
+    showNotification(`Question moved ${direction} successfully!`, 'success');
+}
+
+function duplicateQuestion(num) {
+    const idx = questions.findIndex(q => q.id === num);
+    if (idx === -1) return;
+    questionCount++;
+    const original = questions[idx];
+    // Deep clone options
+    const newQuestion = {
+        ...JSON.parse(JSON.stringify(original)),
+        id: questionCount,
+        content: original.content + ' (Copy)'
+    };
+    questions.splice(idx + 1, 0, newQuestion);
+    renderAllQuestions();
+    updateQuestionCount();
+    triggerAutoSave();
+    showNotification('Question duplicated successfully!', 'success');
+    setTimeout(() => {
+        const el = document.getElementById(`question-${questionCount}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+}
+
 function deleteQuestion(num) {
     Swal.fire({
         title: 'Delete Question?',
@@ -314,19 +388,12 @@ function deleteQuestion(num) {
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            const element = document.getElementById(`question-${num}`);
-            if (element) {
-                // Add exit animation
-                element.style.animation = 'fadeOut 0.3s ease-out';
-                
-                setTimeout(() => {
-                    element.remove();
-                    questions = questions.filter(q => q.id !== num);
-                    renumberQuestions();
-                    updateQuestionCount();
-                    triggerAutoSave();
-                }, 300);
-                
+            const idx = questions.findIndex(q => q.id === num);
+            if (idx !== -1) {
+                questions.splice(idx, 1);
+                renderAllQuestions();
+                updateQuestionCount();
+                triggerAutoSave();
                 Swal.fire({
                     title: 'Deleted!',
                     text: 'Question has been deleted successfully.',
@@ -342,272 +409,52 @@ function deleteQuestion(num) {
     });
 }
 
-function moveQuestion(num, direction) {
-    const questionElement = document.getElementById(`question-${num}`);
-    if (!questionElement) return;
-
+// Re-render all questions in correct order
+function renderAllQuestions() {
     const container = document.getElementById('questionsContainer');
-    const allQuestions = Array.from(container.children).filter(child =>
-        child.classList.contains('question-card-modern')
-    );
-    const currentIndex = allQuestions.indexOf(questionElement);
-
-    let targetIndex;
-    if (direction === 'up' && currentIndex > 0) {
-        targetIndex = currentIndex - 1;
-    } else if (direction === 'down' && currentIndex < allQuestions.length - 1) {
-        targetIndex = currentIndex + 1;
-    } else {
-        showNotification(
-            `Cannot move ${direction}. Question is already at the ${direction === 'up' ? 'top' : 'bottom'}.`,
-            'warning'
-        );
-        return;
-    }
-
-    // Swap in DOM
-    const targetElement = allQuestions[targetIndex];
-    if (direction === 'up') {
-        container.insertBefore(questionElement, targetElement);
-    } else {
-        container.insertBefore(questionElement, targetElement.nextSibling);
-    }
-
-    // Swap in questions array
-    const idx = questions.findIndex(q => q.id === num);
-    if (idx !== -1) {
-        if (direction === 'up' && idx > 0) {
-            [questions[idx - 1], questions[idx]] = [questions[idx], questions[idx - 1]];
-        } else if (direction === 'down' && idx < questions.length - 1) {
-            [questions[idx], questions[idx + 1]] = [questions[idx + 1], questions[idx]];
-        }
-    }
-
-    // Renumber and save
-    renumberQuestions();
-    triggerAutoSave();
-    showNotification(`Question moved ${direction} successfully!`, 'success');
-}
-
-function duplicateQuestion(num) {
-    const originalQuestion = questions.find(q => q.id === num);
-    if (originalQuestion) {
-        questionCount++;
-        const newQuestion = {
-            ...originalQuestion,
-            id: questionCount,
-            content: originalQuestion.content + ' (Copy)'
-        };
-        questions.push(newQuestion);
-        
-        const questionHtml = createQuestionHtml(questionCount);
-        const originalElement = document.getElementById(`question-${num}`);
-        originalElement.insertAdjacentHTML('afterend', questionHtml);
-        
-        // Populate the duplicated question data
-        setTimeout(() => {
-            const contentElement = document.getElementById(`question-${questionCount}-content`);
-            if (contentElement) {
-                contentElement.value = newQuestion.content;
-                contentElement.dispatchEvent(new Event('input'));
-            }
-            
-            // Set question type
-            const typeElement = document.getElementById(`question-${questionCount}-type`);
-            if (typeElement) {
-                typeElement.value = originalQuestion.type;
-                toggleQuestionType(questionCount, originalQuestion.type);
-            }
-            
-            // Copy options if multiple choice
-            if (originalQuestion.type === 'multiple_choice') {
-                ['A', 'B', 'C', 'D'].forEach((letter, index) => {
-                    const optionInput = document.getElementById(`option-${questionCount}-${letter}`);
-                    if (optionInput && originalQuestion.options[index]) {
-                        optionInput.value = originalQuestion.options[index];
-                        updateQuestion(questionCount, `option${letter}`, originalQuestion.options[index]);
-                    }
-                });
-                
-                if (originalQuestion.correctAnswer) {
-                    selectCorrectAnswer(questionCount, originalQuestion.correctAnswer);
-                }
-            }
-        }, 100);
-        
-        updateQuestionCount();
-        triggerAutoSave();
-        
-        showNotification('Question duplicated successfully!', 'success');
-        
-        // Scroll to new question
-        setTimeout(() => {
-            const element = document.getElementById(`question-${questionCount}`);
-            if (element) {
-                element.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-            }
-        }, 200);
-    }
-}
-
-// Function to renumber questions after reordering
-function renumberQuestions() {
-    const questionElements = document.querySelectorAll('.question-card-modern');
-    questionElements.forEach((element, index) => {
-        const newNum = index + 1;
-        
-        // Update element ID
-        element.id = `question-${newNum}`;
-        
-        // Update question number display
-        const numberDisplay = element.querySelector('.question-number');
-        if (numberDisplay) numberDisplay.textContent = newNum;
-        
-        // Update heading
-        const heading = element.querySelector('h5');
-        if (heading) heading.textContent = `Question ${newNum}`;
-        
-        // Update all form element IDs and event handlers
-        updateQuestionElementIds(element, newNum);
-        
-        // Update questions array
-        if (questions[index]) {
-            questions[index].id = newNum;
-        }
+    container.innerHTML = '';
+    questions.forEach((q, idx) => {
+        q.id = idx + 1;
+        container.insertAdjacentHTML('beforeend', createQuestionHtml(q.id));
     });
-    
-    questionCount = questionElements.length;
-}
-
-// Helper function to update element IDs and handlers
-function updateQuestionElementIds(element, newNum) {
-    // Update textarea
-    const textarea = element.querySelector('textarea');
-    if (textarea) {
-        textarea.id = `question-${newNum}-content`;
-        textarea.setAttribute('oninput', `updateQuestion(${newNum}, 'content', this.value)`);
-    }
-    
-    // Update select
-    const select = element.querySelector('select');
-    if (select) {
-        select.id = `question-${newNum}-type`;
-        select.setAttribute('onchange', `toggleQuestionType(${newNum}, this.value)`);
-    }
-    
-    // Update file input
-    const fileInput = element.querySelector('input[type="file"]');
-    if (fileInput) {
-        fileInput.id = `image-${newNum}`;
-        fileInput.setAttribute('onchange', `handleImageUpload(${newNum}, this)`);
-    }
-    
-    // Update image upload zone
-    const uploadZone = element.querySelector('.image-upload-zone');
-    if (uploadZone) {
-        uploadZone.setAttribute('onclick', `document.getElementById('image-${newNum}').click()`);
-    }
-    
-    // Update action buttons
-    const actionButtons = element.querySelectorAll('.action-btn');
-    actionButtons.forEach(button => {
-        const icon = button.querySelector('i');
-        if (icon) {
-            if (icon.classList.contains('fa-arrow-up')) {
-                button.setAttribute('onclick', `moveQuestion(${newNum}, 'up')`);
-            } else if (icon.classList.contains('fa-arrow-down')) {
-                button.setAttribute('onclick', `moveQuestion(${newNum}, 'down')`);
-            } else if (icon.classList.contains('fa-copy')) {
-                button.setAttribute('onclick', `duplicateQuestion(${newNum})`);
-            } else if (icon.classList.contains('fa-trash')) {
-                button.setAttribute('onclick', `deleteQuestion(${newNum})`);
+    // Restore values for each question
+    questions.forEach((q, idx) => {
+        const id = idx + 1;
+        const contentEl = document.getElementById(`question-${id}-content`);
+        if (contentEl) contentEl.value = q.content;
+        const typeEl = document.getElementById(`question-${id}-type`);
+        if (typeEl) {
+            typeEl.value = q.type;
+            toggleQuestionType(id, q.type);
+        }
+        // Restore options
+        if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
+            ['A', 'B', 'C', 'D'].forEach((letter, i) => {
+                const optEl = document.getElementById(`option-${id}-${letter}`);
+                if (optEl) optEl.value = q.options[i] || '';
+            });
+            if (q.correctAnswer) selectCorrectAnswer(id, q.correctAnswer);
+        }
+        // Restore image preview if available
+        if (q.image && q.image.preview) {
+            const uploadZone = document.querySelector(`#question-${id} .image-upload-zone`);
+            if (uploadZone) {
+                uploadZone.classList.add('has-image');
+                uploadZone.innerHTML = `
+                    <img src="${q.image.preview}" alt="Question Image" 
+                         style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-danger" 
+                                onclick="removeImage(${id})" type="button">
+                            <i class="fas fa-trash me-1"></i> Remove
+                        </button>
+                    </div>
+                `;
             }
         }
     });
-    
-    // Update options container
-    const optionsContainer = element.querySelector('.answer-options');
-    if (optionsContainer) {
-        optionsContainer.id = `options-${newNum}`;
-        
-        // Update option inputs and radios
-        const optionInputs = optionsContainer.querySelectorAll('input[type="text"]');
-        optionInputs.forEach((input, index) => {
-            const letter = String.fromCharCode(65 + index); // A, B, C, D
-            input.id = `option-${newNum}-${letter}`;
-            input.setAttribute('oninput', `updateQuestion(${newNum}, 'option${letter}', this.value)`);
-        });
-        
-        const radioButtons = optionsContainer.querySelectorAll('.option-radio');
-        radioButtons.forEach((radio, index) => {
-            const letter = String.fromCharCode(65 + index); // A, B, C, D
-            radio.id = `radio-${newNum}-${letter}`;
-            radio.setAttribute('onclick', `selectCorrectAnswer(${newNum}, '${letter}')`);
-        });
-    }
+    questionCount = questions.length;
 }
-
-// Notification function
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.style.cssText = `
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        z-index: 9999;
-        padding: 12px 20px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 500;
-        max-width: 300px;
-        animation: slideInRight 0.3s ease-out;
-    `;
-    
-    const colors = {
-        success: '#10b981',
-        error: '#ef4444',
-        warning: '#f59e0b',
-        info: '#3b82f6'
-    };
-    
-    notification.style.background = colors[type] || colors.info;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.animation = 'slideOutRight 0.3s ease-in';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
-}
-
-// CSS animations for notifications
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOutRight {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-    
-    @keyframes fadeOut {
-        from { opacity: 1; transform: scale(1); }
-        to { opacity: 0; transform: scale(0.9); }
-    }
-`;
-document.head.appendChild(style);
 
 // =================== PREVIEW FUNCTIONALITY ===================
 

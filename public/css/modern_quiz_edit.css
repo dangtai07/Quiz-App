@@ -858,6 +858,12 @@ body::before {
     right: -50px;
 }
 
+/* Show actions when card is active */
+.question-card-modern.active-question .question-actions {
+    opacity: 1;
+    right: -50px;
+}
+
 /* Individual Action Buttons */
 .action-btn {
     width: 36px;
