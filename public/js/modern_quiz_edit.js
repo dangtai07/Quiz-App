@@ -47,7 +47,7 @@ function triggerAutoSave() {
 
 function saveDraft() {
     // Show auto-save indicator
-    showAutoSaveIndicator();
+    // showAutoSaveIndicator();
     
     // In a real implementation, you might save to localStorage or send to server
     console.log('Draft saved automatically');
@@ -316,6 +316,10 @@ function moveQuestion(num, direction) {
         return;
     }
 
+    // Add transitioning class to maintain button visibility
+    const allCards = document.querySelectorAll('.question-card-modern');
+    allCards.forEach(card => card.classList.add('transitioning'));
+
     // Swap in array
     const temp = questions[idx];
     questions[idx] = questions[newIdx];
@@ -324,109 +328,72 @@ function moveQuestion(num, direction) {
     // Re-render all questions in new order
     renderAllQuestions();
 
-    // Scroll so the moved question's header (with actions) is at the top of the viewport
+    // Scroll and highlight the moved question
     setTimeout(() => {
-        const card = document.getElementById(`question-${newIdx + 1}`);
-        if (card) {
-            const header = card.querySelector('.question-header');
+        // Remove transitioning class
+        const updatedCards = document.querySelectorAll('.question-card-modern');
+        updatedCards.forEach(card => {
+            card.classList.remove('transitioning', 'active-question', 'recently-moved');
+        });
+
+        const movedCard = document.getElementById(`question-${newIdx + 1}`);
+        if (movedCard) {
+            // Add visual feedback classes
+            movedCard.classList.add('recently-moved', 'active-question');
+            
+            // Scroll so the moved question's header is visible
+            const header = movedCard.querySelector('.question-header');
             if (header) {
                 const rect = header.getBoundingClientRect();
                 const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
                 window.scrollTo({
-                    top: rect.top + scrollTop - 16, // adjust offset as needed for sticky headers
+                    top: rect.top + scrollTop - 20, // Small offset from top
                     behavior: 'smooth'
                 });
-            } else {
-                // fallback: scroll to card
-                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+
+            // Keep the action buttons visible for longer
+            setTimeout(() => {
+                movedCard.classList.remove('recently-moved');
+            }, 2000);
+
+            // Remove active state after a delay
+            setTimeout(() => {
+                movedCard.classList.remove('active-question');
+            }, 3000);
         }
-        // Highlight the moved question
-        document.querySelectorAll('.question-card-modern').forEach(el => el.classList.remove('active-question'));
-        const activeCard = document.getElementById(`question-${newIdx + 1}`);
-        if (activeCard) activeCard.classList.add('active-question');
     }, 100);
 
     triggerAutoSave();
     showNotification(`Question moved ${direction} successfully!`, 'success');
 }
 
-function duplicateQuestion(num) {
-    const idx = questions.findIndex(q => q.id === num);
-    if (idx === -1) return;
-    questionCount++;
-    const original = questions[idx];
-    // Deep clone options
-    const newQuestion = {
-        ...JSON.parse(JSON.stringify(original)),
-        id: questionCount,
-        content: original.content + ' (Copy)'
-    };
-    questions.splice(idx + 1, 0, newQuestion);
-    renderAllQuestions();
-    updateQuestionCount();
-    triggerAutoSave();
-    showNotification('Question duplicated successfully!', 'success');
-    setTimeout(() => {
-        const el = document.getElementById(`question-${questionCount}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 200);
-}
-
-function deleteQuestion(num) {
-    Swal.fire({
-        title: 'Delete Question?',
-        text: `Are you sure you want to delete Question ${num}? This action cannot be undone.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, Delete Question',
-        cancelButtonText: 'Cancel',
-        customClass: {
-            popup: 'swal-modern'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const idx = questions.findIndex(q => q.id === num);
-            if (idx !== -1) {
-                questions.splice(idx, 1);
-                renderAllQuestions();
-                updateQuestionCount();
-                triggerAutoSave();
-                Swal.fire({
-                    title: 'Deleted!',
-                    text: 'Question has been deleted successfully.',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    customClass: {
-                        popup: 'swal-modern'
-                    }
-                });
-            }
-        }
-    });
-}
-
-// Re-render all questions in correct order
+// Enhanced renderAllQuestions function
 function renderAllQuestions() {
     const container = document.getElementById('questionsContainer');
+    
+    // Store scroll position
+    const scrollPosition = window.scrollY;
+    
     container.innerHTML = '';
+    
     questions.forEach((q, idx) => {
         q.id = idx + 1;
         container.insertAdjacentHTML('beforeend', createQuestionHtml(q.id));
     });
+    
     // Restore values for each question
     questions.forEach((q, idx) => {
         const id = idx + 1;
         const contentEl = document.getElementById(`question-${id}-content`);
         if (contentEl) contentEl.value = q.content;
+        
         const typeEl = document.getElementById(`question-${id}-type`);
         if (typeEl) {
             typeEl.value = q.type;
             toggleQuestionType(id, q.type);
         }
+        
         // Restore options
         if (q.type === 'multiple_choice' && Array.isArray(q.options)) {
             ['A', 'B', 'C', 'D'].forEach((letter, i) => {
@@ -435,6 +402,7 @@ function renderAllQuestions() {
             });
             if (q.correctAnswer) selectCorrectAnswer(id, q.correctAnswer);
         }
+        
         // Restore image preview if available
         if (q.image && q.image.preview) {
             const uploadZone = document.querySelector(`#question-${id} .image-upload-zone`);
@@ -453,7 +421,147 @@ function renderAllQuestions() {
             }
         }
     });
+    
     questionCount = questions.length;
+    updateQuestionCount();
+    
+    // Restore approximate scroll position
+    window.scrollTo(0, scrollPosition);
+}
+
+// Enhanced duplicate function with better visibility
+function duplicateQuestion(num) {
+    const idx = questions.findIndex(q => q.id === num);
+    if (idx === -1) return;
+    
+    questionCount++;
+    const original = questions[idx];
+    // Deep clone options
+    const newQuestion = {
+        ...JSON.parse(JSON.stringify(original)),
+        id: questionCount,
+        content: original.content + ' (Copy)'
+    };
+    
+    questions.splice(idx + 1, 0, newQuestion);
+    renderAllQuestions();
+    updateQuestionCount();
+    triggerAutoSave();
+    
+    showNotification('Question duplicated successfully!', 'success');
+    
+    // Highlight the duplicated question
+    setTimeout(() => {
+        const duplicatedCard = document.getElementById(`question-${idx + 2}`);
+        if (duplicatedCard) {
+            duplicatedCard.classList.add('recently-moved', 'active-question');
+            duplicatedCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            setTimeout(() => {
+                duplicatedCard.classList.remove('recently-moved');
+            }, 2000);
+            
+            setTimeout(() => {
+                duplicatedCard.classList.remove('active-question');
+            }, 4000);
+        }
+    }, 200);
+}
+
+// Enhanced function to update question count display
+function updateQuestionCount() {
+    const countElement = document.getElementById('questionCount');
+    const countDisplayElement = document.getElementById('questionCountDisplay');
+    
+    if (countElement) {
+        countElement.textContent = questions.length;
+    }
+    if (countDisplayElement) {
+        countDisplayElement.textContent = questions.length;
+    }
+    
+    // Update estimated duration
+    const estimatedElement = document.getElementById('estimatedDuration');
+    if (estimatedElement) {
+        const minutes = Math.round(questions.length * 1.5);
+        estimatedElement.textContent = minutes < 60 ? `${minutes} min` : `${Math.floor(minutes/60)}h ${minutes%60}m`;
+    }
+}
+
+// Enhanced notification function
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        z-index: 9999;
+        padding: 12px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        max-width: 350px;
+        animation: slideInRight 0.3s ease-out;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    `;
+    
+    const colors = {
+        success: 'linear-gradient(135deg, #10b981, #059669)',
+        error: 'linear-gradient(135deg, #ef4444, #dc2626)',
+        warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
+        info: 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+    };
+    
+    notification.style.background = colors[type] || colors.info;
+    
+    const icon = {
+        success: 'fas fa-check-circle',
+        error: 'fas fa-exclamation-circle',
+        warning: 'fas fa-exclamation-triangle',
+        info: 'fas fa-info-circle'
+    };
+    
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="${icon[type] || icon.info} me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// CSS animations for notifications (add to document if not already present)
+if (!document.querySelector('#notificationStyles')) {
+    const style = document.createElement('style');
+    style.id = 'notificationStyles';
+    style.textContent = `
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .notification {
+            transform: translateZ(0); /* Force hardware acceleration */
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 // =================== PREVIEW FUNCTIONALITY ===================
@@ -749,13 +857,13 @@ async function updateQuiz() {
 
 // =================== UTILITY FUNCTIONS ===================
 
-function initializeTooltips() {
-    // Initialize tooltips for action buttons
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-}
+// function initializeTooltips() {
+//     // Initialize tooltips for action buttons
+//     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+//     tooltipTriggerList.map(function (tooltipTriggerEl) {
+//         return new bootstrap.Tooltip(tooltipTriggerEl);
+//     });
+// }
 
 // Expose functions for global access
 window.toggleScheduleSettings = toggleScheduleSettings;
@@ -773,3 +881,62 @@ window.editQuiz = editQuiz;
 window.updateQuiz = updateQuiz;
 window.scrollToPreviewQuestion = scrollToPreviewQuestion;
 window.selectPreviewOption = selectPreviewOption;
+
+function handleImageUpload(num, input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            // Find the question and set image
+            const question = questions.find(q => q.id === num);
+            if (question) {
+                question.image = {
+                    file: file,
+                    preview: e.target.result
+                };
+                // Show preview in UI
+                const uploadZone = document.querySelector(`#question-${num} .image-upload-zone`);
+                if (uploadZone) {
+                    uploadZone.classList.add('has-image');
+                    uploadZone.innerHTML = `
+                        <img src="${e.target.result}" alt="Question Image" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeImage(${num})" type="button">
+                                <i class="fas fa-trash me-1"></i> Remove
+                            </button>
+                        </div>
+                    `;
+                }
+                triggerAutoSave();
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function removeImage(num) {
+    const question = questions.find(q => q.id === num);
+    if (question) {
+        question.image = null;
+        // Restore upload UI with input and event handler
+        const uploadZone = document.querySelector(`#question-${num} .image-upload-zone`);
+        if (uploadZone) {
+            uploadZone.classList.remove('has-image');
+            uploadZone.innerHTML = `
+                <input type="file"
+                       id="image-${num}"
+                       accept="image/*"
+                       style="display: none;"
+                       onchange="handleImageUpload(${num}, this)">
+                <div class="upload-content">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h6>Upload Image</h6>
+                    <p class="text-muted small mb-0">Click to select image</p>
+                </div>
+            `;
+        }
+        triggerAutoSave();
+    }
+}
