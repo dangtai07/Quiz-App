@@ -64,6 +64,11 @@ body::before {
     opacity: 1;
 }
 
+.rounded-circle {
+    border-radius: 50% !important;
+    width: 40px !important;
+    height: 40px !important;
+}
 /* Progress Steps */
 .progress-steps {
     background: var(--glass-bg);

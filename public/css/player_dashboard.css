@@ -94,7 +94,11 @@ body {
     position: relative;
     z-index: 2;
 }
-
+.rounded-circle {
+    border-radius: 50% !important;
+    width: 40px !important;
+    height: 40px !important;
+}
 .welcome-title {
     font-size: 2.5rem;
     font-weight: 800;

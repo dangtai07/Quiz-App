@@ -199,7 +199,11 @@ body::before {
     transform: translateY(-4px);
     box-shadow: var(--shadow-medium);
 }
-
+.rounded-circle {
+    border-radius: 50% !important;
+    width: 40px !important;
+    height: 40px !important;
+}
 .card-header-modern {
     background: var(--primary-gradient);
     color: white;

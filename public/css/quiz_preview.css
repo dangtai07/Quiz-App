@@ -95,7 +95,11 @@
 .quiz-sidebar::-webkit-scrollbar-thumb:hover {
     background: #999;
 }
-
+.rounded-circle {
+    border-radius: 50% !important;
+    width: 40px !important;
+    height: 40px !important;
+}
 /* Responsive adjustments */
 @media (max-width: 992px) {
     .col-lg-3 {
