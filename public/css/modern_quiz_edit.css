@@ -51,6 +51,7 @@ body::before {
     margin-bottom: 2rem;
     position: relative;
     overflow: hidden;
+    border-radius: var(--border-radius-lg); /* Add rounded border */
 }
 
 .editor-header::before {
@@ -146,8 +147,8 @@ body::before {
     content: '';
     position: absolute;
     top: 20px;
-    left: 0;
-    right: 0;
+    left: 20px;
+    right: 30px;
     height: 2px;
     background: linear-gradient(to right, #10b981 0%, #10b981 100%);
     z-index: 1;

@@ -87,8 +87,8 @@ body::before {
     content: '';
     position: absolute;
     top: 20px;
-    left: 0;
-    right: 0;
+    left: 20px;
+    right: 30px;
     height: 2px;
     background: linear-gradient(to right, #e2e8f0 0%, #e2e8f0 100%);
     z-index: 1;
