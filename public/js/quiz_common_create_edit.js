@@ -147,11 +147,22 @@ function duplicateQuestion(num) {
     
     questionCount++;
     const original = questions[idx];
-    // Deep clone options
+    
+    // Create new question object with careful handling of File objects
     const newQuestion = {
-        ...JSON.parse(JSON.stringify(original)),
         id: questionCount,
-        content: original.content + ' (Copy)'
+        content: original.content + ' (Copy)',
+        type: original.type,
+        options: [...(original.options || [])],
+        correctAnswer: original.correctAnswer,
+        image: original.image ? {
+            preview: original.image.preview,
+            // Create new File object if original has one
+            file: original.image.file ? 
+                new File([original.image.file], original.image.file.name, {
+                    type: original.image.file.type
+                }) : null
+        } : null
     };
     
     questions.splice(idx + 1, 0, newQuestion);
