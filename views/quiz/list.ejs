@@ -400,16 +400,12 @@
                 console.error('Error initializing dropdown:', error);
             }
         });
-        
-        console.log('Dropdown initialization complete');
     });
 
     // Test function for debugging
     function testDropdown() {
         const dropdown = document.querySelector('.dropdown-toggle');
         if (dropdown) {
-            console.log('Dropdown element found:', dropdown);
-            console.log('Bootstrap version:', bootstrap.Dropdown.VERSION || 'Unknown');
             dropdown.click();
         } else {
             console.log('No dropdown element found');

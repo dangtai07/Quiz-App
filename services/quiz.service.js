@@ -88,7 +88,6 @@ class QuizService {
             if (!quiz) {
                 throw new Error('Quiz not found');
             }
-            console.log(quiz);
             return quiz;
         } catch (error) {
             throw new Error(`Error getting quiz: ${error.message}`);
@@ -165,7 +164,6 @@ class QuizService {
 
     async updateQuiz(id, quizData, files) {
         try {
-            console.log("files: ", files);
             const quiz = await Quiz.findById(id);
             if (!quiz) {
                 throw new Error('Quiz not found');
@@ -173,8 +171,7 @@ class QuizService {
 
             const quizInfo = JSON.parse(quizData.quizInfo);
             const questionsData = JSON.parse(quizData.questionsData);
-            console.log("questionsData: ", questionsData);
-
+            
             // Process images and save paths
             const processedQuestions = questionsData.map(question => {
                 const imageKey = `questionImage_${question.number}`;

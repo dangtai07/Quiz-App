@@ -57,7 +57,6 @@ class QuizController {
 
     async updateQuiz(req, res) {
         try {
-            console.log(req.body);
             const updatedQuiz = await QuizService.updateQuiz(req.params.id, req.body, req.files);
             res.json(updatedQuiz);
         } catch (error) {
