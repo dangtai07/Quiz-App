@@ -194,18 +194,25 @@ async function updateQuiz() {
         }
 
         // Collect questions data
-        const questionsData = questions.map((question, index) => ({
-            number: index + 1,
-            content: question.content,
-            type: question.type,
-            options: question.type === 'multiple_choice' 
-                ? question.options.map((text, optIndex) => ({
-                    letter: String.fromCharCode(65 + optIndex), // A, B, C, D
-                    text: text || ''
-                })).filter(opt => opt.text.trim())
-                : [],
-            correctAnswer: question.correctAnswer || []
-        }));
+        const questionsData = questions.map((question, index) => {
+            // Get image src if exists
+            const imgElement = document.querySelector(`#question-${index + 1} .image-upload-zone img`);
+            const imageSrc = imgElement ? imgElement.src : null;
+
+            return {
+                number: index + 1,
+                content: question.content,
+                type: question.type,
+                options: question.type === 'multiple_choice' 
+                    ? question.options.map((text, optIndex) => ({
+                        letter: String.fromCharCode(65 + optIndex), // A, B, C, D
+                        text: text || ''
+                    })).filter(opt => opt.text.trim())
+                    : [],
+                correctAnswer: question.correctAnswer || [],
+                image: imageSrc
+            };
+        });
 
         // Validate questions array
         if (questionsData.length === 0) {
@@ -266,7 +273,7 @@ async function updateQuiz() {
             timer: 2000,
             showConfirmButton: false
         }).then(() => {
-            window.location.href = '/quizzes';
+            //window.location.href = '/quizzes';
         });
 
     } catch (error) {
