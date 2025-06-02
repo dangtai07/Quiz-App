@@ -199,7 +199,6 @@ function loadDraftIfExists() {
     if (draft) {
         try {
             const quizData = JSON.parse(draft);
-            
             // Show option to restore draft
             Swal.fire({
                 title: 'Draft Found',
@@ -267,6 +266,11 @@ function restoreDraft(quizData) {
                 if (uploadZone) {
                     uploadZone.classList.add('has-image');
                     uploadZone.innerHTML = `
+                        <input type="file"
+                               id="image-${question.id}"
+                               accept="image/*"
+                               style="display: none;"
+                               onchange="handleImageUpload(${question.id}, this)">
                         <img src="${question.image.preview}" alt="Question Image" 
                              style="max-width: 100%; max-height: 200px; border-radius: 8px;">
                         <div class="mt-2">
@@ -276,6 +280,18 @@ function restoreDraft(quizData) {
                             </button>
                         </div>
                     `;
+
+                    // Fetch the image and create a File object
+                    fetch(question.image.preview)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const fileName = `question_${question.id}_image.png`;
+                            const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+                            question.image.file = file;
+                        })
+                        .catch(err => {
+                            console.error('Error creating file from image:', err);
+                        });
                 }
             }
         }, 100);

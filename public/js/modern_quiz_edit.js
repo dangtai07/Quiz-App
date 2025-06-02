@@ -273,7 +273,7 @@ async function updateQuiz() {
             timer: 2000,
             showConfirmButton: false
         }).then(() => {
-            //window.location.href = '/quizzes';
+            window.location.href = '/quizzes';
         });
 
     } catch (error) {
