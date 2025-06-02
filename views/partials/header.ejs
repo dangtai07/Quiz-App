@@ -1,41 +1,44 @@
-<nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+<nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="/">
-            <i class="fas fa-brain me-2"></i>
+        <a class="navbar-brand" href="/quizzes">
+            <i class="fas fa-brain"></i>
             Quiz App
         </a>
-        
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
         
         <div class="collapse navbar-collapse" id="navbarNav">
-            <!-- Remove ALL duplicate navigation links -->
             <ul class="navbar-nav me-auto">
-                <!-- Empty - no duplicate links -->
+                <!-- Keep empty or add other high-level navigation if needed -->
             </ul>
             
-            <!-- Keep only user dropdown -->
             <div class="navbar-nav ms-auto">
                 <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center" 
+                        href="#" 
+                        role="button" 
+                        data-bs-toggle="dropdown" 
+                        aria-expanded="false"
+                        id="navbarDropdown">
                         <div class="d-flex align-items-center">
                             <div class="rounded-circle bg-white bg-opacity-20 p-2 me-2" style="position: relative;">
+                                <!-- <i class="fas fa-user text-white"></i> -->
                                 <img src="https://jbagy.me/wp-content/uploads/2025/03/anh-dai-dien-zalo-dep-1.jpg" alt="User" class="rounded-circle align-avatar-image" style="object-fit: cover;">
                             </div>
-                            <span class="fw-medium">
+                            <span class="fw-medium d-none d-sm-inline">
                                 <% if (typeof user !== 'undefined' && user) { %>
-                                    <%= user.name %>
+                                    <%= user.name || 'Admin' %>
                                 <% } else { %>
-                                    User
+                                    Admin
                                 <% } %>
                             </span>
                         </div>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="navbarDropdown">
                         <li>
                             <h6 class="dropdown-header">
-                                <% if (typeof user !== 'undefined' && user && user.email) { %>
+                                <% if (typeof user !== 'undefined' && user) { %>
                                     <i class="fas fa-envelope me-2"></i>
                                     <%= user.email %>
                                 <% } %>

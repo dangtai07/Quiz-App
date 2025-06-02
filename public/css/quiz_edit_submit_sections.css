@@ -1,0 +1,50 @@
+.submit-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 0.5rem;
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.submit-section h4 {
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.submit-section .btn {
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.submit-section .btn-outline-light:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.submit-section .btn-light {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.submit-section .btn-light:hover {
+    background: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.submit-section .gap-3 {
+    gap: 1rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .submit-section {
+        padding: 1.5rem;
+    }
+    
+    .submit-section .d-flex {
+        flex-direction: column;
+    }
+    
+    .submit-section .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}

@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Keep existing CSS -->
-    <link href="/css/quiz_create.css" rel="stylesheet">
+    <link href="/css/quiz_sub_preview_modal.css" rel="stylesheet">
     <link href="/css/modern_quiz_list.css" rel="stylesheet">
     
     <!-- Add SweetAlert2 CSS -->
@@ -19,104 +19,20 @@
     <%- typeof style !== 'undefined' ? style : '' %>
 </head>
 <body class="bg-light">
-    <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/quizzes">
-                <i class="fas fa-brain"></i>
-                Quiz App
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <!-- Keep empty or add other high-level navigation if needed -->
-                </ul>
-                
-                <div class="navbar-nav ms-auto">
-                    <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" 
-                           href="#" 
-                           role="button" 
-                           data-bs-toggle="dropdown" 
-                           aria-expanded="false"
-                           id="navbarDropdown">
-                            <div class="d-flex align-items-center">
-                                <div class="rounded-circle bg-white bg-opacity-20 p-2 me-2" style="position: relative;">
-                                    <img src="https://jbagy.me/wp-content/uploads/2025/03/anh-dai-dien-zalo-dep-1.jpg" alt="User" class="rounded-circle align-avatar-image" style="object-fit: cover;">
-                                </div>
-                                <span class="fw-medium d-none d-sm-inline">
-                                    <% if (typeof user !== 'undefined' && user) { %>
-                                        <%= user.name || 'Admin' %>
-                                    <% } else { %>
-                                        Admin
-                                    <% } %>
-                                </span>
-                            </div>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="navbarDropdown">
-                            <li>
-                                <h6 class="dropdown-header">
-                                    <% if (typeof user !== 'undefined' && user) { %>
-                                        <i class="fas fa-envelope me-2"></i>
-                                        <%= user.email %>
-                                    <% } %>
-                                </h6>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <!-- Include Header Partial -->
+    <%- include('../partials/header') %>
     
     <div class="container py-4">
         <%- body %>
     </div>
 
     <!-- Footer -->
-    <footer class="footer mt-auto py-3 bg-light border-top">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-6 text-center text-md-start">
-                    <span class="text-muted">
-                        <i class="fas fa-brain me-1"></i>
-                        Quiz App &copy; <%= new Date().getFullYear() %> All rights reserved
-                    </span>
-                </div>
-                <div class="col-md-6">
-                    <ul class="list-inline mb-0 text-center text-md-end">
-                        <li class="list-inline-item">
-                            <a href="/about" class="text-muted text-decoration-none">
-                                <i class="fas fa-info-circle me-1"></i>About
-                            </a>
-                        </li>
-                        <li class="list-inline-item ms-3">
-                            <a href="/contact" class="text-muted text-decoration-none">
-                                <i class="fas fa-envelope me-1"></i>Contact
-                            </a>
-                        </li>
-                        <li class="list-inline-item ms-3">
-                            <a href="/privacy" class="text-muted text-decoration-none">
-                                <i class="fas fa-shield-alt me-1"></i>Privacy
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <%- include('../partials/footer') %>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <!-- Add SweetAlert2 JS before your scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/quiz_common_create_edit.js"></script>
     <%- typeof script !== 'undefined' ? script : '' %>
 </body>
 </html>

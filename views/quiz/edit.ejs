@@ -283,35 +283,8 @@
         </div>
     </div>
 
-    <!-- Save Section -->
-    <!-- <div class="save-section animate-slide-up">
-        <div class="container">
-            <div class="row">
-                <div class="col-12">
-                    <div class="save-card">
-                        <div class="save-content">
-                            <h3 class="save-title">Ready to Update Your Quiz?</h3>
-                            <p class="save-description">Review all changes and click save when ready.</p>
-                            <div class="save-actions">
-                                <button class="btn btn-outline-primary me-3" onclick="previewQuiz()" data-bs-toggle="modal" data-bs-target="#previewModal">
-                                    <i class="fas fa-eye me-2"></i>
-                                    Preview Changes
-                                </button>
-                                <button class="btn btn-success-modern" onclick="updateQuiz()">
-                                    <i class="fas fa-save me-2"></i>
-                                    Save Changes
-                                </button>
-                            </div>
-                        </div>
-                        <div class="save-icon">
-                            <i class="fas fa-save"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div> -->
 </div>
+<!-- Submit Section -->
 <div class="row">
     <div class="col-12">
         <div class="submit-section text-center">
@@ -360,7 +333,7 @@
                         </div>
 
                         <!-- Sticky Sidebar -->
-                        <div class="col-lg-3 bg-light">
+                        <div class="col-lg-3 bg-light" style="padding-left: 0px;">
                             <div class="quiz-sidebar preview-sidebar">
                                 <!-- Timer Section -->
                                 <div class="quiz-timer p-3 mb-4">
@@ -411,6 +384,7 @@
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="/js/quiz_common_create_edit.js"></script>
 
 <!-- Initialize quiz data safely -->
 <script>
@@ -437,9 +411,15 @@ window.quizData = {
 const quizId = window.quizData.id;
 let questionCount = window.quizData.questions.length;
 let questions = window.quizData.questions;
+let autoSaveTimer;
+let previewTimer;
+let hasUnsavedChanges = false;
 
-console.log('Quiz edit initialized with', questionCount, 'questions');
-console.log('Quiz ID:', quizId);
+window.questions = questions;
+window.questionCount = questionCount;
+window.autoSaveTimer = autoSaveTimer;
+window.previewTimer = previewTimer;
+window.hasUnsavedChanges = hasUnsavedChanges;
 </script>
 
 <script src="/js/modern_quiz_edit.js"></script>
