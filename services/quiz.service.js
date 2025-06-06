@@ -9,22 +9,25 @@ class QuizService {
             const questionsData = JSON.parse(quizData.questionsData);
             
             // Process images and save paths
-            // In your createQuiz method, replace the image processing section with this:
-
-            // Process images and save paths
             const processedQuestions = questionsData.map(question => {
                 const imageKey = `questionImage_${question.number}`;
-                // Find file where fieldname matches imageKey
-                const imageFile = files ? Object.values(files).flat().find(f => f.fieldname === imageKey) : null;
-                let imagePath = null;
+                let imageFile = null;
                 
+                // Find the correct image file
+                if (files) {
+                    if (Array.isArray(files)) {
+                        imageFile = files.find(f => f.fieldname === imageKey);
+                    } else if (typeof files === 'object') {
+                        imageFile = Object.values(files).flat().find(f => f.fieldname === imageKey);
+                    }
+                }
+
+                let imagePath = null;
                 if (imageFile && imageFile.path) {
                     try {
-                        // Use the path from multer - handle both Windows and Unix paths
                         const pathParts = imageFile.path.split('public');
                         if (pathParts.length > 1) {
                             imagePath = '/' + pathParts[1].replace(/\\/g, '/');
-                            // Remove leading slash if it exists
                             if (imagePath.startsWith('//')) {
                                 imagePath = imagePath.substring(1);
                             }
@@ -35,28 +38,54 @@ class QuizService {
                     }
                 }
                 
+                // Process options - ensure they have the correct format
+                const processedOptions = [];
+                if (question.options && Array.isArray(question.options)) {
+                    question.options.forEach(option => {
+                        if (option && option.text && option.text.trim()) {
+                            processedOptions.push({
+                                letter: option.letter,
+                                text: option.text.trim()
+                            });
+                        }
+                    });
+                }
+                
+                // Ensure at least 2 options exist
+                if (processedOptions.length < 2) {
+                    while (processedOptions.length < 2) {
+                        const letter = String.fromCharCode(65 + processedOptions.length); // A, B, C, D, E, F
+                        processedOptions.push({
+                            letter: letter,
+                            text: ''
+                        });
+                    }
+                }
+                
                 return {
                     number: question.number,
-                    content: question.content,
-                    type: question.type,
-                    options: question.type === 'multiple_choice' ? question.options : [],
-                    correctAnswer: question.correctAnswer || [],
+                    content: question.content.trim(),
+                    answerTime: Math.max(5, Math.min(300, parseInt(question.answerTime) || 30)), // 5-300 seconds
+                    options: processedOptions,
+                    correctAnswer: question.correctAnswer || 'A',
                     image: imagePath
                 };
             });
             
-            // Create quiz document
+            // Calculate total duration
+            const totalDuration = processedQuestions.reduce((sum, q) => sum + q.answerTime, 0);
+            
+            // Create quiz document with new schema
             const quiz = new Quiz({
-                title: quizInfo.title,
+                title: quizInfo.title.trim(),
                 mode: quizInfo.mode,
-                language: quizInfo.language,
                 scheduleSettings: quizInfo.mode === 'offline' ? quizInfo.scheduleSettings : null,
                 questions: processedQuestions,
-                // Add metadata for enhanced functionality
-                createdBy: null, // You can add user ID here if available
+                createdBy: null, // Add user ID here if available from req.session
                 metadata: {
-                    version: '1.0',
-                    estimatedDuration: this.calculateEstimatedDuration(processedQuestions.length),
+                    totalDuration: totalDuration,
+                    version: '2.0',
+                    estimatedDuration: this.formatDuration(totalDuration),
                     difficulty: this.calculateDifficulty(processedQuestions),
                     tags: this.extractTags(quizInfo.title),
                     lastModified: new Date()
@@ -64,13 +93,14 @@ class QuizService {
             });
             
             await quiz.save();
+            console.log(`✅ Quiz "${quiz.title}" created successfully with ${processedQuestions.length} questions`);
             return quiz;
             
         } catch (error) {
             // Delete uploaded files if error occurs
             if (files) {
-                Object.keys(files).forEach(key => {
-                    const file = files[key][0];
+                const filesToDelete = Array.isArray(files) ? files : Object.values(files).flat();
+                filesToDelete.forEach(file => {
                     if (file && file.path) {
                         fs.unlink(file.path, err => {
                             if (err) console.error('Error deleting file:', err);
@@ -94,6 +124,164 @@ class QuizService {
         }
     }
 
+    async updateQuiz(id, quizData, files) {
+        try {
+            const quiz = await Quiz.findById(id);
+            if (!quiz) {
+                throw new Error('Quiz not found');
+            }
+
+            const quizInfo = JSON.parse(quizData.quizInfo);
+            const questionsData = JSON.parse(quizData.questionsData);
+            
+            // Process images and save paths
+            const processedQuestions = questionsData.map(question => {
+                const imageKey = `questionImage_${question.number}`;
+                let imageFile = null;
+                
+                if (files) {
+                    if (Array.isArray(files)) {
+                        imageFile = files.find(f => f.fieldname === imageKey);
+                    } else if (typeof files === 'object') {
+                        imageFile = Object.values(files).flat().find(f => f.fieldname === imageKey);
+                    }
+                }
+
+                let imagePath = null;
+
+                // Handle new image upload
+                if (imageFile && imageFile.path) {
+                    try {
+                        const pathParts = imageFile.path.split('public');
+                        if (pathParts.length > 1 && pathParts[1]) {
+                            imagePath = pathParts[1].replace(/\\/g, '/');
+                            if (!imagePath.startsWith('/')) {
+                                imagePath = '/' + imagePath;
+                            }
+                            imagePath = imagePath.replace(/\/+/g, '/');
+                        } else {
+                            const filename = path.basename(imageFile.path);
+                            imagePath = `/uploads/quiz_images/${filename}`;
+                        }
+                        
+                        // Delete old image if exists
+                        const oldQuestion = quiz.questions.find(q => q.number === question.number);
+                        if (oldQuestion?.image) {
+                            const oldImagePath = path.join(__dirname, '../public', oldQuestion.image);
+                            fs.unlink(oldImagePath, err => {
+                                if (err) console.log('Note: Could not delete old image:', err.message);
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error processing image path:', error);
+                        imagePath = null;
+                    }
+                } else {
+                    // Keep existing image or remove it
+                    const existingQuestion = quiz.questions.find(q => q.number === question.number);
+                    if (question.image === null || question.image === '') {
+                        // Image was removed
+                        if (existingQuestion?.image) {
+                            const oldImagePath = path.join(__dirname, '../public', existingQuestion.image);
+                            fs.unlink(oldImagePath, err => {
+                                if (err) console.log('Note: Could not delete removed image:', err.message);
+                            });
+                        }
+                        imagePath = null;
+                    } else {
+                        // Keep existing image
+                        imagePath = existingQuestion?.image || null;
+                    }
+                }
+
+                // Process options
+                const processedOptions = [];
+                if (question.options && Array.isArray(question.options)) {
+                    question.options.forEach(option => {
+                        if (option && option.text && option.text.trim()) {
+                            processedOptions.push({
+                                letter: option.letter,
+                                text: option.text.trim()
+                            });
+                        }
+                    });
+                }
+                
+                // Ensure minimum options
+                if (processedOptions.length < 2) {
+                    while (processedOptions.length < 2) {
+                        const letter = String.fromCharCode(65 + processedOptions.length);
+                        processedOptions.push({
+                            letter: letter,
+                            text: ''
+                        });
+                    }
+                }
+
+                return {
+                    number: question.number,
+                    content: question.content.trim(),
+                    answerTime: Math.max(5, Math.min(300, parseInt(question.answerTime) || 30)),
+                    options: processedOptions,
+                    correctAnswer: question.correctAnswer || 'A',
+                    image: imagePath
+                };
+            });
+
+            // Handle deleted questions' images
+            quiz.questions.forEach(oldQuestion => {
+                const stillExists = processedQuestions.some(q => q.number === oldQuestion.number);
+                if (!stillExists && oldQuestion.image) {
+                    const oldImagePath = path.join(__dirname, '../public', oldQuestion.image);
+                    fs.unlink(oldImagePath, err => {
+                        if (err) console.error('Error deleting removed question image:', err);
+                    });
+                }
+            });
+
+            // Calculate new total duration
+            const totalDuration = processedQuestions.reduce((sum, q) => sum + q.answerTime, 0);
+
+            // Update quiz document
+            const updatedQuiz = await Quiz.findByIdAndUpdate(
+                id,
+                {
+                    title: quizInfo.title.trim(),
+                    mode: quizInfo.mode,
+                    scheduleSettings: quizInfo.mode === 'offline' ? quizInfo.scheduleSettings : null,
+                    questions: processedQuestions,
+                    'metadata.totalDuration': totalDuration,
+                    'metadata.lastModified': new Date(),
+                    'metadata.estimatedDuration': this.formatDuration(totalDuration),
+                    'metadata.difficulty': this.calculateDifficulty(processedQuestions),
+                    'metadata.tags': this.extractTags(quizInfo.title),
+                    'metadata.version': '2.0'
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            );
+
+            console.log(`✅ Quiz "${updatedQuiz.title}" updated successfully`);
+            return updatedQuiz;
+
+        } catch (error) {
+            // Delete uploaded files if error occurs
+            if (files) {
+                const filesToDelete = Array.isArray(files) ? files : Object.values(files).flat();
+                filesToDelete.forEach(file => {
+                    if (file && file.path) {
+                        fs.unlink(file.path, err => {
+                            if (err) console.error('Error deleting file:', err);
+                        });
+                    }
+                });
+            }
+            throw new Error(`Error updating quiz: ${error.message}`);
+        }
+    }
+
     async deleteQuiz(id) {
         try {
             const quiz = await Quiz.findById(id);
@@ -112,6 +300,7 @@ class QuizService {
             });
 
             await Quiz.findByIdAndDelete(id);
+            console.log(`✅ Quiz "${quiz.title}" deleted successfully`);
             return { message: 'Quiz deleted successfully' };
         } catch (error) {
             throw new Error(`Error deleting quiz: ${error.message}`);
@@ -121,7 +310,7 @@ class QuizService {
     async getAllQuizzes() {
         try {
             const quizzes = await Quiz.find()
-                .select('title mode language questions scheduleSettings createdAt updatedAt metadata')
+                .select('title mode questions scheduleSettings createdAt updatedAt metadata')
                 .sort({ createdAt: -1 });
 
             return quizzes.map(quiz => {
@@ -130,11 +319,11 @@ class QuizService {
                 // Calculate enhanced statistics
                 const questionCount = quiz.questions.length;
                 const hasImages = quiz.questions.some(q => q.image);
-                const multipleChoiceCount = quiz.questions.filter(q => q.type === 'multiple_choice').length;
-                const textInputCount = quiz.questions.filter(q => q.type === 'text_input').length;
+                const totalDuration = quiz.questions.reduce((sum, q) => sum + (q.answerTime || 30), 0);
                 
-                // Calculate difficulty score (0-100)
-                const difficultyScore = this.calculateDifficultyScore(quiz.questions);
+                // Calculate average options per question
+                const averageOptions = questionCount > 0 ? 
+                    quiz.questions.reduce((sum, q) => sum + (q.options ? q.options.length : 2), 0) / questionCount : 0;
                 
                 return {
                     ...quizObject,
@@ -145,16 +334,15 @@ class QuizService {
                     formattedDate: new Date(quiz.updatedAt).toLocaleDateString(),
                     // Enhanced metadata
                     hasImages: hasImages,
-                    questionTypes: {
-                        multipleChoice: multipleChoiceCount,
-                        textInput: textInputCount
-                    },
-                    difficulty: this.getDifficultyLabel(difficultyScore),
-                    difficultyScore: difficultyScore,
-                    estimatedDuration: this.calculateEstimatedDuration(questionCount),
+                    totalDuration: totalDuration,
+                    formattedDuration: this.formatDuration(totalDuration),
+                    averageOptions: Math.round(averageOptions * 10) / 10,
+                    difficulty: this.getDifficultyLabel(this.calculateDifficultyScore(quiz.questions)),
+                    difficultyScore: this.calculateDifficultyScore(quiz.questions),
                     tags: quizObject.metadata?.tags || [],
                     isRecent: this.isRecentlyUpdated(quiz.updatedAt),
-                    status: this.getQuizStatus(quiz)
+                    status: this.getQuizStatus(quiz),
+                    version: quizObject.metadata?.version || '1.0'
                 };
             });
         } catch (error) {
@@ -162,177 +350,59 @@ class QuizService {
         }
     }
 
-    async updateQuiz(id, quizData, files) {
-        try {
-            const quiz = await Quiz.findById(id);
-            if (!quiz) {
-                throw new Error('Quiz not found');
-            }
-
-            const quizInfo = JSON.parse(quizData.quizInfo);
-            const questionsData = JSON.parse(quizData.questionsData);
-            
-            // Process images and save paths
-            const processedQuestions = questionsData.map(question => {
-                const imageKey = `questionImage_${question.number}`;
-                let imageFile = null;
-                if (files && Array.isArray(files)) {
-                    imageFile = files.find(f => f.fieldname === imageKey);
-                } else if (files && typeof files === 'object') {
-                    imageFile = Object.values(files).flat().find(f => f.fieldname === imageKey);
-                }
-
-                let imagePath = null;
-
-                // If imageFile exists, process new upload
-                if (imageFile && imageFile.path) {
-                    try {
-                        const pathParts = imageFile.path.split('public');
-                        if (pathParts.length > 1 && pathParts[1]) {
-                            imagePath = pathParts[1].replace(/\\/g, '/');
-                            if (!imagePath.startsWith('/')) {
-                                imagePath = '/' + imagePath;
-                            }
-                            imagePath = imagePath.replace(/\/+/g, '/');
-                        } else {
-                            const filename = path.basename(imageFile.path);
-                            imagePath = `/uploads/quiz_images/${filename}`;
-                        }
-                        // Delete old image if exists
-                        const oldQuestion = quiz.questions.find(q => q.number === question.number);
-                        if (oldQuestion?.image) {
-                            const oldImagePath = path.join(__dirname, '../public', oldQuestion.image);
-                            fs.unlink(oldImagePath, err => {
-                                if (err) console.log('Note: Could not delete old image:', err.message);
-                            });
-                        }
-                    } catch (error) {
-                        console.error('Error processing image path:', error);
-                        imagePath = null;
-                    }
-                } else {
-                    // Check if the image should be removed (frontend sends image: null or empty)
-                    const existingQuestion = quiz.questions.find(q => q.number === question.number);
-                    // If the incoming question.image is null/empty and there was an old image, remove it
-                    if (
-                        (!question.image || question.image === '' || question.image === null) &&
-                        existingQuestion?.image
-                    ) {
-                        const oldImagePath = path.join(__dirname, '../public', existingQuestion.image);
-                        fs.unlink(oldImagePath, err => {
-                            if (err) console.log('Note: Could not delete removed image:', err.message);
-                        });
-                        imagePath = null;
-                    } else {
-                        // Otherwise, keep the existing image
-                        imagePath = existingQuestion?.image || null;
-                    }
-                }
-
-                return {
-                    number: question.number,
-                    content: question.content,
-                    type: question.type,
-                    options: question.type === 'multiple_choice' ? question.options : [],
-                    correctAnswer: question.correctAnswer || [],
-                    image: imagePath
-                };
-            });
-
-            // Handle deleted questions' images
-            quiz.questions.forEach(oldQuestion => {
-                const stillExists = processedQuestions.some(q => q.number === oldQuestion.number);
-                if (!stillExists && oldQuestion.image) {
-                    const oldImagePath = path.join(__dirname, '../public', oldQuestion.image);
-                    fs.unlink(oldImagePath, err => {
-                        if (err) console.error('Error deleting removed question image:', err);
-                    });
-                }
-            });
-
-            // Update quiz document with enhanced metadata
-            const updatedQuiz = await Quiz.findByIdAndUpdate(
-                id,
-                {
-                    title: quizInfo.title,
-                    mode: quizInfo.mode,
-                    language: quizInfo.language,
-                    scheduleSettings: quizInfo.mode === 'offline' ? quizInfo.scheduleSettings : null,
-                    questions: processedQuestions,
-                    'metadata.lastModified': new Date(),
-                    'metadata.estimatedDuration': this.calculateEstimatedDuration(processedQuestions.length),
-                    'metadata.difficulty': this.calculateDifficulty(processedQuestions),
-                    'metadata.tags': this.extractTags(quizInfo.title)
-                },
-                {
-                    new: true,
-                    runValidators: true
-                }
-            );
-
-            return updatedQuiz;
-
-        } catch (error) {
-            // Delete uploaded files if error occurs
-            if (files) {
-                const uploadedFiles = Object.values(files).flat();
-                uploadedFiles.forEach(file => {
-                    if (file && file.path) {
-                        fs.unlink(file.path, err => {
-                            if (err) console.error('Error deleting file:', err);
-                        });
-                    }
-                });
-            }
-            throw new Error(`Error updating quiz: ${error.message}`);
-        }
-    }
-
     // Helper methods for enhanced functionality
-
-    calculateEstimatedDuration(questionCount) {
-        // Estimate 1-2 minutes per question
-        const minutes = questionCount * 1.5;
-        
-        if (minutes < 60) {
-            return `${Math.round(minutes)} min`;
+    formatDuration(totalSeconds) {
+        if (totalSeconds < 60) {
+            return `${totalSeconds}s`;
+        } else if (totalSeconds < 3600) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
         } else {
-            const hours = Math.floor(minutes / 60);
-            const remainingMinutes = Math.round(minutes % 60);
-            return `${hours}h ${remainingMinutes}m`;
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
         }
     }
 
     calculateDifficulty(questions) {
-        // Simple difficulty calculation based on question characteristics
-        let score = 0;
+        if (!questions || questions.length === 0) return 'Easy';
+        
+        let difficultyScore = 0;
         
         questions.forEach(question => {
             // Base difficulty
-            score += 10;
+            difficultyScore += 10;
             
-            // Multiple choice is easier than text input
-            if (question.type === 'text_input') {
-                score += 15;
+            // More options = slightly harder
+            const optionCount = question.options ? question.options.length : 2;
+            if (optionCount > 4) {
+                difficultyScore += 5;
+            } else if (optionCount > 2) {
+                difficultyScore += 2;
             }
             
-            // More options = harder
-            if (question.options && question.options.length > 3) {
-                score += 5;
+            // Longer content = harder
+            if (question.content.length > 150) {
+                difficultyScore += 10;
+            } else if (question.content.length > 75) {
+                difficultyScore += 5;
             }
             
-            // Longer questions are harder
-            if (question.content.length > 100) {
-                score += 10;
+            // Shorter time = harder
+            if (question.answerTime < 20) {
+                difficultyScore += 15;
+            } else if (question.answerTime < 30) {
+                difficultyScore += 5;
             }
             
-            // Questions with images might be easier (visual aids)
+            // Images might make it easier (visual aids)
             if (question.image) {
-                score -= 5;
+                difficultyScore -= 5;
             }
         });
         
-        const averageScore = questions.length > 0 ? score / questions.length : 0;
+        const averageScore = questions.length > 0 ? difficultyScore / questions.length : 0;
         return this.getDifficultyLabel(averageScore);
     }
 
@@ -344,20 +414,33 @@ class QuizService {
         questions.forEach(question => {
             let questionScore = 20; // Base score
             
-            if (question.type === 'text_input') {
-                questionScore += 30;
+            // Option count factor
+            const optionCount = question.options ? question.options.length : 2;
+            if (optionCount > 4) {
+                questionScore += 15;
+            } else if (optionCount > 2) {
+                questionScore += 5;
             }
             
-            if (question.options && question.options.length > 3) {
+            // Content length factor
+            if (question.content.length > 150) {
+                questionScore += 20;
+            } else if (question.content.length > 75) {
                 questionScore += 10;
             }
             
-            if (question.content.length > 150) {
-                questionScore += 15;
+            // Time pressure factor
+            if (question.answerTime < 20) {
+                questionScore += 25;
+            } else if (question.answerTime < 30) {
+                questionScore += 10;
+            } else if (question.answerTime > 60) {
+                questionScore -= 10;
             }
             
+            // Visual aid factor
             if (question.image) {
-                questionScore -= 10; // Images might make it easier
+                questionScore -= 10;
             }
             
             totalScore += questionScore;
@@ -374,11 +457,11 @@ class QuizService {
     }
 
     extractTags(title) {
-        // Simple tag extraction from title
         const commonTags = [
             'math', 'science', 'history', 'english', 'geography', 
             'biology', 'chemistry', 'physics', 'literature', 'art',
-            'technology', 'programming', 'business', 'economics'
+            'technology', 'programming', 'business', 'economics',
+            'music', 'sports', 'culture', 'language', 'computer'
         ];
         
         const titleLower = title.toLowerCase();
@@ -408,36 +491,114 @@ class QuizService {
         }
     }
 
-    // New methods for enhanced functionality
-
-    async getQuizStatistics(quizId) {
+    // Enhanced analytics methods
+    async getQuizAnalytics() {
         try {
-            const quiz = await Quiz.findById(quizId);
-            if (!quiz) {
-                throw new Error('Quiz not found');
-            }
-
-            // TODO: Implement real statistics from quiz results
+            const quizzes = await Quiz.find().select('title mode language questions createdAt updatedAt metadata');
+            
+            const totalQuizzes = quizzes.length;
+            const totalQuestions = quizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0);
+            const totalDuration = quizzes.reduce((sum, quiz) => {
+                return sum + quiz.questions.reduce((qSum, question) => {
+                    return qSum + (question.answerTime || 30);
+                }, 0);
+            }, 0);
+            
+            const modeDistribution = quizzes.reduce((acc, quiz) => {
+                acc[quiz.mode] = (acc[quiz.mode] || 0) + 1;
+                return acc;
+            }, {});
+            
+            // Enhanced option analysis
+            const optionDistribution = {};
+            let totalOptionsCount = 0;
+            quizzes.forEach(quiz => {
+                quiz.questions.forEach(question => {
+                    const optionCount = question.options ? question.options.length : 2;
+                    optionDistribution[optionCount] = (optionDistribution[optionCount] || 0) + 1;
+                    totalOptionsCount += optionCount;
+                });
+            });
+            
+            const averageQuestionsPerQuiz = totalQuizzes > 0 ? Math.round(totalQuestions / totalQuizzes) : 0;
+            const averageOptionsPerQuestion = totalQuestions > 0 ? Math.round((totalOptionsCount / totalQuestions) * 10) / 10 : 0;
+            const averageDurationPerQuiz = totalQuizzes > 0 ? Math.round(totalDuration / totalQuizzes) : 0;
+            
+            const recentQuizzes = quizzes.filter(quiz => {
+                const daysDiff = Math.floor((new Date() - new Date(quiz.createdAt)) / (1000 * 60 * 60 * 24));
+                return daysDiff <= 30;
+            }).length;
+            
             return {
-                totalAttempts: 0,
-                averageScore: 0,
-                completionRate: 0,
-                averageTime: 0,
-                questionStats: quiz.questions.map(q => ({
-                    questionNumber: q.number,
-                    correctPercentage: 0,
-                    averageTime: 0,
-                    skipPercentage: 0
-                }))
+                overview: {
+                    totalQuizzes,
+                    totalQuestions,
+                    totalDuration: this.formatDuration(totalDuration),
+                    averageQuestionsPerQuiz,
+                    averageOptionsPerQuestion,
+                    averageDurationPerQuiz: this.formatDuration(averageDurationPerQuiz),
+                    recentQuizzes
+                },
+                distributions: {
+                    mode: modeDistribution,
+                    optionCounts: optionDistribution
+                },
+                trends: {
+                    weeklyGrowth: 0, // TODO: Implement trend analysis
+                    monthlyGrowth: 0,
+                    popularTimes: [],
+                    difficultyTrends: this.analyzeDifficultyTrends(quizzes)
+                },
+                performance: {
+                    questionsWithImages: quizzes.reduce((sum, quiz) => {
+                        return sum + quiz.questions.filter(q => q.image).length;
+                    }, 0),
+                    averageTimePerQuestion: totalQuestions > 0 ? Math.round(totalDuration / totalQuestions) : 0,
+                    versionDistribution: this.analyzeVersionDistribution(quizzes)
+                }
             };
         } catch (error) {
-            throw new Error(`Error getting quiz statistics: ${error.message}`);
+            throw new Error(`Error getting quiz analytics: ${error.message}`);
         }
     }
 
+    analyzeDifficultyTrends(quizzes) {
+        const difficulties = { Easy: 0, Medium: 0, Hard: 0, Expert: 0 };
+        
+        quizzes.forEach(quiz => {
+            const difficulty = this.calculateDifficulty(quiz.questions);
+            difficulties[difficulty] = (difficulties[difficulty] || 0) + 1;
+        });
+        
+        return difficulties;
+    }
+
+    analyzeVersionDistribution(quizzes) {
+        const versions = {};
+        
+        quizzes.forEach(quiz => {
+            const version = quiz.metadata?.version || '1.0';
+            versions[version] = (versions[version] || 0) + 1;
+        });
+        
+        return versions;
+    }
+
+    // Search functionality with enhanced filters
     async searchQuizzes(searchParams) {
         try {
-            const { query, mode, language, difficulty, tags, sortBy = 'newest' } = searchParams;
+            const { 
+                query, 
+                mode, 
+                language, 
+                difficulty, 
+                tags, 
+                minDuration, 
+                maxDuration,
+                minQuestions,
+                maxQuestions,
+                sortBy = 'newest' 
+            } = searchParams;
             
             let mongoQuery = {};
             
@@ -464,6 +625,30 @@ class QuizService {
                 mongoQuery['metadata.tags'] = { $in: tags };
             }
             
+            if (minDuration || maxDuration) {
+                mongoQuery['metadata.totalDuration'] = {};
+                if (minDuration) mongoQuery['metadata.totalDuration'].$gte = parseInt(minDuration);
+                if (maxDuration) mongoQuery['metadata.totalDuration'].$lte = parseInt(maxDuration);
+            }
+            
+            // For questions count, we need to use aggregation
+            let pipeline = [
+                { $match: mongoQuery },
+                {
+                    $addFields: {
+                        questionCount: { $size: '$questions' }
+                    }
+                }
+            ];
+            
+            if (minQuestions || maxQuestions) {
+                const questionFilter = {};
+                if (minQuestions) questionFilter.$gte = parseInt(minQuestions);
+                if (maxQuestions) questionFilter.$lte = parseInt(maxQuestions);
+                pipeline.push({ $match: { questionCount: questionFilter } });
+            }
+            
+            // Add sorting
             let sortQuery = {};
             switch (sortBy) {
                 case 'newest':
@@ -476,74 +661,21 @@ class QuizService {
                     sortQuery = { title: 1 };
                     break;
                 case 'questions':
-                    sortQuery = { 'questions.length': -1 };
+                    sortQuery = { questionCount: -1 };
+                    break;
+                case 'duration':
+                    sortQuery = { 'metadata.totalDuration': -1 };
                     break;
                 default:
                     sortQuery = { createdAt: -1 };
             }
             
-            const quizzes = await Quiz.find(mongoQuery)
-                .sort(sortQuery)
-                .select('title mode language questions scheduleSettings createdAt updatedAt metadata');
+            pipeline.push({ $sort: sortQuery });
             
+            const quizzes = await Quiz.aggregate(pipeline);
             return quizzes;
         } catch (error) {
             throw new Error(`Error searching quizzes: ${error.message}`);
-        }
-    }
-
-    async getQuizAnalytics() {
-        try {
-            const quizzes = await Quiz.find().select('title mode language questions createdAt updatedAt');
-            
-            const totalQuizzes = quizzes.length;
-            const totalQuestions = quizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0);
-            
-            const modeDistribution = quizzes.reduce((acc, quiz) => {
-                acc[quiz.mode] = (acc[quiz.mode] || 0) + 1;
-                return acc;
-            }, {});
-            
-            const languageDistribution = quizzes.reduce((acc, quiz) => {
-                acc[quiz.language] = (acc[quiz.language] || 0) + 1;
-                return acc;
-            }, {});
-            
-            const questionTypeDistribution = {};
-            quizzes.forEach(quiz => {
-                quiz.questions.forEach(question => {
-                    questionTypeDistribution[question.type] = (questionTypeDistribution[question.type] || 0) + 1;
-                });
-            });
-            
-            const averageQuestionsPerQuiz = totalQuizzes > 0 ? Math.round(totalQuestions / totalQuizzes) : 0;
-            
-            const recentQuizzes = quizzes.filter(quiz => {
-                const daysDiff = Math.floor((new Date() - new Date(quiz.createdAt)) / (1000 * 60 * 60 * 24));
-                return daysDiff <= 30;
-            }).length;
-            
-            return {
-                overview: {
-                    totalQuizzes,
-                    totalQuestions,
-                    averageQuestionsPerQuiz,
-                    recentQuizzes
-                },
-                distributions: {
-                    mode: modeDistribution,
-                    language: languageDistribution,
-                    questionType: questionTypeDistribution
-                },
-                trends: {
-                    // TODO: Implement trend analysis
-                    weeklyGrowth: 0,
-                    monthlyGrowth: 0,
-                    popularTimes: []
-                }
-            };
-        } catch (error) {
-            throw new Error(`Error getting quiz analytics: ${error.message}`);
         }
     }
 }

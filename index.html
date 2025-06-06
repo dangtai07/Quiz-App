@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Demo Dịch Trang</title>
+  <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+</head>
+<body>
+  <h1>Chào mừng!</h1>
+  <p>Đây là một trang thử nghiệm chức năng dịch tự động.</p>
+
+  <div>
+    <button onclick="translatePage('vi')">Tiếng Việt</button>
+    <button onclick="translatePage('en')">English</button>
+  </div>
+  <!-- Nút chuyển sang bản dịch tiếng Anh -->
+<a href="https://translate.google.com/translate?sl=vi&tl=en&u=https://pt-solution.vn/khoot/ad.php" target="_blank">
+  <button>Dịch sang tiếng Anh</button>
+</a>
+
+<!-- Nút chuyển về tiếng Việt -->
+<a href="https://translate.google.com/translate?sl=en&tl=vi&u=https://pt-solution.vn/khoot/ad.php" target="_blank">
+  <button>Dịch sang Tiếng Việt</button>
+</a>
+
+  <!-- Khởi tạo Google Translate (ẩn) -->
+  <div id="google_translate_element" style="display: none;"></div>
+</body>
+</html>
+<script>
+    function googleTranslateElementInit() {
+  new google.translate.TranslateElement({
+    pageLanguage: 'vi', // ngôn ngữ gốc của trang
+    autoDisplay: false
+  }, 'google_translate_element');
+}
+
+// Hàm chuyển đổi ngôn ngữ khi nhấn nút
+function translatePage(lang) {
+  const select = document.querySelector('.goog-te-combo');
+  if (select) {
+    select.value = lang;
+    select.dispatchEvent(new Event('change'));
+  }
+}
+
+// Ẩn các phần giao diện Google Translate (nếu muốn)
+const style = document.createElement('style');
+style.innerHTML = `
+  .goog-te-banner-frame, .goog-logo-link, .goog-te-gadget {
+    display: none !important;
+  }
+  body {
+    top: 0px !important;
+  }
+`;
+document.head.appendChild(style);
+</script>

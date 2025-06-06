@@ -1,0 +1,301 @@
+<% layout = false %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= isEdit ? 'Edit Quiz' : 'Create New Quiz' %> - Quiz App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="/css/modern_quiz_form.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
+</head>
+<body>
+<div class="container-editor">
+    <!-- Auto-save indicator -->
+    <div class="auto-save" id="autoSaveIndicator">
+        <i class="fas fa-check-circle me-2"></i>
+        <span><%= isEdit ? 'Changes saved' : 'Draft saved' %></span>
+    </div>
+    
+    <div class="modern-quiz-editor">
+        <!-- Header Section -->
+        <div class="editor-header animate-fade-in">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <div class="header-content">
+                            <h1 class="editor-title">
+                                <i class="fas <%= isEdit ? 'fa-edit' : 'fa-plus-circle' %> me-3"></i>
+                                <%= isEdit ? 'Edit Quiz' : 'Create New Quiz' %>
+                            </h1>
+                            <p class="editor-subtitle">
+                                <%= isEdit ? 'Update your quiz content and settings' : 'Design engaging quizzes with customizable options' %>
+                            </p>
+                            <% if (isEdit) { %>
+                            <div class="quiz-meta">
+                                <span class="meta-badge">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Created <%= new Date(quiz.createdAt).toLocaleDateString() %>
+                                </span>
+                                <span class="meta-badge">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Last updated <%= new Date(quiz.updatedAt).toLocaleDateString() %>
+                                </span>
+                            </div>
+                            <% } %>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        <div class="header-actions">
+                            <a href="/quizzes" class="btn btn-outline-light me-2">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Back to Dashboard
+                            </a>
+                            <button class="btn btn-primary-modern" onclick="previewQuiz()" data-bs-toggle="modal" data-bs-target="#previewModal">
+                                <i class="fas fa-eye me-2"></i>
+                                Preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Quiz Information Section -->
+        <div class="modern-card animate-slide-up">
+            <div class="card-header-modern">
+                <h4 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Quiz Information
+                </h4>
+            </div>
+            <div class="card-body-modern">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="form-floating-modern">
+                            <input type="text" class="form-control-modern" id="quizTitle" placeholder=" " 
+                                   value="<%= isEdit ? quiz.title : '' %>" required>
+                            <label class="form-label-modern">Quiz Title</label>
+                        </div>
+                        
+                        <div class="row">
+                            <div>
+                                <div class="form-floating-modern">
+                                    <select class="form-control-modern" id="quizMode" onchange="toggleScheduleSettings()">
+                                        <option value="online" <%= isEdit && quiz.mode === 'online' ? 'selected' : '' %>>Online Mode</option>
+                                        <option value="offline" <%= isEdit && quiz.mode === 'offline' ? 'selected' : '' %>>Scheduled Mode</option>
+                                    </select>
+                                    <label class="form-label-modern">Quiz Mode</label>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <!-- Schedule Settings -->
+                        <div id="scheduleSettings" style="display: <%= isEdit && quiz.mode === 'offline' ? 'block' : 'none' %>;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                Schedule your quiz for specific time periods
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-floating-modern">
+                                        <input type="datetime-local" class="form-control-modern" id="startTime"
+                                               value="<%= isEdit && quiz.scheduleSettings?.startTime ? new Date(quiz.scheduleSettings.startTime).toISOString().slice(0, 16) : '' %>">
+                                        <label class="form-label-modern">Start Time</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating-modern">
+                                        <input type="datetime-local" class="form-control-modern" id="endTime"
+                                               value="<%= isEdit && quiz.scheduleSettings?.endTime ? new Date(quiz.scheduleSettings.endTime).toISOString().slice(0, 16) : '' %>">
+                                        <label class="form-label-modern">End Time</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="d-flex flex-column h-100">
+                            <h6 class="text-primary mb-3">Quiz Statistics</h6>
+                            <div class="stat-card-mini">
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-2">
+                                    <span class="text-muted">Questions</span>
+                                    <span class="fw-bold" id="questionCount"><%= isEdit ? quiz.questions.length : 0 %></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded mb-2">
+                                    <span class="text-muted">Total Duration</span>
+                                    <span class="fw-bold" id="totalDuration">0 min</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center p-3 bg-light rounded">
+                                    <span class="text-muted">Status</span>
+                                    <span class="badge bg-<%= isEdit ? 'success' : 'warning' %>">
+                                        <%= isEdit ? 'Active' : 'Draft' %>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Questions Section -->
+        <div class="modern-card animate-slide-up">
+            <div class="card-header-modern d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Quiz Questions
+                </h4>
+                <button class="btn btn-outline-light" onclick="addQuestion()">
+                    <i class="fas fa-plus me-2"></i>
+                    Add Question
+                </button>
+            </div>
+            <div class="card-body-modern">
+                <div id="questionsContainer">
+                    <% if (isEdit && quiz.questions && quiz.questions.length > 0) { %>
+                        <% quiz.questions.forEach((question, index) => { %>
+                            <!-- Question cards will be rendered here by JavaScript -->
+                        <% }); %>
+                    <% } %>
+                </div>
+                
+                <!-- Add Question Button -->
+                <div class="add-question-btn" onclick="addQuestion()">
+                    <div class="add-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <h5 class="mb-2">Add New Question</h5>
+                    <p class="text-muted mb-0">
+                        <%= isEdit ? 'Click to add another question to your quiz' : 'Click to create your first question' %>
+                    </p>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Submit Section -->
+        <div class="save-section">
+            <div class="save-card">
+                <div class="save-content">
+                    <h2 class="save-title">
+                        <%= isEdit ? '✅ Ready to Update Your Quiz?' : '🎉 Ready to Create Your Quiz?' %>
+                    </h2>
+                    <p class="save-description">
+                        <%= isEdit ? 'Review all changes and update your quiz.' : 'Review all questions and settings before publishing.' %>
+                    </p>
+                    <div class="save-actions">
+                        <button type="button" class="btn btn-outline-light btn-lg px-4" 
+                                data-bs-toggle="modal" data-bs-target="#previewModal" 
+                                onclick="previewQuiz()">
+                            <i class="fas fa-eye me-2"></i>Preview Quiz
+                        </button>
+                        <button type="button" class="btn btn btn-success-modern" onclick="<%= isEdit ? 'updateQuiz()' : 'publishQuiz()' %>">
+                            <i class="fas fa-<%= isEdit ? 'check-circle' : 'rocket' %> me-2"></i>
+                            <%= isEdit ? 'Update Quiz' : 'Publish Quiz' %>
+                        </button>
+                    </div>
+                </div>
+                <div class="save-icon">
+                    <i class="fas fa-<%= isEdit ? 'save' : 'magic' %>"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Updated Preview Modal - Single Question Display -->
+<div class="modal fade preview-modal" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <div class="w-100">
+                    <div class="quiz-info-preview">
+                        <div class="quiz-info-content">
+                            <h4 class="mb-3">Quiz: <span id="previewTitle"></span></h4>
+                            <p class="mb-2"><i class="fas fa-globe me-1"></i><strong>Mode:</strong> <span id="previewMode"></span></p>
+                            <p class="mb-2"><i class="fas fa-question-circle me-1"></i><strong>Questions:</strong> <span id="previewQuestionProgress"></span></p>
+                        </div>
+                        <div class="quiz-timer-section">
+                            <div class="timer-display">
+                                <div class="timer-circle" id="timerCircle">
+                                    <span class="timer-text" id="timerText"><span id="timerMinutes">00</span>:<span id="timerSeconds">30</span></span>
+                                </div>
+                            </div>
+                            <p class="mb-0 mt-2">Time remaining</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="progress mt-3" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%" 
+                             id="previewProgress" aria-valuenow="0" aria-valuemin="0" 
+                             aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Question Display -->
+                <div id="previewQuestionContainer">
+                    <!-- Single question will be displayed here -->
+                </div>
+                
+                <!-- Navigation -->
+                <div class="preview-navigation text-center mt-4">
+                    <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()" style="display: none;">
+                        Next<i class="fas fa-arrow-right ms-1"></i>
+                    </button>
+                    <button class="btn btn-success" id="finishBtn" onclick="finishQuiz()" style="display: none;">
+                        <i class="fas fa-flag-checkered me-1"></i>Finish Quiz
+                    </button>
+                </div>
+            </div>
+            
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Close Preview
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- Initialize quiz data safely -->
+<script>
+// Initialize quiz data safely
+window.quizFormConfig = {
+    isEdit: <%= isEdit ? 'true' : 'false' %>,
+    <% if (isEdit) { %>
+    quizId: '<%= quiz._id %>',
+    initialData: {
+        title: <%- JSON.stringify(quiz.title) %>,
+        mode: '<%= quiz.mode %>',
+        language: '<%= quiz.language %>',
+        scheduleSettings: <%- JSON.stringify(quiz.scheduleSettings || null) %>,
+        questions: <%- JSON.stringify(quiz.questions.map((question, index) => ({
+            id: index + 1,
+            content: question.content,
+            answerTime: question.answerTime || 30,
+            options: question.options || [],
+            correctAnswer: question.correctAnswer || '',
+            image: question.image || null
+        }))) %>
+    }
+    <% } else { %>
+    quizId: null,
+    initialData: null
+    <% } %>
+};
+</script>
+
+<script src="/js/form.js"></script>
+</body>
+</html>

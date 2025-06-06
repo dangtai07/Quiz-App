@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const argon2 = require('argon2');
 
 // User schema
 const userSchema = new mongoose.Schema({
@@ -96,7 +96,7 @@ userSchema.pre('save', async function(next) {
     try {
         // Hash password with cost of 12
         const saltRounds = 12;
-        this.password = await bcrypt.hash(this.password, saltRounds);
+        this.password = await argon2.hash(this.password);
         next();
     } catch (error) {
         console.error('Password hashing error:', error);
@@ -107,7 +107,7 @@ userSchema.pre('save', async function(next) {
 // Instance method to compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
     try {
-        return await bcrypt.compare(candidatePassword, this.password);
+        return await argon2.verify(this.password, candidatePassword);
     } catch (error) {
         console.error('Password comparison error:', error);
         return false;

@@ -19,6 +19,7 @@
 body {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     position: relative;
+    height: 100vh;
 }
 
 body::before {
@@ -448,7 +449,12 @@ body::before {
     box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
     color: white;
 }
+.flex-direction-column {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
 
+}
 .btn-outline-modern {
     background: transparent;
     border: 2px solid #e2e8f0;

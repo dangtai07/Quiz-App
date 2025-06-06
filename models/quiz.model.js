@@ -4,7 +4,7 @@ const optionSchema = new mongoose.Schema({
     letter: {
         type: String,
         required: true,
-        enum: ['A', 'B', 'C', 'D']
+        enum: ['A', 'B', 'C', 'D', 'E', 'F'] // Mở rộng để hỗ trợ tối đa 6 lựa chọn
     },
     text: {
         type: String,
@@ -21,11 +21,7 @@ const questionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    type: {
-        type: String,
-        required: true,
-        enum: ['multiple_choice', 'text_input']
-    },
+    // Loại bỏ type - mặc định tất cả đều là single choice
     image: {
         type: String
     },
@@ -33,14 +29,30 @@ const questionSchema = new mongoose.Schema({
         type: [optionSchema],
         validate: {
             validator: function(options) {
-                return this.type !== 'multiple_choice' || (options && options.length > 0);
+                // Yêu cầu ít nhất 2 lựa chọn, tối đa 6 lựa chọn
+                return options && options.length >= 2 && options.length <= 6;
             },
-            message: 'Multiple choice questions must have options'
+            message: 'Each question must have between 2 and 6 options'
+        },
+        default: function() {
+            // Mặc định tạo 2 lựa chọn trống
+            return [
+                { letter: 'A', text: '' },
+                { letter: 'B', text: '' }
+            ];
         }
     },
     correctAnswer: {
-        type: [String],
-        default: []
+        type: String, // Chỉ 1 đáp án đúng (single choice)
+        required: true,
+        enum: ['A', 'B', 'C', 'D', 'E', 'F']
+    },
+    // Thêm trường thời gian trả lời cho mỗi câu hỏi
+    answerTime: {
+        type: Number, // Thời gian tính bằng giây
+        default: 30,  // Mặc định 30 giây
+        min: 5,       // Tối thiểu 5 giây
+        max: 300      // Tối đa 5 phút (300 giây)
     }
 });
 
@@ -54,11 +66,6 @@ const quizSchema = new mongoose.Schema({
         required: true,
         enum: ['online', 'offline']
     },
-    language: {
-        type: String,
-        required: true,
-        enum: ['vietnamese', 'english']
-    },
     scheduleSettings: {
         startTime: Date,
         endTime: Date
@@ -67,9 +74,30 @@ const quizSchema = new mongoose.Schema({
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
+    },
+    // Thêm metadata để tính tổng thời gian quiz
+    metadata: {
+        totalDuration: {
+            type: Number, // Tổng thời gian của tất cả câu hỏi (giây)
+            default: 0
+        },
+        version: {
+            type: String,
+            default: '2.0' // Version mới sau khi loại bỏ answer-type
+        }
     }
 }, {
     timestamps: true
+});
+
+// Pre-save middleware để tính tổng thời gian
+quizSchema.pre('save', function(next) {
+    if (this.questions && this.questions.length > 0) {
+        this.metadata.totalDuration = this.questions.reduce((total, question) => {
+            return total + (question.answerTime || 30);
+        }, 0);
+    }
+    next();
 });
 
 module.exports = mongoose.model('Quiz', quizSchema);

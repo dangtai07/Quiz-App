@@ -1,6 +1,5 @@
 const QuizService = require('../services/quiz.service');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
 
 // Helper function to determine quiz status
 function getQuizStatus(quiz) {
@@ -22,17 +21,66 @@ function getQuizStatus(quiz) {
 }
 
 // Helper function to estimate quiz duration
-function estimateQuizDuration(questionCount) {
-    // Assume 1-2 minutes per question on average
-    const minutes = questionCount * 1.5;
+function estimateQuizDuration(questions) {
+    if (!questions || questions.length === 0) return '0 min';
     
-    if (minutes < 60) {
-        return `${Math.round(minutes)} min`;
+    const totalSeconds = questions.reduce((sum, question) => {
+        return sum + (question.answerTime || 30);
+    }, 0);
+    
+    if (totalSeconds < 60) {
+        return `${totalSeconds}s`;
     } else {
-        const hours = Math.floor(minutes / 60);
-        const remainingMinutes = Math.round(minutes % 60);
-        return `${hours}h ${remainingMinutes}m`;
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
     }
+}
+
+// Helper function to migrate old quiz data to new format
+function migrateQuizData(quiz) {
+    if (!quiz.questions) return quiz;
+    
+    // Migrate questions to new format if needed
+    quiz.questions = quiz.questions.map(question => {
+        // If question has old 'type' field, remove it (we only support single choice now)
+        if (question.type) {
+            delete question.type;
+        }
+        
+        // Ensure answerTime exists
+        if (!question.answerTime) {
+            question.answerTime = 30; // Default 30 seconds
+        }
+        
+        // Ensure options are in new format
+        if (question.options && question.options.length > 0) {
+            // If options are in old format, convert them
+            if (typeof question.options[0] === 'string') {
+                question.options = question.options.map((text, index) => ({
+                    letter: String.fromCharCode(65 + index), // A, B, C, D, etc.
+                    text: text
+                }));
+            }
+        } else {
+            // Default to 2 empty options
+            question.options = [
+                { letter: 'A', text: '' },
+                { letter: 'B', text: '' }
+            ];
+        }
+        
+        // Ensure correctAnswer is a single letter (not array)
+        if (Array.isArray(question.correctAnswer)) {
+            question.correctAnswer = question.correctAnswer[0] || 'A';
+        } else if (!question.correctAnswer) {
+            question.correctAnswer = 'A';
+        }
+        
+        return question;
+    });
+    
+    return quiz;
 }
 
 class QuizController {
@@ -41,14 +89,16 @@ class QuizController {
             const quiz = await QuizService.createQuiz(req.body, req.files);
             res.status(201).json(quiz);
         } catch (error) {
-            console.error(error);
+            console.error('Create quiz error:', error);
             res.status(500).json({ error: error.message });
         }
     }
 
     async getQuiz(req, res) {
         try {
-            const quiz = await QuizService.getQuiz(req.params.id);
+            let quiz = await QuizService.getQuiz(req.params.id);
+            // Migrate data if needed
+            quiz = migrateQuizData(quiz);
             res.json(quiz);
         } catch (error) {
             res.status(404).json({ error: error.message });
@@ -74,11 +124,38 @@ class QuizController {
         }
     }
 
+    // NEW: Unified render method for both create and edit
     renderCreateQuiz(req, res) {
-        res.render('quiz/create', {
+        res.render('quiz/form', {
             title: 'Create New Quiz',
-            style: '',
+            isEdit: false,
+            quiz: null,
+            user: req.session.user,
+            layout: false
         });
+    }
+
+    async renderEditQuiz(req, res) {
+        try {
+            let quiz = await QuizService.getQuiz(req.params.id);
+            // Migrate data if needed for backward compatibility
+            quiz = migrateQuizData(quiz);
+            
+            res.render('quiz/form', {
+                title: 'Edit Quiz',
+                isEdit: true,
+                quiz: quiz,
+                user: req.session.user,
+                layout: false
+            });
+        } catch (error) {
+            console.error('Error loading quiz for edit:', error);
+            res.status(404).render('error/404', {
+                title: 'Quiz Not Found',
+                message: 'The quiz you are looking for does not exist.',
+                layout: false
+            });
+        }
     }
 
     // Enhanced getQuizzes method with better data processing
@@ -91,6 +168,9 @@ class QuizController {
             
             // Add additional stats and formatting
             const enhancedQuizzes = quizzes.map(quiz => {
+                // Migrate quiz data if needed
+                const migratedQuiz = migrateQuizData(quiz);
+                
                 // Calculate completion percentage
                 const completionRate = quiz.totalCount > 0 ? 
                     Math.round((quiz.completedCount / quiz.totalCount) * 100) : 0;
@@ -114,16 +194,21 @@ class QuizController {
                 }
                 
                 return {
-                    ...quiz,
+                    ...migratedQuiz.toObject ? migratedQuiz.toObject() : migratedQuiz,
                     completionRate,
                     relativeTime,
                     isRecent: daysDiff <= 7,
-                    hasParticipants: quiz.totalCount > 0,
+                    hasParticipants: (quiz.totalCount || 0) > 0,
                     averageScore: quiz.averageScore || 0,
-                    // Add status based on schedule
                     status: getQuizStatus(quiz),
-                    // Add estimated duration
-                    estimatedDuration: estimateQuizDuration(quiz.questions.length)
+                    estimatedDuration: estimateQuizDuration(migratedQuiz.questions),
+                    // Enhanced metadata
+                    totalDuration: migratedQuiz.questions ? 
+                        migratedQuiz.questions.reduce((sum, q) => sum + (q.answerTime || 30), 0) : 0,
+                    hasImages: migratedQuiz.questions ? 
+                        migratedQuiz.questions.some(q => q.image) : false,
+                    optionCounts: migratedQuiz.questions ? 
+                        migratedQuiz.questions.map(q => q.options ? q.options.length : 2) : []
                 };
             });
             
@@ -135,7 +220,8 @@ class QuizController {
                 active: enhancedQuizzes.filter(q => q.status === 'active').length,
                 totalParticipants: enhancedQuizzes.reduce((sum, q) => sum + (q.totalCount || 0), 0),
                 averageQuestions: enhancedQuizzes.length > 0 ? 
-                    Math.round(enhancedQuizzes.reduce((sum, q) => sum + q.questions.length, 0) / enhancedQuizzes.length) : 0
+                    Math.round(enhancedQuizzes.reduce((sum, q) => sum + q.questions.length, 0) / enhancedQuizzes.length) : 0,
+                totalDuration: enhancedQuizzes.reduce((sum, q) => sum + (q.totalDuration || 0), 0)
             };
             
             res.render('quiz/list', {
@@ -143,7 +229,7 @@ class QuizController {
                 user: user,
                 quizzes: enhancedQuizzes,
                 stats: stats,
-                layout: false // Using custom layout
+                layout: false
             });
             
         } catch (error) {
@@ -158,44 +244,33 @@ class QuizController {
 
     async previewQuiz(req, res) {
         try {
-            const quiz = await QuizService.getQuiz(req.params.id);
+            let quiz = await QuizService.getQuiz(req.params.id);
+            // Migrate data if needed
+            quiz = migrateQuizData(quiz);
 
             res.render('quiz/preview', {
                 title: 'Preview Quiz',
                 quiz: quiz,
-                isPreview: true
+                isPreview: true,
+                user: req.session.user
             });
         } catch (error) {
-            res.status(404).render('error', {
-                message: 'Quiz not found',
-                error: error
+            console.error('Error loading quiz preview:', error);
+            res.status(404).render('error/404', {
+                title: 'Quiz Not Found',
+                message: 'The quiz you are looking for does not exist.',
+                layout: false
             });
         }
     }
 
-    async renderEditQuiz(req, res) {
-        try {
-            const quiz = await QuizService.getQuiz(req.params.id);
-            res.render('quiz/edit', {
-                title: 'Edit Quiz',
-                quiz: quiz,
-                questionCount: quiz.questions.length, // Add this
-                style: '',
-                script: ''
-            });
-        } catch (error) {
-            console.error('Error loading quiz:', error);
-            res.redirect('/quizzes');
-        }
-    }
-
-    // New method for quiz duplication
+    // Enhanced duplication with new format support
     async duplicateQuiz(req, res) {
         try {
             const originalQuizId = req.params.id;
             
             // Get the original quiz
-            const originalQuiz = await QuizService.getQuiz(originalQuizId);
+            let originalQuiz = await QuizService.getQuiz(originalQuizId);
             if (!originalQuiz) {
                 return res.status(404).json({
                     success: false,
@@ -203,20 +278,25 @@ class QuizController {
                 });
             }
             
-            // Create new quiz data
+            // Migrate data if needed
+            originalQuiz = migrateQuizData(originalQuiz);
+            
+            // Create new quiz data in new format
             const duplicateData = {
                 quizInfo: JSON.stringify({
                     title: `${originalQuiz.title} (Copy)`,
                     mode: originalQuiz.mode,
-                    language: originalQuiz.language,
                     scheduleSettings: originalQuiz.scheduleSettings
                 }),
                 questionsData: JSON.stringify(originalQuiz.questions.map((q, index) => ({
                     number: index + 1,
                     content: q.content,
-                    type: q.type,
-                    options: q.options || [],
-                    correctAnswer: q.correctAnswer || []
+                    answerTime: q.answerTime || 30,
+                    options: q.options || [
+                        { letter: 'A', text: '' },
+                        { letter: 'B', text: '' }
+                    ],
+                    correctAnswer: q.correctAnswer || 'A'
                 })))
             };
             
@@ -262,8 +342,6 @@ class QuizController {
             // Check if quiz has active participants (optional business logic)
             const hasActiveParticipants = quiz.totalCount > 0;
             if (hasActiveParticipants) {
-                // You might want to prevent deletion of quizzes with participants
-                // or add additional confirmation
                 console.log(`Warning: Deleting quiz with ${quiz.totalCount} participants`);
             }
             
@@ -288,24 +366,33 @@ class QuizController {
         }
     }
 
-    // Analytics method
+    // Enhanced analytics method
     async getAnalytics(req, res) {
         try {
             const quizzes = await QuizService.getAllQuizzes();
             
+            // Migrate all quiz data for accurate analytics
+            const migratedQuizzes = quizzes.map(quiz => migrateQuizData(quiz));
+            
             const analytics = {
-                totalQuizzes: quizzes.length,
-                totalQuestions: quizzes.reduce((sum, q) => sum + q.questions.length, 0),
-                totalParticipants: quizzes.reduce((sum, q) => sum + (q.totalCount || 0), 0),
+                totalQuizzes: migratedQuizzes.length,
+                totalQuestions: migratedQuizzes.reduce((sum, q) => sum + q.questions.length, 0),
+                totalParticipants: migratedQuizzes.reduce((sum, q) => sum + (q.totalCount || 0), 0),
+                totalDuration: migratedQuizzes.reduce((sum, q) => {
+                    return sum + q.questions.reduce((qSum, question) => {
+                        return qSum + (question.answerTime || 30);
+                    }, 0);
+                }, 0),
                 byMode: {
-                    online: quizzes.filter(q => q.mode === 'online').length,
-                    offline: quizzes.filter(q => q.mode === 'offline').length
+                    online: migratedQuizzes.filter(q => q.mode === 'online').length,
+                    offline: migratedQuizzes.filter(q => q.mode === 'offline').length
                 },
-                byLanguage: {
-                    vietnamese: quizzes.filter(q => q.language === 'vietnamese').length,
-                    english: quizzes.filter(q => q.language === 'english').length
+                questionStats: {
+                    averageOptionsPerQuestion: this.calculateAverageOptions(migratedQuizzes),
+                    averageTimePerQuestion: this.calculateAverageTime(migratedQuizzes),
+                    questionsWithImages: this.countQuestionsWithImages(migratedQuizzes)
                 },
-                recentActivity: quizzes
+                recentActivity: migratedQuizzes
                     .filter(q => {
                         const daysDiff = Math.floor((new Date() - new Date(q.updatedAt)) / (1000 * 60 * 60 * 24));
                         return daysDiff <= 7;
@@ -320,6 +407,91 @@ class QuizController {
             res.status(500).json({
                 success: false,
                 message: 'Failed to fetch analytics'
+            });
+        }
+    }
+
+    // Helper methods for analytics
+    calculateAverageOptions(quizzes) {
+        const totalOptions = quizzes.reduce((sum, quiz) => {
+            return sum + quiz.questions.reduce((qSum, question) => {
+                return qSum + (question.options ? question.options.length : 2);
+            }, 0);
+        }, 0);
+        
+        const totalQuestions = quizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0);
+        return totalQuestions > 0 ? Math.round((totalOptions / totalQuestions) * 10) / 10 : 0;
+    }
+
+    calculateAverageTime(quizzes) {
+        const totalTime = quizzes.reduce((sum, quiz) => {
+            return sum + quiz.questions.reduce((qSum, question) => {
+                return qSum + (question.answerTime || 30);
+            }, 0);
+        }, 0);
+        
+        const totalQuestions = quizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0);
+        return totalQuestions > 0 ? Math.round(totalTime / totalQuestions) : 0;
+    }
+
+    countQuestionsWithImages(quizzes) {
+        return quizzes.reduce((sum, quiz) => {
+            return sum + quiz.questions.filter(question => question.image).length;
+        }, 0);
+    }
+
+    // NEW: Migration endpoint for existing quizzes
+    async migrateQuizzes(req, res) {
+        try {
+            const quizzes = await QuizService.getAllQuizzes();
+            let migratedCount = 0;
+            
+            for (const quiz of quizzes) {
+                const originalQuiz = await QuizService.getQuiz(quiz._id);
+                const migratedQuiz = migrateQuizData(originalQuiz);
+                
+                // Check if migration is needed
+                const needsMigration = originalQuiz.questions.some(q => 
+                    q.type || !q.answerTime || !q.options || Array.isArray(q.correctAnswer)
+                );
+                
+                if (needsMigration) {
+                    await QuizService.updateQuiz(quiz._id, {
+                        quizInfo: JSON.stringify({
+                            title: migratedQuiz.title,
+                            mode: migratedQuiz.mode,
+                            language: migratedQuiz.language,
+                            scheduleSettings: migratedQuiz.scheduleSettings
+                        }),
+                        questionsData: JSON.stringify(migratedQuiz.questions.map((q, index) => ({
+                            number: index + 1,
+                            content: q.content,
+                            answerTime: q.answerTime || 30,
+                            options: q.options || [
+                                { letter: 'A', text: '' },
+                                { letter: 'B', text: '' }
+                            ],
+                            correctAnswer: q.correctAnswer || 'A'
+                        })))
+                    }, null);
+                    
+                    migratedCount++;
+                }
+            }
+            
+            res.json({
+                success: true,
+                message: `Migration completed. ${migratedCount} quizzes were updated.`,
+                migratedCount,
+                totalQuizzes: quizzes.length
+            });
+            
+        } catch (error) {
+            console.error('Migration error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Migration failed',
+                error: error.message
             });
         }
     }

@@ -2,28 +2,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     setupAutoSave();
     updateQuestionCount();
-    reCreateImageObjectInQuestion();
 });
-function reCreateImageObjectInQuestion() {
-    questions.forEach((question) => {
-        if (question.image && question.image.trim().length > 0) {
-            fetch(question.image)
-                .then(res => res.blob())
-                .then(blob => {
-                    const fileName = `question_${question.id}_image.png`;
-                    const file = new File([blob], fileName, { type: blob.type || 'image/png' });
-                    question.image = {
-                        preview: URL.createObjectURL(file),
-                        file: file
-                    };
-            })
-            .catch(err => {
-                console.error('Error creating file from image:', err);
-                question.image = null; // Reset if error occurs
-            });
-        }
-    });
-}
+
 function saveDraft() {
     return;
 }

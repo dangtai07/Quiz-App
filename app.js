@@ -109,10 +109,6 @@ app.get('/api/quizzes/analytics', requireAuth, requireAdmin, async (req, res) =>
                     online: quizzes.filter(q => q.mode === 'online').length,
                     offline: quizzes.filter(q => q.mode === 'offline').length
                 },
-                byLanguage: {
-                    vietnamese: quizzes.filter(q => q.language === 'vietnamese').length,
-                    english: quizzes.filter(q => q.language === 'english').length
-                },
                 recentActivity: quizzes.filter(q => {
                     const daysDiff = Math.floor((new Date() - new Date(q.updatedAt)) / (1000 * 60 * 60 * 24));
                     return daysDiff <= 7;
@@ -120,9 +116,7 @@ app.get('/api/quizzes/analytics', requireAuth, requireAdmin, async (req, res) =>
                 averageQuestionsPerQuiz: quizzes.length > 0 ? 
                     Math.round(quizzes.reduce((sum, q) => sum + q.questions.length, 0) / quizzes.length) : 0,
                 mostPopularMode: quizzes.filter(q => q.mode === 'online').length > 
-                    quizzes.filter(q => q.mode === 'offline').length ? 'online' : 'offline',
-                mostPopularLanguage: quizzes.filter(q => q.language === 'vietnamese').length > 
-                    quizzes.filter(q => q.language === 'english').length ? 'vietnamese' : 'english'
+                    quizzes.filter(q => q.mode === 'offline').length ? 'online' : 'offline'
             }
         };
         
