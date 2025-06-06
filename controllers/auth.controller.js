@@ -1,6 +1,13 @@
 const User = require('../models/user.model');
 const Quiz = require('../models/quiz.model'); // Assuming this exists
 
+// Định nghĩa mật khẩu cho từng phòng ban (6 chữ số)
+const ROOM_PASSWORDS = {
+    'hrm': '123456', // Mật khẩu cho phòng HRM
+    'hse': '234567', // Mật khẩu cho phòng HSE
+    'gm': '345678'   // Mật khẩu cho phòng GM
+};
+
 class AuthController {
     // GET login page
     getLoginPage = (req, res) => {
@@ -101,14 +108,14 @@ class AuthController {
         }
     };
 
-    // Role-based redirection logic
+    // Role-based redirection logic - UPDATED để chuyển đến room selection cho admin
     redirectBasedOnRole = async (req, res) => {
         try {
             const user = req.session.user;
             
             if (user.role === 'admin') {
-                // Admin: Redirect to existing quiz management page
-                return res.redirect('/quizzes');
+                // Admin: Chuyển đến trang chọn phòng ban thay vì trực tiếp đến quiz management
+                return res.redirect('/auth/admin/select-room');
             } 
             else if (user.role === 'player') {
                 // Player: Redirect to player dashboard
@@ -123,6 +130,102 @@ class AuthController {
             console.error('Role-based redirection error:', error);
             res.redirect('/auth/login');
         }
+    };
+
+    // NEW: GET room selection page
+    getRoomSelectionPage = (req, res) => {
+        // Kiểm tra xem user đã đăng nhập chưa
+        if (!req.session || !req.session.user) {
+            return res.redirect('/auth/login');
+        }
+
+        // Chỉ admin mới được truy cập trang này
+        if (req.session.user.role !== 'admin') {
+            return res.redirect('/player/dashboard');
+        }
+
+        // Kiểm tra xem đã chọn phòng chưa
+        if (req.session.selectedRoom) {
+            return res.redirect('/quizzes');
+        }
+        console.log('Rendering room selection page for admin');
+        res.render('auth/room', {
+            title: 'Select Department - Quiz App',
+            user: req.session.user,
+            layout: false
+        });
+    };
+
+    // NEW: POST room selection
+    selectRoom = async (req, res) => {
+        try {
+            const { selectedRoom, roomPassword } = req.body;
+
+            // Validate input
+            if (!selectedRoom || !roomPassword) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Please select a department and enter the access code'
+                });
+            }
+
+            // Validate room code
+            if (!ROOM_PASSWORDS.hasOwnProperty(selectedRoom)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid department selection'
+                });
+            }
+
+            // Validate password format (6 digits)
+            if (!/^\d{6}$/.test(roomPassword)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Access code must be exactly 6 digits'
+                });
+            }
+
+            // Check password
+            if (ROOM_PASSWORDS[selectedRoom] !== roomPassword) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid access code for the selected department'
+                });
+            }
+
+            // Store selected room in session
+            req.session.selectedRoom = {
+                code: selectedRoom,
+                name: this.getRoomName(selectedRoom),
+                selectedAt: new Date()
+            };
+
+            // Log successful room selection
+            console.log(`✅ User ${req.session.user.email} accessed ${selectedRoom.toUpperCase()} department at ${new Date().toISOString()}`);
+
+            res.json({
+                success: true,
+                message: `Successfully accessed ${this.getRoomName(selectedRoom)} department`,
+                redirectUrl: '/quizzes'
+            });
+
+        } catch (error) {
+            console.error('Room selection error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'An error occurred while accessing the department'
+            });
+        }
+    };
+
+    // Helper method to get room name
+    getRoomName = (roomCode) => {
+        const roomNames = {
+            'hrm': 'Human Resource Management',
+            'hse': 'Health, Safety & Environment',
+            'gm': 'General Management'
+        };
+        return roomNames[roomCode] || roomCode.toUpperCase();
     };
 
     // GET logout
@@ -170,7 +273,22 @@ class AuthController {
         }
     };
 
-    // Middleware to check if user is admin
+    // NEW: Middleware to check if admin has selected a room
+    requireRoomSelection = (req, res, next) => {
+        if (req.session.user.role !== 'admin') {
+            return next(); // Players don't need room selection
+        }
+
+        if (!req.session.selectedRoom) {
+            return res.redirect('/auth/admin/select-room');
+        }
+
+        // Add selected room to request object
+        req.selectedRoom = req.session.selectedRoom;
+        next();
+    };
+
+    // Updated: Middleware to check if user is admin (and has selected room)
     requireAdmin = (req, res, next) => {
         if (!req.user || req.user.role !== 'admin') {
             return res.status(403).send(`
@@ -218,6 +336,12 @@ class AuthController {
                 </html>
             `);
         }
+
+        // Check if admin has selected a room (exclude room selection page)
+        if (req.path !== '/admin/select-room' && !req.session.selectedRoom) {
+            return res.redirect('/auth/admin/select-room');
+        }
+
         next();
     };
 
@@ -315,6 +439,26 @@ class AuthController {
                 error: error.message
             });
         }
+    };
+
+    // NEW: Method to clear room selection (for testing or manual reset)
+    clearRoomSelection = (req, res) => {
+        if (req.session) {
+            delete req.session.selectedRoom;
+        }
+        res.redirect('/auth/admin/select-room');
+    };
+
+    // NEW: Get current room info (for templates)
+    getCurrentRoomInfo = (req) => {
+        if (req.session && req.session.selectedRoom) {
+            return {
+                code: req.session.selectedRoom.code,
+                name: req.session.selectedRoom.name,
+                selectedAt: req.session.selectedRoom.selectedAt
+            };
+        }
+        return null;
     };
 }
 

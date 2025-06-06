@@ -1150,7 +1150,7 @@ function submitQuizToServer(isUpdate) {
                 icon: 'success',
                 confirmButtonText: 'View Quiz Dashboard'
             }).then(() => {
-                // window.location.href = '/quizzes';
+                window.location.href = '/quizzes';
             });
         })
         .catch(error => {

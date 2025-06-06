@@ -149,9 +149,9 @@ function setupViewToggle() {
             
             // Update grid class
             if (view === 'list') {
-                quizGrid.classList.add('list-view');
+                quizGrid?.classList.add('list-view');
             } else {
-                quizGrid.classList.remove('list-view');
+                quizGrid?.classList.remove('list-view');
             }
             
             // Store preference

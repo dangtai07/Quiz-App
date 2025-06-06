@@ -8,6 +8,11 @@ class QuizService {
             const quizInfo = JSON.parse(quizData.quizInfo);
             const questionsData = JSON.parse(quizData.questionsData);
             
+            // Validate room code (REQUIRED for new quizzes)
+            if (!quizInfo.roomCode || !['hrm', 'hse', 'gm'].includes(quizInfo.roomCode)) {
+                throw new Error('Valid room code (hrm, hse, or gm) is required');
+            }
+            
             // Process images and save paths
             const processedQuestions = questionsData.map(question => {
                 const imageKey = `questionImage_${question.number}`;
@@ -75,10 +80,11 @@ class QuizService {
             // Calculate total duration
             const totalDuration = processedQuestions.reduce((sum, q) => sum + q.answerTime, 0);
             
-            // Create quiz document with new schema
+            // Create quiz document with new schema including roomCode
             const quiz = new Quiz({
                 title: quizInfo.title.trim(),
                 mode: quizInfo.mode,
+                roomCode: quizInfo.roomCode, // NEW: Room code field
                 scheduleSettings: quizInfo.mode === 'offline' ? quizInfo.scheduleSettings : null,
                 questions: processedQuestions,
                 createdBy: null, // Add user ID here if available from req.session
@@ -93,7 +99,7 @@ class QuizService {
             });
             
             await quiz.save();
-            console.log(`✅ Quiz "${quiz.title}" created successfully with ${processedQuestions.length} questions`);
+            console.log(`✅ Quiz "${quiz.title}" created successfully for ${quiz.roomCode.toUpperCase()} department with ${processedQuestions.length} questions`);
             return quiz;
             
         } catch (error) {
@@ -124,6 +130,23 @@ class QuizService {
         }
     }
 
+    // NEW: Get quizzes by room code
+    async getQuizzesByRoom(roomCode) {
+        try {
+            if (!roomCode || !['hrm', 'hse', 'gm'].includes(roomCode)) {
+                throw new Error('Valid room code is required');
+            }
+            
+            const quizzes = await Quiz.find({ roomCode: roomCode })
+                .select('title mode questions scheduleSettings createdAt updatedAt metadata roomCode')
+                .sort({ createdAt: -1 });
+            
+            return quizzes;
+        } catch (error) {
+            throw new Error(`Error fetching quizzes for room ${roomCode}: ${error.message}`);
+        }
+    }
+
     async updateQuiz(id, quizData, files) {
         try {
             const quiz = await Quiz.findById(id);
@@ -133,6 +156,12 @@ class QuizService {
 
             const quizInfo = JSON.parse(quizData.quizInfo);
             const questionsData = JSON.parse(quizData.questionsData);
+            
+            // Preserve existing roomCode if not provided (for backward compatibility)
+            let roomCode = quiz.roomCode;
+            if (quizInfo.roomCode && ['hrm', 'hse', 'gm'].includes(quizInfo.roomCode)) {
+                roomCode = quizInfo.roomCode;
+            }
             
             // Process images and save paths
             const processedQuestions = questionsData.map(question => {
@@ -242,12 +271,13 @@ class QuizService {
             // Calculate new total duration
             const totalDuration = processedQuestions.reduce((sum, q) => sum + q.answerTime, 0);
 
-            // Update quiz document
+            // Update quiz document with roomCode
             const updatedQuiz = await Quiz.findByIdAndUpdate(
                 id,
                 {
                     title: quizInfo.title.trim(),
                     mode: quizInfo.mode,
+                    roomCode: roomCode, // Ensure roomCode is preserved/updated
                     scheduleSettings: quizInfo.mode === 'offline' ? quizInfo.scheduleSettings : null,
                     questions: processedQuestions,
                     'metadata.totalDuration': totalDuration,
@@ -263,7 +293,7 @@ class QuizService {
                 }
             );
 
-            console.log(`✅ Quiz "${updatedQuiz.title}" updated successfully`);
+            console.log(`✅ Quiz "${updatedQuiz.title}" updated successfully in ${roomCode?.toUpperCase()} department`);
             return updatedQuiz;
 
         } catch (error) {
@@ -300,7 +330,7 @@ class QuizService {
             });
 
             await Quiz.findByIdAndDelete(id);
-            console.log(`✅ Quiz "${quiz.title}" deleted successfully`);
+            console.log(`✅ Quiz "${quiz.title}" deleted successfully from ${quiz.roomCode?.toUpperCase()} department`);
             return { message: 'Quiz deleted successfully' };
         } catch (error) {
             throw new Error(`Error deleting quiz: ${error.message}`);
@@ -310,7 +340,7 @@ class QuizService {
     async getAllQuizzes() {
         try {
             const quizzes = await Quiz.find()
-                .select('title mode questions scheduleSettings createdAt updatedAt metadata')
+                .select('title mode roomCode questions scheduleSettings createdAt updatedAt metadata')
                 .sort({ createdAt: -1 });
 
             return quizzes.map(quiz => {
@@ -342,12 +372,57 @@ class QuizService {
                     tags: quizObject.metadata?.tags || [],
                     isRecent: this.isRecentlyUpdated(quiz.updatedAt),
                     status: this.getQuizStatus(quiz),
-                    version: quizObject.metadata?.version || '1.0'
+                    version: quizObject.metadata?.version || '1.0',
+                    // Room information
+                    roomName: this.getRoomName(quiz.roomCode)
                 };
             });
         } catch (error) {
             throw new Error(`Error fetching quizzes: ${error.message}`);
         }
+    }
+
+    // NEW: Get quiz statistics by room
+    async getQuizStatsByRoom(roomCode) {
+        try {
+            if (!roomCode || !['hrm', 'hse', 'gm'].includes(roomCode)) {
+                throw new Error('Valid room code is required');
+            }
+
+            const quizzes = await this.getQuizzesByRoom(roomCode);
+            
+            return {
+                roomCode: roomCode,
+                roomName: this.getRoomName(roomCode),
+                totalQuizzes: quizzes.length,
+                totalQuestions: quizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0),
+                totalDuration: quizzes.reduce((sum, quiz) => {
+                    return sum + quiz.questions.reduce((qSum, question) => {
+                        return qSum + (question.answerTime || 30);
+                    }, 0);
+                }, 0),
+                byMode: {
+                    online: quizzes.filter(q => q.mode === 'online').length,
+                    offline: quizzes.filter(q => q.mode === 'offline').length
+                },
+                recentQuizzes: quizzes.filter(quiz => {
+                    const daysDiff = Math.floor((new Date() - new Date(quiz.createdAt)) / (1000 * 60 * 60 * 24));
+                    return daysDiff <= 7;
+                }).length
+            };
+        } catch (error) {
+            throw new Error(`Error getting quiz stats for room ${roomCode}: ${error.message}`);
+        }
+    }
+
+    // Helper method to get room name
+    getRoomName(roomCode) {
+        const roomNames = {
+            'hrm': 'Human Resource Management',
+            'hse': 'Health, Safety & Environment',
+            'gm': 'General Management'
+        };
+        return roomNames[roomCode] || roomCode?.toUpperCase() || 'Unknown';
     }
 
     // Helper methods for enhanced functionality
@@ -491,10 +566,15 @@ class QuizService {
         }
     }
 
-    // Enhanced analytics methods
-    async getQuizAnalytics() {
+    // Enhanced analytics methods with room filtering
+    async getQuizAnalytics(roomCode = null) {
         try {
-            const quizzes = await Quiz.find().select('title mode language questions createdAt updatedAt metadata');
+            let quizzes;
+            if (roomCode) {
+                quizzes = await this.getQuizzesByRoom(roomCode);
+            } else {
+                quizzes = await Quiz.find().select('title mode roomCode language questions createdAt updatedAt metadata');
+            }
             
             const totalQuizzes = quizzes.length;
             const totalQuestions = quizzes.reduce((sum, quiz) => sum + quiz.questions.length, 0);
@@ -506,6 +586,13 @@ class QuizService {
             
             const modeDistribution = quizzes.reduce((acc, quiz) => {
                 acc[quiz.mode] = (acc[quiz.mode] || 0) + 1;
+                return acc;
+            }, {});
+
+            // Room distribution (if not filtering by specific room)
+            const roomDistribution = roomCode ? null : quizzes.reduce((acc, quiz) => {
+                const room = quiz.roomCode || 'unassigned';
+                acc[room] = (acc[room] || 0) + 1;
                 return acc;
             }, {});
             
@@ -530,6 +617,10 @@ class QuizService {
             }).length;
             
             return {
+                roomInfo: roomCode ? {
+                    code: roomCode,
+                    name: this.getRoomName(roomCode)
+                } : null,
                 overview: {
                     totalQuizzes,
                     totalQuestions,
@@ -541,6 +632,7 @@ class QuizService {
                 },
                 distributions: {
                     mode: modeDistribution,
+                    room: roomDistribution,
                     optionCounts: optionDistribution
                 },
                 trends: {
@@ -584,7 +676,7 @@ class QuizService {
         return versions;
     }
 
-    // Search functionality with enhanced filters
+    // Search functionality with enhanced filters including room code
     async searchQuizzes(searchParams) {
         try {
             const { 
@@ -597,6 +689,7 @@ class QuizService {
                 maxDuration,
                 minQuestions,
                 maxQuestions,
+                roomCode, // NEW: Room code filter
                 sortBy = 'newest' 
             } = searchParams;
             
@@ -615,6 +708,11 @@ class QuizService {
             
             if (language) {
                 mongoQuery.language = language;
+            }
+
+            // NEW: Filter by room code
+            if (roomCode) {
+                mongoQuery.roomCode = roomCode;
             }
             
             if (difficulty) {
@@ -666,6 +764,9 @@ class QuizService {
                 case 'duration':
                     sortQuery = { 'metadata.totalDuration': -1 };
                     break;
+                case 'room':
+                    sortQuery = { roomCode: 1, title: 1 };
+                    break;
                 default:
                     sortQuery = { createdAt: -1 };
             }
@@ -676,6 +777,39 @@ class QuizService {
             return quizzes;
         } catch (error) {
             throw new Error(`Error searching quizzes: ${error.message}`);
+        }
+    }
+
+    // NEW: Method to migrate existing quizzes without roomCode
+    async assignRoomCodeToQuizzes(targetRoomCode, quizIds = null) {
+        try {
+            if (!['hrm', 'hse', 'gm'].includes(targetRoomCode)) {
+                throw new Error('Invalid room code. Must be hrm, hse, or gm');
+            }
+
+            let filter = {};
+            if (quizIds && Array.isArray(quizIds)) {
+                filter._id = { $in: quizIds };
+            } else {
+                // Target quizzes without roomCode
+                filter.roomCode = { $exists: false };
+            }
+
+            const result = await Quiz.updateMany(
+                filter,
+                { $set: { roomCode: targetRoomCode } }
+            );
+
+            console.log(`✅ Assigned ${targetRoomCode.toUpperCase()} room code to ${result.modifiedCount} quizzes`);
+            
+            return {
+                success: true,
+                modifiedCount: result.modifiedCount,
+                roomCode: targetRoomCode,
+                roomName: this.getRoomName(targetRoomCode)
+            };
+        } catch (error) {
+            throw new Error(`Error assigning room code: ${error.message}`);
         }
     }
 }

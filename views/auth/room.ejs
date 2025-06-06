@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Department - Quiz App</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+            --light-color: #f8fafc;
+            --dark-color: #1e293b;
+            --border-radius: 16px;
+            --border-radius-lg: 24px;
+            --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 25px 50px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .room-selection-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .selection-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            border: none;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .selection-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            text-align: center;
+            padding: 3rem 2rem;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(25%, -25%);
+        }
+
+        .header-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 400;
+            line-height: 1.5;
+            position: relative;
+            z-index: 2;
+        }
+
+        .card-body {
+            padding: 3rem 2rem;
+        }
+
+        .user-info {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #fbbf24;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .user-info .user-name {
+            font-weight: 700;
+            color: var(--warning-color);
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .user-info .user-email {
+            font-size: 0.9rem;
+            color: #92400e;
+        }
+
+        .department-selection {
+            margin-bottom: 2rem;
+        }
+
+        .department-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .department-card {
+            background: var(--light-color);
+            border: 2px solid #e2e8f0;
+            border-radius: var(--border-radius);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .department-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .department-card:hover::before {
+            left: 100%;
+        }
+
+        .department-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .department-card.selected {
+            border-color: var(--primary-color);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+        }
+
+        .department-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .department-card:hover .department-icon,
+        .department-card.selected .department-icon {
+            transform: scale(1.1);
+        }
+
+        .department-name {
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .department-description {
+            font-size: 0.85rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
+        .password-section {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: var(--transition);
+        }
+
+        .password-section.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .form-floating {
+            position: relative;
+        }
+
+        .form-control {
+            border: 2px solid #e2e8f0;
+            border-radius: var(--border-radius);
+            padding: 1rem 1.25rem;
+            font-size: 1.1rem;
+            transition: var(--transition);
+            background: white;
+            text-align: center;
+            letter-spacing: 0.5rem;
+            font-weight: 600;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            background: white;
+            outline: none;
+        }
+
+        .form-floating > label {
+            color: #64748b;
+            font-weight: 500;
+            left: 1.25rem;
+        }
+
+        .btn-enter-room {
+            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            width: 100%;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-enter-room::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-enter-room:hover::before {
+            left: 100%;
+        }
+
+        .btn-enter-room:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            color: white;
+        }
+
+        .btn-enter-room:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .footer-links a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin: 0 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--secondary-color);
+            text-decoration: underline;
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .room-selection-container {
+                padding: 0 10px;
+            }
+            
+            .card-header {
+                padding: 2rem 1.5rem;
+            }
+            
+            .card-body {
+                padding: 2rem 1.5rem;
+            }
+            
+            .card-title {
+                font-size: 1.75rem;
+            }
+            
+            .department-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            
+            .department-card {
+                padding: 1.25rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="room-selection-container fade-in">
+        <div class="card selection-card">
+            <div class="card-header">
+                <div class="header-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h1 class="card-title">Select Department</h1>
+                <p class="card-subtitle">Choose your department and enter the access code to continue.</p>
+            </div>
+            
+            <div class="card-body">
+                <!-- User Info Display -->
+                <% if (typeof user !== 'undefined' && user) { %>
+                <div class="user-info">
+                    <div class="user-name">
+                        <i class="fas fa-user-tie me-2"></i>
+                        Welcome, <%= user.name %>!
+                    </div>
+                    <div class="user-email"><%= user.email %></div>
+                </div>
+                <% } %>
+
+                <form id="roomSelectionForm" action="/auth/admin/select-room" method="POST">
+                    <!-- Department Selection -->
+                    <div class="department-selection">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-building-columns me-2"></i>
+                            Choose Department:
+                        </h6>
+                        <div class="department-grid">
+                            <div class="department-card" data-room="hrm" onclick="selectDepartment('hrm')">
+                                <div class="department-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="department-name">HRM</div>
+                                <div class="department-description">Human Resource Management</div>
+                            </div>
+                            
+                            <div class="department-card" data-room="hse" onclick="selectDepartment('hse')">
+                                <div class="department-icon">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <div class="department-name">HSE</div>
+                                <div class="department-description">Health, Safety & Environment</div>
+                            </div>
+                            
+                            <div class="department-card" data-room="gm" onclick="selectDepartment('gm')">
+                                <div class="department-icon">
+                                    <i class="fas fa-crown"></i>
+                                </div>
+                                <div class="department-name">GM</div>
+                                <div class="department-description">General Management</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div class="password-section" id="passwordSection">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-key me-2"></i>
+                            Enter Department Access Code:
+                        </h6>
+                        <div class="form-floating">
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="roomPassword" 
+                                   name="roomPassword"
+                                   placeholder="000000" 
+                                   maxlength="6"
+                                   pattern="[0-9]{6}"
+                                   required>
+                            <label for="roomPassword">6-Digit Access Code</label>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Please enter the 6-digit access code for the selected department.
+                        </small>
+                    </div>
+
+                    <!-- Hidden field for selected room -->
+                    <input type="hidden" id="selectedRoom" name="selectedRoom" value="">
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-enter-room" id="enterRoomBtn" disabled>
+                        <i class="fas fa-door-open me-2"></i>
+                        Enter Department
+                    </button>
+                </form>
+
+                <div class="footer-links">
+                    <a href="/auth/logout">
+                        <i class="fas fa-sign-out-alt me-1"></i>Logout
+                    </a>
+                    <a href="/auth/admin/dashboard">
+                        <i class="fas fa-home me-1"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- SweetAlert2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        let selectedDepartment = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('roomSelectionForm');
+            const passwordInput = document.getElementById('roomPassword');
+            const enterRoomBtn = document.getElementById('enterRoomBtn');
+
+            // Password input formatting
+            passwordInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                if (value.length > 6) {
+                    value = value.slice(0, 6); // Limit to 6 digits
+                }
+                e.target.value = value;
+                validateForm();
+            });
+
+            // Form validation
+            function validateForm() {
+                const isValid = selectedDepartment && passwordInput.value.length === 6;
+                enterRoomBtn.disabled = !isValid;
+                return isValid;
+            }
+
+            // Password validation on input
+            passwordInput.addEventListener('input', validateForm);
+
+            // Form submission
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (!validateForm()) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Input',
+                        text: 'Please select a department and enter a valid 6-digit access code.',
+                        confirmButtonColor: '#667eea'
+                    });
+                    return;
+                }
+
+                // Show loading state
+                const originalContent = enterRoomBtn.innerHTML;
+                enterRoomBtn.innerHTML = '<span class="loading-spinner"></span>Accessing Department...';
+                enterRoomBtn.disabled = true;
+
+                // Submit form
+                fetch('/auth/admin/select-room', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        selectedRoom: selectedDepartment,
+                        roomPassword: passwordInput.value
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Access Granted!',
+                            text: `Welcome to ${getDepartmentName(selectedDepartment)} Department`,
+                            timer: 2000,
+                            timerProgressBar: true,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.href = data.redirectUrl || '/quizzes';
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Access Denied',
+                            text: data.message || 'Invalid access code. Please try again.',
+                            confirmButtonColor: '#667eea'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Something went wrong. Please try again.',
+                        confirmButtonColor: '#667eea'
+                    });
+                })
+                .finally(() => {
+                    enterRoomBtn.innerHTML = originalContent;
+                    enterRoomBtn.disabled = false;
+                    validateForm();
+                });
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Enter key to submit when form is valid
+                if (e.key === 'Enter' && validateForm() && !enterRoomBtn.disabled) {
+                    form.dispatchEvent(new Event('submit'));
+                }
+                
+                // Escape key to clear selection
+                if (e.key === 'Escape') {
+                    clearSelection();
+                }
+            });
+        });
+
+        function selectDepartment(roomCode) {
+            // Clear previous selection
+            document.querySelectorAll('.department-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Select new department
+            const selectedCard = document.querySelector(`[data-room="${roomCode}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+                selectedDepartment = roomCode;
+                document.getElementById('selectedRoom').value = roomCode;
+                
+                // Show password section with animation
+                const passwordSection = document.getElementById('passwordSection');
+                passwordSection.classList.add('show');
+                
+                // Focus on password input
+                setTimeout(() => {
+                    document.getElementById('roomPassword').focus();
+                }, 300);
+                
+                // Validate form
+                validateForm();
+                
+                console.log('Selected department:', roomCode);
+            }
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.department-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            selectedDepartment = null;
+            document.getElementById('selectedRoom').value = '';
+            document.getElementById('roomPassword').value = '';
+            
+            const passwordSection = document.getElementById('passwordSection');
+            passwordSection.classList.remove('show');
+            
+            validateForm();
+        }
+
+        function getDepartmentName(code) {
+            const departments = {
+                'hrm': 'Human Resource Management',
+                'hse': 'Health, Safety & Environment',
+                'gm': 'General Management'
+            };
+            return departments[code] || code.toUpperCase();
+        }
+
+        function validateForm() {
+            const passwordInput = document.getElementById('roomPassword');
+            const enterRoomBtn = document.getElementById('enterRoomBtn');
+            
+            const isValid = selectedDepartment && passwordInput.value.length === 6;
+            enterRoomBtn.disabled = !isValid;
+            
+            return isValid;
+        }
+    </script>
+</body>
+</html>

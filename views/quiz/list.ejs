@@ -25,8 +25,56 @@
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- NEW: Room Selection Info -->
                 <ul class="navbar-nav me-auto">
-                    <!-- Keep empty or add other high-level navigation if needed -->
+                    <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" 
+                           href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-white bg-opacity-20 p-2 me-2">
+                                    <i class="fas <%= roomInfo.code === 'hrm' ? 'fa-users' : roomInfo.code === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> text-white"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-medium d-none d-md-inline" style="font-size: 0.9rem;">
+                                        <%= roomInfo.name %>
+                                    </span>
+                                    <span class="fw-medium d-md-none">
+                                        <%= roomInfo.code.toUpperCase() %>
+                                    </span>
+                                    <small class="text-white-50 d-none d-lg-inline" style="font-size: 0.75rem;">
+                                        Selected: <%= new Date(roomInfo.selectedAt).toLocaleTimeString() %>
+                                    </small>
+                                </div>
+                            </div>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <h6 class="dropdown-header">
+                                    <i class="fas fa-building me-2"></i>
+                                    Current Department
+                                </h6>
+                            </li>
+                            <li>
+                                <span class="dropdown-item-text">
+                                    <strong><%= roomInfo.name %></strong><br>
+                                    <small class="text-muted">Code: <%= roomInfo.code.toUpperCase() %></small>
+                                </span>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="switchDepartment()">
+                                    <i class="fas fa-exchange-alt me-2"></i>Switch Department
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#" onclick="viewDepartmentStats()">
+                                    <i class="fas fa-chart-bar me-2"></i>Department Statistics
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <% } %>
                 </ul>
                 
                 <div class="navbar-nav ms-auto">
@@ -39,7 +87,6 @@
                            id="navbarDropdown">
                             <div class="d-flex align-items-center">
                                 <div class="rounded-circle bg-white bg-opacity-20 p-2 me-2" style="position: relative;">
-                                    <!-- <i class="fas fa-user text-white"></i> -->
                                     <img src="https://jbagy.me/wp-content/uploads/2025/03/anh-dai-dien-zalo-dep-1.jpg" alt="User" class="rounded-circle align-avatar-image" style="object-fit: cover;">
                                 </div>
                                 <span class="fw-medium d-none d-sm-inline">
@@ -82,8 +129,20 @@
                             <h1 class="page-title">
                                 <i class="fas fa-clipboard-list me-3"></i>
                                 Quiz Management
+                                <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
+                                <small class="text-white-50 d-block mt-2" style="font-size: 1.2rem; font-weight: 500;">
+                                    <i class="fas <%= roomInfo.code === 'hrm' ? 'fa-users' : roomInfo.code === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> me-2"></i>
+                                    <%= roomInfo.name %> Department
+                                </small>
+                                <% } %>
                             </h1>
-                            <p class="page-subtitle">Create, manage, and monitor all your quizzes in one place</p>
+                            <p class="page-subtitle">
+                                <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
+                                    Manage quizzes for <%= roomInfo.name %> department
+                                <% } else { %>
+                                    Create, manage, and monitor all your quizzes in one place
+                                <% } %>
+                            </p>
                             <div class="stats-row">
                                 <div class="stat-item">
                                     <span class="stat-number"><%= quizzes.length %></span>
@@ -97,6 +156,14 @@
                                     <span class="stat-number"><%= quizzes.filter(q => q.mode === 'offline').length %></span>
                                     <span class="stat-label">Offline</span>
                                 </div>
+                                <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
+                                <div class="stat-item">
+                                    <span class="stat-number">
+                                        <i class="fas <%= roomInfo.code === 'hrm' ? 'fa-users' : roomInfo.code === 'hse' ? 'fa-shield-alt' : 'fa-crown' %>"></i>
+                                    </span>
+                                    <span class="stat-label"><%= roomInfo.code.toUpperCase() %></span>
+                                </div>
+                                <% } %>
                             </div>
                         </div>
                     </div>
@@ -116,6 +183,39 @@
             </div>
         </div>
 
+        <!-- Department Info Banner -->
+        <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
+        <div class="container">
+            <div class="alert alert-info border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1)); border-left: 4px solid var(--info-color) !important;">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="fas <%= roomInfo.code === 'hrm' ? 'fa-users' : roomInfo.code === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> fa-2x text-info"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="alert-heading mb-1">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Currently Managing: <%= roomInfo.name %> Department
+                        </h6>
+                        <p class="mb-1">
+                            You are viewing and managing quizzes for the <strong><%= roomInfo.name %></strong> department.
+                            All new quizzes will be automatically assigned to this department.
+                        </p>
+                        <small class="text-muted">
+                            <i class="fas fa-clock me-1"></i>
+                            Selected at: <%= new Date(roomInfo.selectedAt).toLocaleString() %>
+                        </small>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-info btn-sm" onclick="switchDepartment()">
+                            <i class="fas fa-exchange-alt me-1"></i>
+                            Switch Department
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
         <!-- Filter Section -->
         <div class="filter-section">
             <div class="container">
@@ -124,6 +224,9 @@
                         <h5 class="filter-title">
                             <i class="fas fa-filter me-2"></i>
                             Filter & Search
+                            <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
+                            <small class="text-muted">(<%= roomInfo.code.toUpperCase() %> Department)</small>
+                            <% } %>
                         </h5>
                         <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
                             <i class="fas fa-times me-1"></i>
@@ -195,7 +298,13 @@
                         <i class="fas fa-clipboard-list"></i>
                     </div>
                     <h3>No Quizzes Yet</h3>
-                    <p>Get started by creating your first quiz. It's quick and easy!</p>
+                    <p>
+                        <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
+                            Get started by creating your first quiz for <%= roomInfo.name %> department.
+                        <% } else { %>
+                            Get started by creating your first quiz. It's quick and easy!
+                        <% } %>
+                    </p>
                     <a href="/quizzes/create" class="btn btn-primary-custom">
                         <i class="fas fa-plus me-2"></i>
                         Create Your First Quiz
@@ -220,6 +329,13 @@
                                     <i class="fas <%= quiz.mode === 'online' ? 'fa-globe' : 'fa-desktop' %> me-1"></i>
                                     <%= quiz.mode.charAt(0).toUpperCase() + quiz.mode.slice(1) %>
                                 </span>
+                                <!-- NEW: Department Badge -->
+                                <% if (quiz.roomCode) { %>
+                                <span class="badge badge-language" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                                    <i class="fas <%= quiz.roomCode === 'hrm' ? 'fa-users' : quiz.roomCode === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> me-1"></i>
+                                    <%= quiz.roomCode.toUpperCase() %>
+                                </span>
+                                <% } %>
                             </div>
                             <div class="card-actions">
                                 <div class="dropdown">
@@ -280,6 +396,13 @@
                                 <div class="stat">
                                     <i class="fas fa-calendar"></i>
                                     <span>Scheduled</span>
+                                </div>
+                                <% } %>
+                                <!-- NEW: Department Info -->
+                                <% if (quiz.roomCode) { %>
+                                <div class="stat">
+                                    <i class="fas <%= quiz.roomCode === 'hrm' ? 'fa-users' : quiz.roomCode === 'hse' ? 'fa-shield-alt' : 'fa-crown' %>"></i>
+                                    <span><%= quiz.roomCode.toUpperCase() %> Dept</span>
                                 </div>
                                 <% } %>
                             </div>
@@ -346,6 +469,11 @@
                     <span class="footer-text">
                         <i class="fas fa-brain me-2"></i>
                         Quiz App © <%= new Date().getFullYear() %> All rights reserved
+                        <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
+                        <small class="text-muted ms-2">
+                            | <%= roomInfo.name %> Department
+                        </small>
+                        <% } %>
                     </span>
                 </div>
                 <div class="col-md-6">
@@ -365,48 +493,142 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/js/modern_quiz_list.js"></script>
     
-    <!-- Dropdown Fix Script -->
+    <!-- Room Management Scripts -->
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Initializing dropdown fixes...');
-        
-        // Check if Bootstrap is loaded
-        if (typeof bootstrap === 'undefined') {
-            console.error('Bootstrap JavaScript is not loaded!');
-            return;
+        // Function to switch department
+        function switchDepartment() {
+            Swal.fire({
+                title: 'Switch Department?',
+                text: 'You will be redirected to select a different department.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#667eea',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Yes, Switch',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('/auth/api/admin/switch-room', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.href = data.redirectUrl;
+                        } else {
+                            throw new Error(data.message);
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to switch department. Please try again.',
+                            confirmButtonColor: '#667eea'
+                        });
+                    });
+                }
+            });
         }
-        
-        // Force initialize all dropdowns
-        const dropdownElements = document.querySelectorAll('.dropdown-toggle');
-        
-        dropdownElements.forEach(function(element) {
-            // Ensure the element has required attributes
-            if (!element.hasAttribute('data-bs-toggle')) {
-                element.setAttribute('data-bs-toggle', 'dropdown');
+
+        // Function to view department statistics
+        function viewDepartmentStats() {
+            const roomCode = '<%= typeof roomInfo !== "undefined" && roomInfo ? roomInfo.code : "" %>';
+            
+            if (!roomCode) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'No department selected.',
+                    confirmButtonColor: '#667eea'
+                });
+                return;
             }
-            if (!element.hasAttribute('aria-expanded')) {
-                element.setAttribute('aria-expanded', 'false');
+
+            fetch(`/auth/api/admin/room-stats/${roomCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const stats = data.stats;
+                        Swal.fire({
+                            title: `${stats.roomName} Statistics`,
+                            html: `
+                                <div class="text-start">
+                                    <p><strong>Total Quizzes:</strong> ${stats.totalQuizzes}</p>
+                                    <p><strong>Total Questions:</strong> ${stats.totalQuestions}</p>
+                                    <p><strong>Online Quizzes:</strong> ${stats.byMode.online || 0}</p>
+                                    <p><strong>Offline Quizzes:</strong> ${stats.byMode.offline || 0}</p>
+                                    <p><strong>Recent Quizzes (7 days):</strong> ${stats.recentQuizzes}</p>
+                                    <p><strong>Total Duration:</strong> ${Math.floor(stats.totalDuration / 60)}m ${stats.totalDuration % 60}s</p>
+                                </div>
+                            `,
+                            icon: 'info',
+                            confirmButtonColor: '#667eea'
+                        });
+                    } else {
+                        throw new Error(data.message);
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to fetch department statistics.',
+                        confirmButtonColor: '#667eea'
+                    });
+                });
+        }
+
+        // Add room info to existing functions
+        const originalRefreshQuizzes = window.refreshQuizzes;
+        window.refreshQuizzes = function() {
+            showLoadingState(true);
+            
+            // Show room info in loading message
+            const roomInfo = '<%= typeof roomInfo !== "undefined" && roomInfo ? roomInfo.name : "" %>';
+            if (roomInfo) {
+                document.querySelector('#loadingState p').textContent = `Loading ${roomInfo} quizzes...`;
             }
             
-            // Initialize Bootstrap dropdown
-            try {
-                new bootstrap.Dropdown(element);
-                console.log('Dropdown initialized for:', element);
-            } catch (error) {
-                console.error('Error initializing dropdown:', error);
-            }
-        });
-    });
+            setTimeout(() => {
+                showLoadingState(false);
+                showNotification('Quizzes refreshed successfully!', 'success');
+                
+                // Re-animate cards
+                document.querySelectorAll('.quiz-card').forEach((card, index) => {
+                    card.style.animation = `fadeInUp 0.6s ease-out ${index * 0.1}s both`;
+                });
+            }, 1500);
+        };
 
-    // Test function for debugging
-    function testDropdown() {
-        const dropdown = document.querySelector('.dropdown-toggle');
-        if (dropdown) {
-            dropdown.click();
-        } else {
-            console.log('No dropdown element found');
-        }
-    }
+        // Dropdown fix for room selection
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap JavaScript is not loaded!');
+                return;
+            }
+            
+            const dropdownElements = document.querySelectorAll('.dropdown-toggle');
+            
+            dropdownElements.forEach(function(element) {
+                if (!element.hasAttribute('data-bs-toggle')) {
+                    element.setAttribute('data-bs-toggle', 'dropdown');
+                }
+                if (!element.hasAttribute('aria-expanded')) {
+                    element.setAttribute('aria-expanded', 'false');
+                }
+                
+                try {
+                    new bootstrap.Dropdown(element);
+                } catch (error) {
+                    console.error('Error initializing dropdown:', error);
+                }
+            });
+        });
     </script>
 </body>
 </html>

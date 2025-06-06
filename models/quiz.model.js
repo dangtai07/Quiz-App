@@ -21,7 +21,6 @@ const questionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    // Loại bỏ type - mặc định tất cả đều là single choice
     image: {
         type: String
     },
@@ -29,13 +28,11 @@ const questionSchema = new mongoose.Schema({
         type: [optionSchema],
         validate: {
             validator: function(options) {
-                // Yêu cầu ít nhất 2 lựa chọn, tối đa 6 lựa chọn
                 return options && options.length >= 2 && options.length <= 6;
             },
             message: 'Each question must have between 2 and 6 options'
         },
         default: function() {
-            // Mặc định tạo 2 lựa chọn trống
             return [
                 { letter: 'A', text: '' },
                 { letter: 'B', text: '' }
@@ -47,7 +44,6 @@ const questionSchema = new mongoose.Schema({
         required: true,
         enum: ['A', 'B', 'C', 'D', 'E', 'F']
     },
-    // Thêm trường thời gian trả lời cho mỗi câu hỏi
     answerTime: {
         type: Number, // Thời gian tính bằng giây
         default: 30,  // Mặc định 30 giây
@@ -65,6 +61,13 @@ const quizSchema = new mongoose.Schema({
         type: String,
         required: true,
         enum: ['online', 'offline']
+    },
+    // THÊM MỚI: Trường roomCode để phân biệt phòng ban
+    roomCode: {
+        type: String,
+        required: true,
+        enum: ['hrm', 'hse', 'gm'],
+        index: true // Tạo index để tìm kiếm nhanh hơn
     },
     scheduleSettings: {
         startTime: Date,
@@ -99,5 +102,9 @@ quizSchema.pre('save', function(next) {
     }
     next();
 });
+
+// Index compound để tìm kiếm theo roomCode và các trường khác
+quizSchema.index({ roomCode: 1, createdAt: -1 });
+quizSchema.index({ roomCode: 1, mode: 1 });
 
 module.exports = mongoose.model('Quiz', quizSchema);
