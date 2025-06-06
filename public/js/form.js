@@ -138,7 +138,7 @@ function renderQuestion(question) {
     // Restore values
     setTimeout(() => {
         populateQuestionData(question);
-    }, 50);
+    }, 0);
 }
 
 function renderAllQuestions() {
@@ -294,6 +294,40 @@ function populateQuestionData(question) {
     // Correct answer
     if (question.correctAnswer) {
         selectCorrectAnswer(question.id, question.correctAnswer);
+    }
+    // // Restore image preview if available
+    if (question.image && question.image.preview) {
+        const uploadZone = document.querySelector(`#question-${question.id} .image-upload-zone`);
+        if (uploadZone) {
+            uploadZone.classList.add('has-image');
+            uploadZone.innerHTML = `
+                <input type="file"
+                        id="image-${question.id}"
+                        accept="image/*"
+                        style="display: none;"
+                        onchange="handleImageUpload(${question.id}, this)">
+                <img src="${question.image.preview}" alt="Question Image" 
+                        style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-danger" 
+                            onclick="removeImage(${question.id}, event)" type="button">
+                        <i class="fas fa-trash me-1"></i> Remove
+                    </button>
+                </div>
+            `;
+
+            // Fetch the image and create a File object
+            // fetch(question.image.preview)
+            //     .then(res => res.blob())
+            //     .then(blob => {
+            //         const fileName = `question_${question.id}_image.png`;
+            //         const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+            //         question.image.file = file;
+            //     })
+            //     .catch(err => {
+            //         console.error('Error creating file from image:', err);
+            //     });
+        }
     }
 }
 
@@ -504,7 +538,8 @@ function moveQuestion(questionId, direction) {
         );
         return;
     }
-
+    // Swap ids
+    [questions[idx].id, questions[newIdx].id] = [questions[newIdx].id, questions[idx].id];
     // Swap questions
     [questions[idx], questions[newIdx]] = [questions[newIdx], questions[idx]];
     renderAllQuestions();
@@ -530,8 +565,26 @@ function duplicateQuestion(questionId) {
             file: original.image.file
         } : null
     };
+    setTimeout(() => {
+        if (newQuestion.image && newQuestion.image.preview) {
+            fetch(newQuestion.image.preview)
+                    .then(res => res.blob())
+                    .then(blob => {
+                        const fileName = `question_${newQuestion.id}_image.png`;
+                        const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+                        newQuestion.image.file = file;
+                    })
+                    .catch(err => {
+                        console.error('Error creating file from image:', err);
+                    });
+        }
+
+    },100);
     
     questions.splice(idx + 1, 0, newQuestion);
+    questions.forEach((q, i) => {
+        q.id = i + 1; // Reassign IDs
+    });
     renderAllQuestions();
     updateQuizStatistics();
     triggerAutoSave();
@@ -555,6 +608,9 @@ function deleteQuestion(questionId) {
             if (element) {
                 element.remove();
             }
+            questions.forEach((q, i) => {
+                q.id = i + 1; // Reassign IDs
+            });
             updateQuizStatistics();
             triggerAutoSave();
             showNotification('Question deleted successfully!', 'success');
@@ -648,6 +704,23 @@ function restoreDraft(draftData) {
     questionCount = questions.length > 0 ? Math.max(...questions.map(q => q.id)) : 0;
     
     renderAllQuestions();
+    questions.forEach(question => {
+        setTimeout(() => {
+            if (question.image && question.image.preview) {
+                fetch(question.image.preview)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const fileName = `question_${question.id}_image.png`;
+                            const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+                            question.image.file = file;
+                        })
+                        .catch(err => {
+                            console.error('Error creating file from image:', err);
+                        });
+            }
+
+        },100);
+    });
     updateQuizStatistics();
     
     showNotification('Draft restored successfully!', 'success');
@@ -1023,14 +1096,21 @@ function submitQuizToServer(isUpdate) {
         }
     }
 
-    const questionsData = questions.map((question, index) => ({
-        number: index + 1,
-        content: question.content,
-        answerTime: question.answerTime || DEFAULT_ANSWER_TIME,
-        options: question.options.filter(opt => opt.text && opt.text.trim()),
-        correctAnswer: question.correctAnswer
-    }));
-
+    const questionsData = questions.map((question, index) => {
+        const imgElement = document.querySelector(`#question-${index + 1} .image-upload-zone img`);
+        let imageSrc = imgElement ? imgElement.src : null;
+        if (imageSrc && imageSrc.includes('data:image')) {
+            imageSrc = null
+        }
+        return {
+            number: index + 1,
+            content: question.content,
+            answerTime: question.answerTime || DEFAULT_ANSWER_TIME,
+            options: question.options.filter(opt => opt.text && opt.text.trim()),
+            correctAnswer: question.correctAnswer,
+            image: imageSrc
+        };
+    });
     // Create FormData
     const formData = new FormData();
     formData.append('quizInfo', JSON.stringify(quizInfo));
@@ -1161,6 +1241,92 @@ if (!document.querySelector('#notificationStyles')) {
         }
     `;
     document.head.appendChild(style);
+}
+function renumberQuestions() {
+    const questionElements = document.querySelectorAll('.question-card-modern');
+    questionElements.forEach((element, index) => {
+        const newNum = index + 1;
+        
+        // Update element ID
+        element.id = `question-${newNum}`;
+        
+        // Update question number display
+        const numberDisplay = element.querySelector('.question-number');
+        if (numberDisplay) numberDisplay.textContent = newNum;
+        
+        // Update heading
+        const heading = element.querySelector('h5');
+        if (heading) heading.textContent = `Question ${newNum}`;
+        
+        // Update all form element IDs and event handlers
+        updateQuestionElementIds(element, newNum);
+        
+        // Update questions array
+        if (questions[index]) {
+            questions[index].id = newNum;
+        }
+    });
+    
+    questionCount = questionElements.length;
+}
+function updateQuestionElementIds(element, newNum) {
+    const textarea = element.querySelector('textarea');
+    if (textarea) {
+        textarea.id = `question-${newNum}-content`;
+        textarea.setAttribute('oninput', `updateQuestion(${newNum}, 'content', this.value)`);
+    }
+    
+    const select = element.querySelector('select');
+    if (select) {
+        select.id = `question-${newNum}-type`;
+        select.setAttribute('onchange', `toggleQuestionType(${newNum}, this.value)`);
+    }
+    
+    const fileInput = element.querySelector('input[type="file"]');
+    if (fileInput) {
+        fileInput.id = `image-${newNum}`;
+        fileInput.setAttribute('onchange', `handleImageUpload(${newNum}, this)`);
+    }
+    
+    const uploadZone = element.querySelector('.image-upload-zone');
+    if (uploadZone) {
+        uploadZone.setAttribute('onclick', `document.getElementById('image-${newNum}').click()`);
+    }
+    
+    const actionButtons = element.querySelectorAll('.action-btn');
+    actionButtons.forEach(button => {
+        const icon = button.querySelector('i');
+        if (icon) {
+            if (icon.classList.contains('fa-arrow-up')) {
+                button.setAttribute('onclick', `moveQuestion(${newNum}, 'up')`);
+            } else if (icon.classList.contains('fa-arrow-down')) {
+                button.setAttribute('onclick', `moveQuestion(${newNum}, 'down')`);
+            } else if (icon.classList.contains('fa-copy')) {
+                button.setAttribute('onclick', `duplicateQuestion(${newNum})`);
+            } else if (icon.classList.contains('fa-trash')) {
+                button.setAttribute('onclick', `deleteQuestion(${newNum})`);
+            }
+        }
+    });
+    
+    const optionsContainer = element.querySelector('.answer-options');
+    if (optionsContainer) {
+        optionsContainer.id = `options-${newNum}`;
+        
+        const optionInputs = optionsContainer.querySelectorAll('input[type="text"]');
+        optionInputs.forEach((input, index) => {
+            const letter = String.fromCharCode(65 + index);
+            input.id = `option-${newNum}-${letter}`;
+            input.setAttribute('oninput', `updateQuestion(${newNum}, 'option${letter}', this.value)`);
+        });
+        
+        const radioButtons = optionsContainer.querySelectorAll('.option-radio');
+        radioButtons.forEach((radio, index) => {
+            const letter = String.fromCharCode(65 + index);
+            radio.id = `radio-${newNum}-${letter}`;
+            radio.setAttribute('onclick', `selectCorrectAnswer(${newNum}, '${letter}')`);
+        });
+    }
 }
 
 // Export functions for global access
