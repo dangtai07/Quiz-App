@@ -9,7 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -19,16 +19,19 @@
     
 <style>
         :root {
-            --primary-color: #10b981;
-            --secondary-color: #3b82f6;
-            --success-color: #059669;
-            --danger-color: #ef4444;
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #10b981;
             --warning-color: #f59e0b;
-            --info-color: #1d4ed8;
-            --light-color: #f8fafc;
+            --danger-color: #ef4444;
+            --success-color-light: #6ee7b7;
+            --warning-color-light: #fde68a;
+            --danger-color-light: #fca5a5;
+            --info-color: #3b82f6;
             --dark-color: #1e293b;
+            --light-color: #f8fafc;
             --border-radius: 16px;
-            --border-radius-lg: 24px;
+            --border-radius-lg: 20px;
             --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
             --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             --shadow-lg: 0 25px 50px rgba(0, 0, 0, 0.15);
@@ -43,6 +46,7 @@
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
             padding: 20px;
+            color: var(--dark-color);
             position: relative;
         }
 
@@ -54,9 +58,9 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 60%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+                radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
             pointer-events: none;
             z-index: -1;
         }
@@ -68,12 +72,13 @@
         }
 
         .selection-card {
-            background: white;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: var(--border-radius-lg);
             box-shadow: var(--shadow-lg);
-            border: none;
             overflow: hidden;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: var(--transition);
         }
 
         .selection-card:hover {
@@ -82,9 +87,9 @@
         }
 
         .card-header {
-            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            padding: 2rem;
+            padding: 2.5rem;
             border: none;
             position: relative;
             overflow: hidden;
@@ -124,15 +129,16 @@
         }
 
         .header-icon {
-            width: 70px;
-            height: 70px;
+            width: 80px;
+            height: 80px;
             background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.8rem;
+            font-size: 2rem;
             flex-shrink: 0;
+            box-shadow: var(--shadow);
         }
 
         .header-content {
@@ -141,8 +147,8 @@
         }
 
         .card-title {
-            font-size: 2.2rem;
-            font-weight: 700;
+            font-size: 2.5rem;
+            font-weight: 800;
             margin-bottom: 0.5rem;
             letter-spacing: -0.025em;
         }
@@ -174,21 +180,20 @@
 
         .card-body {
             padding: 3rem 2rem;
+            position: relative;
+            z-index: 2;
         }
 
         .user-info {
-            background: linear-gradient(135deg, 
-                #10b981 0%, 
-                #3b82f6 50%, 
-                #f59e0b 100%
-            );
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: var(--border-radius);
             padding: 2rem;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             text-align: center;
             position: relative;
             overflow: hidden;
+            box-shadow: var(--shadow);
         }
 
         .user-info::before {
@@ -207,8 +212,6 @@
             position: relative;
             z-index: 2;
         }
-
-
 
         .user-info .user-name {
             font-weight: 700;
@@ -243,11 +246,17 @@
         }
 
         .department-selection {
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
         }
 
-        .department-selection h6 {
-            color: #10b981 !important;
+        .section-title {
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .department-grid {
@@ -258,7 +267,7 @@
         }
 
         .department-card {
-            background: var(--light-color);
+            background: white;
             border: 2px solid #e2e8f0;
             border-radius: var(--border-radius);
             padding: 2rem 1.5rem;
@@ -267,6 +276,7 @@
             transition: var(--transition);
             position: relative;
             overflow: hidden;
+            box-shadow: var(--shadow-sm);
         }
 
         .department-card::before {
@@ -276,7 +286,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
+            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
             transition: left 0.5s;
         }
 
@@ -285,29 +295,41 @@
         }
 
         .department-card:hover {
-            border-color: #10b981;
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
-            transform: translateY(-2px);
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow);
+            transform: translateY(-4px);
         }
 
         .department-card.selected {
-            border-color: #10b981;
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
+            border-color: var(--primary-color);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
         }
 
         .department-icon {
-            width: 70px;
-            height: 70px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #10b981, #3b82f6);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 1.5rem;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+        .department-card[data-room="hrm"] .department-icon {
+            background: linear-gradient(135deg, var(--success-color), var(--success-color-light));
+        }
+        .department-card[data-room="hse"] .department-icon {
+            background: linear-gradient(135deg, var(--danger-color), var(--danger-color-light));
+        }
+
+        .department-card[data-room="gm"] .department-icon {
+            background: linear-gradient(135deg, var(--warning-color), var(--warning-color-light));
         }
 
         .department-card:hover .department-icon,
@@ -329,22 +351,19 @@
         }
 
         .password-section {
-            background: rgba(16, 185, 129, 0.05);
+            background: rgba(102, 126, 234, 0.05);
             border-radius: var(--border-radius);
             padding: 2rem;
             margin-bottom: 2rem;
             opacity: 0;
             transform: translateY(20px);
             transition: var(--transition);
+            border: 1px solid rgba(102, 126, 234, 0.1);
         }
 
         .password-section.show {
             opacity: 1;
             transform: translateY(0);
-        }
-
-        .password-section h6 {
-            color: #10b981 !important;
         }
 
         .form-floating {
@@ -364,8 +383,8 @@
         }
 
         .form-control:focus {
-            border-color: #10b981;
-            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
             background: white;
             outline: none;
         }
@@ -377,7 +396,7 @@
         }
 
         .btn-enter-room {
-            background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             border: none;
             border-radius: var(--border-radius);
             padding: 1rem 2rem;
@@ -386,7 +405,7 @@
             color: white;
             width: 100%;
             transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
             position: relative;
             overflow: hidden;
         }
@@ -407,14 +426,14 @@
         }
 
         .btn-enter-room:hover {
-            background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
             color: white;
         }
 
         .btn-enter-room:disabled {
-            background: #9ca3af;
+            background: #94a3b8;
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
@@ -428,15 +447,16 @@
         }
 
         .footer-links a {
-            color: #10b981;
+            color: var(--primary-color);
             text-decoration: none;
             font-size: 0.9rem;
             margin: 0 1rem;
-            transition: color 0.3s ease;
+            transition: var(--transition);
+            font-weight: 500;
         }
 
         .footer-links a:hover {
-            color: #3b82f6;
+            color: var(--secondary-color);
             text-decoration: underline;
         }
 
@@ -469,6 +489,11 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        /* Alert customization */
+        .text-muted {
+            color: #64748b !important;
         }
 
         /* Responsive Design */
@@ -516,7 +541,7 @@
             }
             
             .card-title {
-                font-size: 1.75rem;
+                font-size: 2rem;
             }
             
             .department-grid {
@@ -549,7 +574,7 @@
             }
             
             .card-title {
-                font-size: 1.5rem;
+                font-size: 1.75rem;
             }
             
             .department-grid {
@@ -568,11 +593,11 @@
             <div class="card-header">
                 <div class="header-left">
                     <div class="header-icon">
-                        <i class="fas fa-building"></i>
+                        <i class="fas fa-brain"></i>
                     </div>
                     <div class="header-content">
                         <h1 class="card-title">Select Department</h1>
-                        <p class="card-subtitle">Choose your department and enter the access code to continue.</p>
+                        <p class="card-subtitle">Choose your department and enter the access code to continue to Quiz App.</p>
                     </div>
                 </div>
                 <div class="header-right">
@@ -583,7 +608,7 @@
             </div>
             
             <div class="card-body">
-                <!-- User Info Display với màu sắc sặc sỡ -->
+                <!-- User Info Display -->
                 <div class="user-info">
                     <div class="welcome-badge">
                         <i class="fas fa-star me-1"></i>
@@ -599,10 +624,10 @@
                 <form id="roomSelectionForm" action="/auth/admin/select-room" method="POST">
                     <!-- Department Selection -->
                     <div class="department-selection">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-building-columns me-2"></i>
+                        <div class="section-title">
+                            <i class="fas fa-building-columns"></i>
                             Choose Department:
-                        </h6>
+                        </div>
                         <div class="department-grid">
                             <div class="department-card" data-room="hrm" onclick="selectDepartment('hrm')">
                                 <div class="department-icon">
@@ -632,10 +657,10 @@
 
                     <!-- Password Input -->
                     <div class="password-section" id="passwordSection">
-                        <h6 class="text-primary mb-3">
-                            <i class="fas fa-key me-2"></i>
+                        <div class="section-title">
+                            <i class="fas fa-key"></i>
                             Enter Department Access Code:
-                        </h6>
+                        </div>
                         <div class="form-floating">
                             <input type="password" 
                                    class="form-control" 
@@ -744,7 +769,8 @@
                             text: `Welcome to ${getDepartmentName(selectedDepartment)} Department`,
                             timer: 2000,
                             timerProgressBar: true,
-                            showConfirmButton: false
+                            showConfirmButton: false,
+                            confirmButtonColor: '#667eea'
                         }).then(() => {
                             window.location.href = data.redirectUrl || '/quizzes';
                         });
