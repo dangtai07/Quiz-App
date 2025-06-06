@@ -17,13 +17,13 @@
     <!-- SweetAlert2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
     
-    <style>
+<style>
         :root {
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --warning-color: #f59e0b;
+            --primary-color: #1e40af;
+            --secondary-color: #0ea5e9;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #ff6b6b;
             --info-color: #3b82f6;
             --light-color: #f8fafc;
             --dark-color: #1e293b;
@@ -54,16 +54,16 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 40% 60%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+                radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(239, 68, 68, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
             pointer-events: none;
             z-index: -1;
         }
 
         .room-selection-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
@@ -82,13 +82,17 @@
         }
 
         .card-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            background: linear-gradient(135deg, #10b981 0%, #ef4444 100%);
             color: white;
-            text-align: center;
-            padding: 3rem 2rem;
+            padding: 2rem;
             border: none;
             position: relative;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 2rem;
         }
 
         .card-header::before {
@@ -103,27 +107,44 @@
             transform: translate(25%, -25%);
         }
 
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex: 1;
+            z-index: 2;
+            position: relative;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            z-index: 2;
+            position: relative;
+        }
+
         .header-icon {
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             background: rgba(255, 255, 255, 0.2);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.5rem;
-            font-size: 2rem;
-            position: relative;
-            z-index: 2;
+            font-size: 1.8rem;
+            flex-shrink: 0;
+        }
+
+        .header-content {
+            flex: 1;
+            min-width: 0;
         }
 
         .card-title {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
             letter-spacing: -0.025em;
-            position: relative;
-            z-index: 2;
         }
 
         .card-subtitle {
@@ -131,8 +152,24 @@
             opacity: 0.9;
             font-weight: 400;
             line-height: 1.5;
-            position: relative;
-            z-index: 2;
+            margin: 0;
+        }
+
+        .header-decoration {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
         }
 
         .card-body {
@@ -140,34 +177,118 @@
         }
 
         .user-info {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 1px solid #fbbf24;
+            background: linear-gradient(135deg, 
+                #10b981 0%, 
+                #ef4444 50%, 
+                #f59e0b 100%
+            );
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: var(--border-radius);
-            padding: 1.5rem;
+            padding: 1.5rem 2rem;
             margin-bottom: 2rem;
-            text-align: center;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1.5rem;
         }
+
+        .user-info-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+            z-index: 2;
+            position: relative;
+        }
+
+        .user-info-right {
+            display: flex;
+            align-items: center;
+            z-index: 2;
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            color: white;
+        }
+
+        .user-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-info::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            z-index: 1;
+        }
+
+        .user-info > * {
+            position: relative;
+            z-index: 2;
+        }
+
+
 
         .user-info .user-name {
             font-weight: 700;
-            color: var(--warning-color);
-            margin-bottom: 0.5rem;
-            font-size: 1.1rem;
+            color: white;
+            margin-bottom: 0.25rem;
+            font-size: 1.2rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
 
         .user-info .user-email {
             font-size: 0.9rem;
-            color: #92400e;
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .user-info .welcome-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            color: white;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: float 3s ease-in-out infinite;
         }
 
         .department-selection {
             margin-bottom: 2rem;
         }
 
+        .department-selection h6 {
+            color: #10b981 !important;
+        }
+
         .department-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
@@ -175,7 +296,7 @@
             background: var(--light-color);
             border: 2px solid #e2e8f0;
             border-radius: var(--border-radius);
-            padding: 1.5rem 1rem;
+            padding: 2rem 1.5rem;
             text-align: center;
             cursor: pointer;
             transition: var(--transition);
@@ -190,7 +311,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
             transition: left 0.5s;
         }
 
@@ -199,28 +320,28 @@
         }
 
         .department-card:hover {
-            border-color: var(--primary-color);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+            border-color: #10b981;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15);
             transform: translateY(-2px);
         }
 
         .department-card.selected {
-            border-color: var(--primary-color);
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+            border-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(239, 68, 68, 0.1));
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
         }
 
         .department-icon {
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: linear-gradient(135deg, #10b981, #ef4444);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
-            font-size: 1.5rem;
+            margin: 0 auto 1.5rem;
+            font-size: 1.8rem;
             transition: var(--transition);
         }
 
@@ -233,18 +354,19 @@
             font-weight: 600;
             color: var(--dark-color);
             margin-bottom: 0.5rem;
+            font-size: 1.1rem;
         }
 
         .department-description {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             color: #64748b;
             line-height: 1.4;
         }
 
         .password-section {
-            background: rgba(102, 126, 234, 0.05);
+            background: rgba(16, 185, 129, 0.05);
             border-radius: var(--border-radius);
-            padding: 1.5rem;
+            padding: 2rem;
             margin-bottom: 2rem;
             opacity: 0;
             transform: translateY(20px);
@@ -254,6 +376,10 @@
         .password-section.show {
             opacity: 1;
             transform: translateY(0);
+        }
+
+        .password-section h6 {
+            color: #10b981 !important;
         }
 
         .form-floating {
@@ -273,8 +399,8 @@
         }
 
         .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            border-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
             background: white;
             outline: none;
         }
@@ -286,7 +412,7 @@
         }
 
         .btn-enter-room {
-            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+            background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
             border: none;
             border-radius: var(--border-radius);
             padding: 1rem 2rem;
@@ -295,7 +421,7 @@
             color: white;
             width: 100%;
             transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
             position: relative;
             overflow: hidden;
         }
@@ -316,9 +442,9 @@
         }
 
         .btn-enter-room:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
             color: white;
         }
 
@@ -337,7 +463,7 @@
         }
 
         .footer-links a {
-            color: var(--primary-color);
+            color: #10b981;
             text-decoration: none;
             font-size: 0.9rem;
             margin: 0 1rem;
@@ -345,7 +471,7 @@
         }
 
         .footer-links a:hover {
-            color: var(--secondary-color);
+            color: #ef4444;
             text-decoration: underline;
         }
 
@@ -380,13 +506,44 @@
             }
         }
 
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .room-selection-container {
+                max-width: 800px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .room-selection-container {
+                max-width: 700px;
+            }
+            
+            .department-grid {
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            }
+        }
+
         @media (max-width: 768px) {
             .room-selection-container {
                 padding: 0 10px;
+                max-width: 100%;
             }
             
             .card-header {
+                flex-direction: column;
+                text-align: center;
                 padding: 2rem 1.5rem;
+                gap: 1rem;
+            }
+            
+            .header-left {
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+            
+            .header-right {
+                display: none;
             }
             
             .card-body {
@@ -399,6 +556,45 @@
             
             .department-grid {
                 grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .department-card {
+                padding: 1.5rem 1rem;
+            }
+            
+            .user-info {
+                padding: 1.5rem;
+                flex-direction: column;
+                text-align: center;
+                gap: 1rem;
+            }
+            
+            .user-info-left {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.75rem;
+            }
+            
+            .user-info-right {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .card-header {
+                padding: 1.5rem 1rem;
+            }
+            
+            .card-body {
+                padding: 1.5rem 1rem;
+            }
+            
+            .card-title {
+                font-size: 1.5rem;
+            }
+            
+            .department-grid {
                 gap: 0.75rem;
             }
             
@@ -412,24 +608,35 @@
     <div class="room-selection-container fade-in">
         <div class="card selection-card">
             <div class="card-header">
-                <div class="header-icon">
-                    <i class="fas fa-building"></i>
+                <div class="header-left">
+                    <div class="header-icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="header-content">
+                        <h1 class="card-title">Select Department</h1>
+                        <p class="card-subtitle">Choose your department and enter the access code to continue.</p>
+                    </div>
                 </div>
-                <h1 class="card-title">Select Department</h1>
-                <p class="card-subtitle">Choose your department and enter the access code to continue.</p>
+                <div class="header-right">
+                    <div class="header-decoration">
+                        <i class="fas fa-key"></i>
+                    </div>
+                </div>
             </div>
             
             <div class="card-body">
-                <!-- User Info Display -->
-                <% if (typeof user !== 'undefined' && user) { %>
+                <!-- User Info Display với màu sắc sặc sỡ -->
                 <div class="user-info">
-                    <div class="user-name">
-                        <i class="fas fa-user-tie me-2"></i>
-                        Welcome, <%= user.name %>!
+                    <div class="welcome-badge">
+                        <i class="fas fa-star me-1"></i>
+                        Administrator Access
                     </div>
-                    <div class="user-email"><%= user.email %></div>
+                    <div class="user-name">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Welcome, John Doe!</span>
+                    </div>
+                    <div class="user-email">admin@example.com</div>
                 </div>
-                <% } %>
 
                 <form id="roomSelectionForm" action="/auth/admin/select-room" method="POST">
                     <!-- Department Selection -->
@@ -526,25 +733,22 @@
 
             // Password input formatting
             passwordInput.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                let value = e.target.value.replace(/\D/g, '');
                 if (value.length > 6) {
-                    value = value.slice(0, 6); // Limit to 6 digits
+                    value = value.slice(0, 6);
                 }
                 e.target.value = value;
                 validateForm();
             });
 
-            // Form validation
             function validateForm() {
                 const isValid = selectedDepartment && passwordInput.value.length === 6;
                 enterRoomBtn.disabled = !isValid;
                 return isValid;
             }
 
-            // Password validation on input
             passwordInput.addEventListener('input', validateForm);
 
-            // Form submission
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
@@ -558,7 +762,6 @@
                     return;
                 }
 
-                // Show loading state
                 const originalContent = enterRoomBtn.innerHTML;
                 enterRoomBtn.innerHTML = '<span class="loading-spinner"></span>Accessing Department...';
                 enterRoomBtn.disabled = true;
@@ -614,12 +817,10 @@
 
             // Keyboard shortcuts
             document.addEventListener('keydown', function(e) {
-                // Enter key to submit when form is valid
                 if (e.key === 'Enter' && validateForm() && !enterRoomBtn.disabled) {
                     form.dispatchEvent(new Event('submit'));
                 }
                 
-                // Escape key to clear selection
                 if (e.key === 'Escape') {
                     clearSelection();
                 }
@@ -627,28 +828,23 @@
         });
 
         function selectDepartment(roomCode) {
-            // Clear previous selection
             document.querySelectorAll('.department-card').forEach(card => {
                 card.classList.remove('selected');
             });
             
-            // Select new department
             const selectedCard = document.querySelector(`[data-room="${roomCode}"]`);
             if (selectedCard) {
                 selectedCard.classList.add('selected');
                 selectedDepartment = roomCode;
                 document.getElementById('selectedRoom').value = roomCode;
                 
-                // Show password section with animation
                 const passwordSection = document.getElementById('passwordSection');
                 passwordSection.classList.add('show');
                 
-                // Focus on password input
                 setTimeout(() => {
                     document.getElementById('roomPassword').focus();
                 }, 300);
                 
-                // Validate form
                 validateForm();
                 
                 console.log('Selected department:', roomCode);

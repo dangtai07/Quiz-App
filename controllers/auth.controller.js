@@ -158,7 +158,7 @@ class AuthController {
 
     // NEW: POST room selection
     selectRoom = async (req, res) => {
-        try {
+        try { 
             const { selectedRoom, roomPassword } = req.body;
 
             // Validate input
