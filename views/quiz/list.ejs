@@ -183,39 +183,6 @@
             </div>
         </div>
 
-        <!-- Department Info Banner -->
-        <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
-        <div class="container">
-            <div class="alert alert-info border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.1)); border-left: 4px solid var(--info-color) !important;">
-                <div class="d-flex align-items-center">
-                    <div class="me-3">
-                        <i class="fas <%= roomInfo.code === 'hrm' ? 'fa-users' : roomInfo.code === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> fa-2x text-info"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="alert-heading mb-1">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Currently Managing: <%= roomInfo.name %> Department
-                        </h6>
-                        <p class="mb-1">
-                            You are viewing and managing quizzes for the <strong><%= roomInfo.name %></strong> department.
-                            All new quizzes will be automatically assigned to this department.
-                        </p>
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i>
-                            Selected at: <%= new Date(roomInfo.selectedAt).toLocaleString() %>
-                        </small>
-                    </div>
-                    <div>
-                        <button class="btn btn-outline-info btn-sm" onclick="switchDepartment()">
-                            <i class="fas fa-exchange-alt me-1"></i>
-                            Switch Department
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <% } %>
-
         <!-- Filter Section -->
         <div class="filter-section">
             <div class="container">
@@ -331,7 +298,7 @@
                                 </span>
                                 <!-- NEW: Department Badge -->
                                 <% if (quiz.roomCode) { %>
-                                <span class="badge badge-language" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);">
+                                <span class="badge badge-language" style="background: linear-gradient(135deg, var(--warning-color), #d97706);">
                                     <i class="fas <%= quiz.roomCode === 'hrm' ? 'fa-users' : quiz.roomCode === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> me-1"></i>
                                     <%= quiz.roomCode.toUpperCase() %>
                                 </span>
