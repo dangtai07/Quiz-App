@@ -34,10 +34,7 @@ function initializePreview() {
             
             // Display first question
             displayCurrentQuestion();
-            updateProgress();
             updateButtonStates();
-            
-            console.log('Standalone preview initialized with', questions.length, 'questions');
         } catch (error) {
             console.error('Error parsing quiz data:', error);
             showErrorMessage();
@@ -258,17 +255,7 @@ function nextQuestion() {
         currentPreviewQuestion++;
         selectedAnswer = null; // Reset for next question
         displayCurrentQuestion();
-        updateProgress();
         console.log('Moved to question', currentPreviewQuestion + 1);
-    }
-}
-
-function updateProgress() {
-    const progress = ((currentPreviewQuestion + 1) / questions.length) * 100;
-    const progressBar = document.getElementById('previewProgress');
-    if (progressBar) {
-        progressBar.style.width = `${progress}%`;
-        progressBar.setAttribute('aria-valuenow', progress);
     }
 }
 
@@ -316,7 +303,6 @@ function restartPreview() {
     selectedAnswer = null;
     stopTimer();
     displayCurrentQuestion();
-    updateProgress();
 }
 
 // =================== RANKING FUNCTION ===================
@@ -397,12 +383,10 @@ function showNoQuestionsMessage() {
             </div>
         </div>
     `;
-    
-    // Hide timer and progress
+
+    // Hide timer
     const timerElement = document.querySelector('.quiz-timer-compact');
-    const progressElement = document.querySelector('.progress');
     if (timerElement) timerElement.style.display = 'none';
-    if (progressElement) progressElement.style.display = 'none';
     
     // Disable all buttons
     const buttons = document.querySelectorAll('#nextBtn, #finishBtn, #rankingBtn');
@@ -429,11 +413,9 @@ function showErrorMessage() {
         </div>
     `;
     
-    // Hide timer and progress
+    // Hide timer
     const timerElement = document.querySelector('.quiz-timer-compact');
-    const progressElement = document.querySelector('.progress');
     if (timerElement) timerElement.style.display = 'none';
-    if (progressElement) progressElement.style.display = 'none';
     
     // Disable all buttons
     const buttons = document.querySelectorAll('#nextBtn, #finishBtn, #rankingBtn');
