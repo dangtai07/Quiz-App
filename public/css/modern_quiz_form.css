@@ -782,6 +782,7 @@ body::before {
     flex-direction: column; 
     overflow-y: auto;
     overflow-x: hidden;
+    background: #f8fafc;
 }
 
 /* Điều chỉnh modal dialog để fit với scale */
@@ -794,7 +795,6 @@ body::before {
 
 /* Preview Modal Enhancements */
 .preview-modal .modal-header {
-    background: var(--glass-bg);
     backdrop-filter: blur(20px);
     border: none;
     padding: 2rem;
@@ -803,13 +803,11 @@ body::before {
 
 .preview-modal .modal-body {
     padding: 2rem;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(255, 255, 255, 0.98) 100%);
     flex: 1;
     scroll-behavior: smooth;
 }
 
 .preview-modal .modal-footer {
-    background: var(--glass-bg);
     backdrop-filter: blur(20px);
     padding: 1.5rem 2rem;
 }
@@ -817,7 +815,7 @@ body::before {
 /* Quiz Info Preview */
 .quiz-info-preview {
     padding: 1rem;
-    background: rgba(102, 126, 234, 0.05);
+    background: white;
     border-radius: var(--border-radius);
     margin-bottom: 1rem;
     display: flex;
@@ -1442,7 +1440,7 @@ body::before {
 
 /* Layout cho modal footer */
 .preview-modal .modal-footer {
-    justify-content: space-between;
+    justify-content: end;
     gap: 1rem;
     flex-wrap: wrap;
 }
