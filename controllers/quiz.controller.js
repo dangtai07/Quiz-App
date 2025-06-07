@@ -355,7 +355,8 @@ class QuizController {
                 quiz: quiz,
                 isPreview: true,
                 user: req.session.user,
-                roomInfo: req.session?.selectedRoom
+                roomInfo: req.session?.selectedRoom,
+                layout: false
             });
         } catch (error) {
             console.error('Error loading quiz preview:', error);

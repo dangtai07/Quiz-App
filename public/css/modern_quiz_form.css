@@ -1818,11 +1818,6 @@ body::before {
 
 /* Responsive cho phần chính */
 @media (max-width: 768px) {
-    body {
-        transform: scale(0.9);
-        width: 111.111%;
-    }
-    
     .modern-quiz-editor {
         padding: 1rem;
     }
