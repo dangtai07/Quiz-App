@@ -1,4 +1,4 @@
-// Unified Quiz Form JavaScript for Create & Edit (No Language Selection)
+// Unified Quiz Form JavaScript for Create & Edit (No Language Selection) - UPDATED WITH ANSWER REVEAL
 let questions = [];
 let questionCount = 0;
 let autoSaveTimer;
@@ -11,6 +11,7 @@ let currentPreviewQuestion = 0;
 let previewTimer = null;
 let timeRemaining = 0;
 let isTimerActive = false;
+let selectedAnswer = null; // Track user's selected answer
 
 const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const MIN_OPTIONS = 2;
@@ -313,7 +314,8 @@ function populateQuestionData(question) {
     if (question.correctAnswer) {
         selectCorrectAnswer(question.id, question.correctAnswer);
     }
-    // // Restore image preview if available
+    
+    // Restore image preview if available
     if (question.image && question.image.preview) {
         const uploadZone = document.querySelector(`#question-${question.id} .image-upload-zone`);
         if (uploadZone) {
@@ -333,18 +335,6 @@ function populateQuestionData(question) {
                     </button>
                 </div>
             `;
-
-            // Fetch the image and create a File object
-            // fetch(question.image.preview)
-            //     .then(res => res.blob())
-            //     .then(blob => {
-            //         const fileName = `question_${question.id}_image.png`;
-            //         const file = new File([blob], fileName, { type: blob.type || 'image/png' });
-            //         question.image.file = file;
-            //     })
-            //     .catch(err => {
-            //         console.error('Error creating file from image:', err);
-            //     });
         }
     }
 }
@@ -429,7 +419,6 @@ function refreshQuestionOptions(questionId) {
         applyOptionColors();
     }, 50);
 }
-
 
 // =================== UPDATE FUNCTIONS ===================
 
@@ -627,6 +616,7 @@ function duplicateQuestion(questionId) {
     
     showNotification('Question duplicated successfully!', 'success');
 }
+
 /**
  * Color utility functions
  */
@@ -824,8 +814,9 @@ function previewQuiz() {
     
     // Reset preview state
     currentPreviewQuestion = 0;
+    selectedAnswer = null;
     stopTimer();
-    const question = questions[currentPreviewQuestion];
+    
     // Set quiz basic info
     document.getElementById('previewTitle').textContent = 
         document.getElementById('quizTitle').value || 'Untitled Quiz';
@@ -851,6 +842,9 @@ function displayCurrentQuestion() {
     
     const question = questions[currentPreviewQuestion];
     const container = document.getElementById('previewQuestionContainer');
+    
+    // Reset selected answer for new question
+    selectedAnswer = null;
     
     // Update question progress indicator
     document.getElementById('previewQuestionProgress').textContent = 
@@ -879,16 +873,16 @@ function displayCurrentQuestion() {
     questionHTML += '<div class="preview-options">';
     question.options.forEach(option => {
         if (option.text && option.text.trim()) {
-            const isCorrect = question.correctAnswer === option.letter;
             const colorClass = `letter-${option.letter.toLowerCase()}`;
             questionHTML += `
-                <div class="preview-option ${isCorrect ? 'correct' : ''}" 
+                <div class="preview-option" 
                      data-letter="${option.letter}" 
+                     data-correct="${question.correctAnswer === option.letter ? 'true' : 'false'}"
                      onclick="selectPreviewOption(this, '${option.letter}')">
                     <div class="preview-option-content">
                         <div class="preview-option-letter ${colorClass}">${option.letter}</div>
                         <div class="preview-option-text">${option.text}</div>
-                        ${isCorrect ? '<div class="preview-option-status"><i class="fas fa-check-circle text-success"></i></div>' : ''}
+                        <div class="preview-option-status"></div>
                     </div>
                 </div>
             `;
@@ -907,34 +901,32 @@ function displayCurrentQuestion() {
     // Update navigation buttons
     updateNavigationButtons();
 }
-function applyOptionColors() {
-    // Apply colors to form editor option letters
-    document.querySelectorAll('.option-letter').forEach(element => {
-        const letter = element.textContent.trim();
-        const colorClass = `letter-${letter.toLowerCase()}`;
-        element.classList.add(colorClass);
-    });
+
+/**
+ * Enhanced option selection with tracking
+ */
+function selectPreviewOption(element, letter) {
+    if (!isTimerActive) return; // Can't select after time is up
     
-    // Apply colors to preview option letters
-    document.querySelectorAll('.preview-option-letter').forEach(element => {
-        const letter = element.textContent.trim();
-        const colorClass = `letter-${letter.toLowerCase()}`;
-        element.classList.add(colorClass);
-    });
+    // Store selected answer
+    selectedAnswer = letter;
     
-    // Apply colors to option indicators (for quiz preview page)
-    document.querySelectorAll('.option-indicator').forEach(element => {
-        const letter = element.textContent.trim();
-        const colorClass = `letter-${letter.toLowerCase()}`;
-        element.classList.add(colorClass);
-    });
+    // Remove previous selection
+    const parent = element.closest('.preview-options');
+    if (parent) {
+        parent.querySelectorAll('.preview-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        element.classList.add('selected');
+    }
+    
+    console.log('Selected option:', letter, 'for question', currentPreviewQuestion + 1);
 }
 
 /**
  * Start the countdown timer for current question
  */
 function startQuestionTimer(seconds) {
-    console.log(seconds)
     timeRemaining = seconds;
     isTimerActive = true;
     
@@ -991,9 +983,31 @@ function updateTimerDisplay() {
 }
 
 /**
- * Handle when time is up for current question
+ * Enhanced onTimeUp - Show correct answer and mark wrong if applicable
  */
 function onTimeUp() {
+    const currentQuestion = questions[currentPreviewQuestion];
+    const correctAnswer = currentQuestion.correctAnswer;
+    
+    // Find all options in current question
+    const options = document.querySelectorAll('.preview-option');
+    
+    options.forEach(option => {
+        const optionLetter = option.getAttribute('data-letter');
+        const isCorrect = option.getAttribute('data-correct') === 'true';
+        const statusElement = option.querySelector('.preview-option-status');
+        
+        if (isCorrect) {
+            // Mark correct answer
+            option.classList.add('correct');
+            statusElement.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
+        } else if (selectedAnswer === optionLetter) {
+            // Mark user's wrong selection
+            option.classList.add('wrong');
+            statusElement.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
+        }
+    });
+    
     // Show appropriate navigation button
     if (currentPreviewQuestion < questions.length - 1) {
         document.getElementById('nextBtn').style.display = 'inline-block';
@@ -1002,13 +1016,10 @@ function onTimeUp() {
     }
     
     // Disable option selection
-    const options = document.querySelectorAll('.preview-option');
     options.forEach(option => {
         option.style.pointerEvents = 'none';
-        option.style.opacity = '0.7';
+        option.style.opacity = '0.8';
     });
-    
-    console.log('Time up for question', currentPreviewQuestion + 1);
 }
 
 /**
@@ -1017,6 +1028,7 @@ function onTimeUp() {
 function nextQuestion() {
     if (currentPreviewQuestion < questions.length - 1) {
         currentPreviewQuestion++;
+        selectedAnswer = null; // Reset for next question
         displayCurrentQuestion();
         updateProgress();
         console.log('Moved to question', currentPreviewQuestion + 1);
@@ -1045,24 +1057,6 @@ function updateProgress() {
         progressBar.style.width = `${progress}%`;
         progressBar.setAttribute('aria-valuenow', progress);
     }
-}
-
-/**
- * Handle option selection in preview
- */
-function selectPreviewOption(element, letter) {
-    if (!isTimerActive) return; // Can't select after time is up
-    
-    // Remove previous selection
-    const parent = element.closest('.preview-options');
-    if (parent) {
-        parent.querySelectorAll('.preview-option').forEach(opt => {
-            opt.classList.remove('selected');
-        });
-        element.classList.add('selected');
-    }
-    
-    console.log('Selected option:', letter, 'for question', currentPreviewQuestion + 1);
 }
 
 /**
@@ -1098,7 +1092,31 @@ function editQuiz() {
 document.getElementById('previewModal').addEventListener('hidden.bs.modal', function() {
     stopTimer();
     currentPreviewQuestion = 0;
+    selectedAnswer = null;
 });
+
+function applyOptionColors() {
+    // Apply colors to form editor option letters
+    document.querySelectorAll('.option-letter').forEach(element => {
+        const letter = element.textContent.trim();
+        const colorClass = `letter-${letter.toLowerCase()}`;
+        element.classList.add(colorClass);
+    });
+    
+    // Apply colors to preview option letters
+    document.querySelectorAll('.preview-option-letter').forEach(element => {
+        const letter = element.textContent.trim();
+        const colorClass = `letter-${letter.toLowerCase()}`;
+        element.classList.add(colorClass);
+    });
+    
+    // Apply colors to option indicators (for quiz preview page)
+    document.querySelectorAll('.option-indicator').forEach(element => {
+        const letter = element.textContent.trim();
+        const colorClass = `letter-${letter.toLowerCase()}`;
+        element.classList.add(colorClass);
+    });
+}
 
 // =================== SUBMIT FUNCTIONS ===================
 
@@ -1344,92 +1362,6 @@ if (!document.querySelector('#notificationStyles')) {
         }
     `;
     document.head.appendChild(style);
-}
-function renumberQuestions() {
-    const questionElements = document.querySelectorAll('.question-card-modern');
-    questionElements.forEach((element, index) => {
-        const newNum = index + 1;
-        
-        // Update element ID
-        element.id = `question-${newNum}`;
-        
-        // Update question number display
-        const numberDisplay = element.querySelector('.question-number');
-        if (numberDisplay) numberDisplay.textContent = newNum;
-        
-        // Update heading
-        const heading = element.querySelector('h5');
-        if (heading) heading.textContent = `Question ${newNum}`;
-        
-        // Update all form element IDs and event handlers
-        updateQuestionElementIds(element, newNum);
-        
-        // Update questions array
-        if (questions[index]) {
-            questions[index].id = newNum;
-        }
-    });
-    
-    questionCount = questionElements.length;
-}
-function updateQuestionElementIds(element, newNum) {
-    const textarea = element.querySelector('textarea');
-    if (textarea) {
-        textarea.id = `question-${newNum}-content`;
-        textarea.setAttribute('oninput', `updateQuestion(${newNum}, 'content', this.value)`);
-    }
-    
-    const select = element.querySelector('select');
-    if (select) {
-        select.id = `question-${newNum}-type`;
-        select.setAttribute('onchange', `toggleQuestionType(${newNum}, this.value)`);
-    }
-    
-    const fileInput = element.querySelector('input[type="file"]');
-    if (fileInput) {
-        fileInput.id = `image-${newNum}`;
-        fileInput.setAttribute('onchange', `handleImageUpload(${newNum}, this)`);
-    }
-    
-    const uploadZone = element.querySelector('.image-upload-zone');
-    if (uploadZone) {
-        uploadZone.setAttribute('onclick', `document.getElementById('image-${newNum}').click()`);
-    }
-    
-    const actionButtons = element.querySelectorAll('.action-btn');
-    actionButtons.forEach(button => {
-        const icon = button.querySelector('i');
-        if (icon) {
-            if (icon.classList.contains('fa-arrow-up')) {
-                button.setAttribute('onclick', `moveQuestion(${newNum}, 'up')`);
-            } else if (icon.classList.contains('fa-arrow-down')) {
-                button.setAttribute('onclick', `moveQuestion(${newNum}, 'down')`);
-            } else if (icon.classList.contains('fa-copy')) {
-                button.setAttribute('onclick', `duplicateQuestion(${newNum})`);
-            } else if (icon.classList.contains('fa-trash')) {
-                button.setAttribute('onclick', `deleteQuestion(${newNum})`);
-            }
-        }
-    });
-    
-    const optionsContainer = element.querySelector('.answer-options');
-    if (optionsContainer) {
-        optionsContainer.id = `options-${newNum}`;
-        
-        const optionInputs = optionsContainer.querySelectorAll('input[type="text"]');
-        optionInputs.forEach((input, index) => {
-            const letter = String.fromCharCode(65 + index);
-            input.id = `option-${newNum}-${letter}`;
-            input.setAttribute('oninput', `updateQuestion(${newNum}, 'option${letter}', this.value)`);
-        });
-        
-        const radioButtons = optionsContainer.querySelectorAll('.option-radio');
-        radioButtons.forEach((radio, index) => {
-            const letter = String.fromCharCode(65 + index);
-            radio.id = `radio-${newNum}-${letter}`;
-            radio.setAttribute('onclick', `selectCorrectAnswer(${newNum}, '${letter}')`);
-        });
-    }
 }
 
 // Export functions for global access

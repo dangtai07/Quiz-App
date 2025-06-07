@@ -1,8 +1,8 @@
 :root {
     --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    --warning-gradient: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    --danger-gradient: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
     --info-gradient: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     --glass-bg: rgba(255, 255, 255, 0.95);
     --glass-border: rgba(255, 255, 255, 0.2);
@@ -25,6 +25,10 @@
     --option-e-light: #fb923c;
     --option-f-color: #dc2626;
     --option-f-light: #f87171;
+
+    --progress-bar-gradient: linear-gradient(to right, #1fa2ff, #004e92, #000428);
+    --timer-end-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --timer-begin-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
 * {
@@ -547,8 +551,8 @@ body::before {
 }
 
 .option-radio.checked {
-    border-color: #10b981;
-    background: #10b981;
+    border-color: #667eea;
+    background: #667eea;
 }
 
 .option-radio.checked::after {
@@ -557,8 +561,8 @@ body::before {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: white;
 }
@@ -855,7 +859,7 @@ body::before {
     width: 70px; /* Giảm từ 90px xuống 70px */
     height: 70px;
     border-radius: 50%;
-    background: var(--primary-gradient);
+    background: var(--timer-begin-gradient);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1031,14 +1035,10 @@ body::before {
 }
 
 .preview-option.selected {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
-}
-
-.preview-option.correct {
-    border-color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
+    border-color: #667eea !important;
+    background: rgba(102, 126, 234, 0.08) !important;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2) !important;
+    transform: translateY(-1px);
 }
 
 .preview-option-content {
@@ -1098,7 +1098,7 @@ body::before {
 }
 
 .preview-option.selected .preview-option-letter {
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 0 6px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 0 6px rgba(102, 126, 234, 0.2);
     transform: scale(1.05);
 }
 
@@ -1118,6 +1118,240 @@ body::before {
 .preview-option-status {
     margin-left: 1rem;
     font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+/* =================== ANSWER REVEAL STATES - CORRECT AND WRONG =================== */
+
+/* Correct Answer State */
+.preview-option.correct {
+    border-color: #10b981 !important;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)) !important;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25) !important;
+    animation: correctReveal 0.6s ease-out;
+}
+
+.preview-option.correct .preview-option-status {
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid #10b981;
+    opacity: 1;
+    transform: scale(1);
+    animation: statusAppear 0.4s ease-out 0.2s both;
+}
+
+.preview-option.correct .preview-option-status i {
+    color: #10b981;
+    animation: iconBounce 0.6s ease-out 0.4s both;
+}
+
+/* Wrong Answer State */
+.preview-option.wrong {
+    border-color: #ef4444 !important;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05)) !important;
+    box-shadow: 0 8px 25px rgba(239, 68, 68, 0.25) !important;
+    animation: wrongReveal 0.6s ease-out;
+}
+
+.preview-option.wrong .preview-option-status {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid #ef4444;
+    opacity: 1;
+    transform: scale(1);
+    animation: statusAppear 0.4s ease-out 0.2s both;
+}
+
+.preview-option.wrong .preview-option-status i {
+    color: #ef4444;
+    animation: iconShake 0.6s ease-out 0.4s both;
+}
+
+/* Disabled state for all options after time up */
+.preview-option[style*="pointer-events: none"] {
+    cursor: default;
+}
+
+.preview-option[style*="pointer-events: none"]:not(.correct):not(.wrong) {
+    opacity: 0.6;
+    background: rgba(226, 232, 240, 0.3) !important;
+    border-color: #e2e8f0 !important;
+}
+
+/* Enhance option letter colors when revealed */
+.preview-option.correct .preview-option-letter {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4), 0 0 0 6px rgba(16, 185, 129, 0.3);
+    transform: scale(1.08);
+}
+
+.preview-option.wrong .preview-option-letter {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4), 0 0 0 6px rgba(239, 68, 68, 0.3);
+    transform: scale(1.08);
+}
+
+/* Pulse effect for correct answer */
+.preview-option.correct::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+    z-index: -1;
+    animation: correctPulse 2s ease-in-out infinite;
+}
+
+.preview-option.wrong::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+    z-index: -1;
+    animation: wrongPulse 1s ease-in-out 3;
+}
+
+/* Make correct answer text slightly bolder */
+.preview-option.correct .preview-option-text {
+    font-weight: 600;
+    color: #065f46;
+}
+
+/* Make wrong answer text more muted */
+.preview-option.wrong .preview-option-text {
+    color: #991b1b;
+}
+
+/* Enhance unselected options after reveal */
+.preview-option[style*="pointer-events: none"]:not(.correct):not(.wrong) .preview-option-text {
+    color: #9ca3af;
+}
+
+.preview-option[style*="pointer-events: none"]:not(.correct):not(.wrong) .preview-option-letter {
+    opacity: 0.7;
+    transform: scale(0.95);
+}
+
+/* =================== ANIMATIONS FOR ANSWER REVEAL =================== */
+
+@keyframes correctReveal {
+    0% {
+        transform: translateY(-2px) scale(0.98);
+        border-color: #e2e8f0;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    50% {
+        transform: translateY(-4px) scale(1.02);
+    }
+    100% {
+        transform: translateY(-2px) scale(1);
+        border-color: #10b981;
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+    }
+}
+
+@keyframes wrongReveal {
+    0% {
+        transform: translateY(-2px) scale(0.98);
+        border-color: #e2e8f0;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    25% {
+        transform: translateY(-2px) scale(1.01) rotateX(2deg);
+    }
+    75% {
+        transform: translateY(-2px) scale(1.01) rotateX(-2deg);
+    }
+    100% {
+        transform: translateY(-2px) scale(1) rotateX(0deg);
+        border-color: #ef4444;
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+        box-shadow: 0 8px 25px rgba(239, 68, 68, 0.25);
+    }
+}
+
+@keyframes statusAppear {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes iconBounce {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.3);
+    }
+    70% {
+        transform: scale(0.9);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes iconShake {
+    0% {
+        transform: scale(0) rotate(0deg);
+    }
+    25% {
+        transform: scale(1.2) rotate(-5deg);
+    }
+    50% {
+        transform: scale(1) rotate(5deg);
+    }
+    75% {
+        transform: scale(1.1) rotate(-3deg);
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes correctPulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.1;
+        transform: scale(1.02);
+    }
+}
+
+@keyframes wrongPulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.1;
+        transform: scale(1.01);
+    }
 }
 
 /* =================== PREVIEW MODAL BUTTONS =================== */
@@ -1372,7 +1606,7 @@ body::before {
 }
 
 .progress-bar {
-    background: var(--primary-gradient);
+    background: var(--progress-bar-gradient);
     border-radius: 10px;
     transition: width 0.5s ease;
 }
@@ -1412,6 +1646,63 @@ body::before {
         opacity: 1;
         transform: scale(1);
     }
+}
+
+/* =================== ACCESSIBILITY ENHANCEMENTS =================== */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .preview-option.correct {
+        border-width: 3px !important;
+        border-color: #047857 !important;
+    }
+    
+    .preview-option.wrong {
+        border-width: 3px !important;
+        border-color: #dc2626 !important;
+    }
+    
+    .preview-option.correct .preview-option-status i {
+        color: #047857;
+        font-weight: 900;
+    }
+    
+    .preview-option.wrong .preview-option-status i {
+        color: #dc2626;
+        font-weight: 900;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .preview-option.correct,
+    .preview-option.wrong {
+        animation: none;
+        transition: all 0.2s ease;
+    }
+    
+    .preview-option-status {
+        transition: all 0.2s ease;
+    }
+    
+    .preview-option.correct::before,
+    .preview-option.wrong::before {
+        animation: none;
+    }
+}
+
+/* Focus states for accessibility */
+.preview-option:focus {
+    outline: 3px solid rgba(102, 126, 234, 0.5);
+    outline-offset: 2px;
+}
+
+.preview-option.correct:focus {
+    outline-color: rgba(16, 185, 129, 0.6);
+}
+
+.preview-option.wrong:focus {
+    outline-color: rgba(239, 68, 68, 0.6);
 }
 
 /* Responsive với scale 90% */
@@ -1459,6 +1750,13 @@ body::before {
         font-size: 1rem;
     }
     
+    .preview-option-status {
+        width: 28px;
+        height: 28px;
+        font-size: 1.1rem;
+        margin-left: 0.75rem;
+    }
+    
     .preview-navigation {
         flex-direction: column;
         gap: 0.75rem;
@@ -1498,6 +1796,19 @@ body::before {
     
     .timer-text {
         font-size: 0.85rem;
+    }
+    
+    .preview-option.correct .preview-option-letter,
+    .preview-option.wrong .preview-option-letter {
+        transform: scale(1.05);
+    }
+    
+    .preview-option.correct::before,
+    .preview-option.wrong::before {
+        top: -1px;
+        left: -1px;
+        right: -1px;
+        bottom: -1px;
     }
 }
 
