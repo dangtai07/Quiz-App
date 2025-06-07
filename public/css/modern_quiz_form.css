@@ -11,6 +11,20 @@
     --border-radius: 16px;
     --border-radius-lg: 24px;
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* New Option Colors A-F */
+    --option-a-color: #166534;
+    --option-a-light: #22c55e;
+    --option-b-color: #65a30d;
+    --option-b-light: #84cc16;
+    --option-c-color: #f59e0b;
+    --option-c-light: #fbbf24;
+    --option-d-color: #d97706;
+    --option-d-light: #f59e0b;
+    --option-e-color: #ea580c;
+    --option-e-light: #fb923c;
+    --option-f-color: #dc2626;
+    --option-f-light: #f87171;
 }
 
 * {
@@ -533,8 +547,8 @@ body::before {
 }
 
 .option-radio.checked {
-    border-color: #667eea;
-    background: #667eea;
+    border-color: #10b981;
+    background: #10b981;
 }
 
 .option-radio.checked::after {
@@ -543,23 +557,69 @@ body::before {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: white;
 }
 
+/* Updated Option Letter Styling with New Colors */
 .option-letter {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: var(--primary-gradient);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
+    font-weight: 700;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Individual option letter colors */
+.option-letter:nth-child(1),
+.option-group[data-letter="A"] .option-letter,
+.option-letter.letter-a {
+    background: linear-gradient(135deg, var(--option-a-color), var(--option-a-light));
+}
+
+.option-letter:nth-child(2),
+.option-group[data-letter="B"] .option-letter,
+.option-letter.letter-b {
+    background: linear-gradient(135deg, var(--option-b-color), var(--option-b-light));
+}
+
+.option-letter:nth-child(3),
+.option-group[data-letter="C"] .option-letter,
+.option-letter.letter-c {
+    background: linear-gradient(135deg, var(--option-c-color), var(--option-c-light));
+}
+
+.option-letter:nth-child(4),
+.option-group[data-letter="D"] .option-letter,
+.option-letter.letter-d {
+    background: linear-gradient(135deg, var(--option-d-color), var(--option-d-light));
+}
+
+.option-letter:nth-child(5),
+.option-group[data-letter="E"] .option-letter,
+.option-letter.letter-e {
+    background: linear-gradient(135deg, var(--option-e-color), var(--option-e-light));
+}
+
+.option-letter:nth-child(6),
+.option-group[data-letter="F"] .option-letter,
+.option-letter.letter-f {
+    background: linear-gradient(135deg, var(--option-f-color), var(--option-f-light));
+}
+
+/* Hover effects for option letters */
+.option-group:hover .option-letter {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 /* Action Buttons */
@@ -741,9 +801,7 @@ body::before {
     padding: 2rem;
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.02) 0%, rgba(255, 255, 255, 0.98) 100%);
     flex: 1;
-}
-.preview-modal .modal-body {
-    scroll-behavior: smooth; /* ← THÊM vào modal-body selector */
+    scroll-behavior: smooth;
 }
 
 .preview-modal .modal-footer {
@@ -758,17 +816,12 @@ body::before {
     background: rgba(102, 126, 234, 0.05);
     border-radius: var(--border-radius);
     margin-bottom: 1rem;
-}
-.quiz-info-preview {
-    padding: 1rem;
-    background: rgba(102, 126, 234, 0.05);
-    border-radius: var(--border-radius);
-    margin-bottom: 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 2rem;
 }
+
 .quiz-info-content {
     flex: 1;
 }
@@ -995,11 +1048,11 @@ body::before {
     z-index: 2;
 }
 
+/* Updated Preview Option Letter Styling with New Colors */
 .preview-option-letter {
     width: 42px; /* Tăng size để bù scale */
     height: 42px;
     border-radius: 50%;
-    background: var(--primary-gradient);
     color: white;
     display: flex;
     align-items: center;
@@ -1008,10 +1061,50 @@ body::before {
     font-size: 1.15rem; /* Tăng size */
     margin-right: 1rem;
     flex-shrink: 0;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Individual preview option letter colors */
+.preview-option[data-letter="A"] .preview-option-letter,
+.preview-option-letter.letter-a {
+    background: linear-gradient(135deg, var(--option-a-color), var(--option-a-light));
+}
+
+.preview-option[data-letter="B"] .preview-option-letter,
+.preview-option-letter.letter-b {
+    background: linear-gradient(135deg, var(--option-b-color), var(--option-b-light));
+}
+
+.preview-option[data-letter="C"] .preview-option-letter,
+.preview-option-letter.letter-c {
+    background: linear-gradient(135deg, var(--option-c-color), var(--option-c-light));
+}
+
+.preview-option[data-letter="D"] .preview-option-letter,
+.preview-option-letter.letter-d {
+    background: linear-gradient(135deg, var(--option-d-color), var(--option-d-light));
+}
+
+.preview-option[data-letter="E"] .preview-option-letter,
+.preview-option-letter.letter-e {
+    background: linear-gradient(135deg, var(--option-e-color), var(--option-e-light));
+}
+
+.preview-option[data-letter="F"] .preview-option-letter,
+.preview-option-letter.letter-f {
+    background: linear-gradient(135deg, var(--option-f-color), var(--option-f-light));
 }
 
 .preview-option.selected .preview-option-letter {
-    background: var(--success-gradient);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 0 6px rgba(16, 185, 129, 0.2);
+    transform: scale(1.05);
+}
+
+.preview-option:hover .preview-option-letter {
+    transform: scale(1.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .preview-option-text {
@@ -1303,6 +1396,24 @@ body::before {
 .preview-modal.show .modal-dialog {
     transform: translate(0, 0) scale(0.9);
 }
+
+/* Animation for option letters when they appear */
+.option-letter,
+.preview-option-letter {
+    animation: optionAppear 0.4s ease-out;
+}
+
+@keyframes optionAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 /* Responsive với scale 90% */
 @media (max-width: 768px) {
     .preview-modal .modal-dialog {
@@ -1481,6 +1592,12 @@ body::before {
     .option-controls .btn {
         min-width: 100px;
         padding: 0.5rem 1rem;
+    }
+    
+    .option-letter {
+        width: 28px;
+        height: 28px;
+        font-size: 0.9rem;
     }
 }
 

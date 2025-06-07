@@ -18,6 +18,7 @@ const MAX_OPTIONS = 6;
 const DEFAULT_ANSWER_TIME = 30;
 
 document.addEventListener('DOMContentLoaded', function() {
+    setupColorObserver();
     initializeQuizForm();
 });
 
@@ -39,6 +40,11 @@ function initializeQuizForm() {
     setupEventListeners();
     setupAutoSave();
     updateQuizStatistics();
+    
+    // Apply initial color classes
+    setTimeout(() => {
+        applyOptionColors();
+    }, 100);
 }
 
 function loadInitialData(data) {
@@ -135,9 +141,10 @@ function renderQuestion(question) {
     
     container.insertAdjacentHTML('beforeend', questionHtml);
     
-    // Restore values
+    // Apply color classes after DOM insertion
     setTimeout(() => {
         populateQuestionData(question);
+        applyOptionColors();
     }, 0);
 }
 
@@ -236,17 +243,25 @@ function createQuestionHtml(question) {
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="text-primary mb-0">Answer Options</h6>
                         <div class="option-controls">
-                            ${question.options.length < MAX_OPTIONS ? 
-                                `<button class="btn btn-sm btn-outline-primary me-2" 
-                                         onclick="addOption(${question.id})" type="button">
-                                     <i class="fas fa-plus me-1"></i>Add Option
-                                 </button>` : ''
-                            }
                             ${question.options.length > MIN_OPTIONS ? 
                                 `<button class="btn btn-sm btn-outline-danger" 
-                                         onclick="removeLastOption(${question.id})" type="button">
-                                     <i class="fas fa-minus me-1"></i>Remove Option
-                                 </button>` : ''
+                                onclick="removeLastOption(${question.id})" type="button">
+                                <i class="fas fa-minus me-1"></i>Remove Option
+                                </button>` :
+                                `<button class="btn btn-sm btn-outline-danger" 
+                                onclick="removeLastOption(${question.id})" type="button" disabled>
+                                <i class="fas fa-minus me-1"></i>Remove Option
+                                </button>`
+                            }
+                            ${question.options.length < MAX_OPTIONS ? 
+                                `<button class="btn btn-sm btn-outline-primary me-2" 
+                                        onclick="addOption(${question.id})" type="button">
+                                    <i class="fas fa-plus me-1"></i>Add Option
+                                </button>` : 
+                                `<button class="btn btn-sm btn-outline-primary me-2" 
+                                        onclick="addOption(${question.id})" type="button" disabled>
+                                    <i class="fas fa-plus me-1"></i>Add Option
+                                </button>`
                             }
                         </div>
                     </div>
@@ -260,12 +275,14 @@ function createQuestionHtml(question) {
 }
 
 function createOptionsHtml(question) {
-    return question.options.map(option => `
+    return question.options.map((option, index) => {
+        const colorClass = `letter-${option.letter.toLowerCase()}`;
+        return `
         <div class="option-group" data-letter="${option.letter}">
             <div class="option-radio ${question.correctAnswer === option.letter ? 'checked' : ''}" 
                  id="radio-${question.id}-${option.letter}" 
                  onclick="selectCorrectAnswer(${question.id}, '${option.letter}')"></div>
-            <div class="option-letter">${option.letter}</div>
+            <div class="option-letter ${colorClass}">${option.letter}</div>
             <input type="text" 
                    class="form-control-modern flex-grow-1" 
                    placeholder="Enter option ${option.letter}" 
@@ -273,7 +290,8 @@ function createOptionsHtml(question) {
                    value="${option.text}"
                    oninput="updateQuestion(${question.id}, 'option${option.letter}', this.value)">
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function populateQuestionData(question) {
@@ -374,21 +392,29 @@ function refreshQuestionOptions(questionId) {
     
     // Update controls
     controlsContainer.innerHTML = `
-        ${question.options.length < MAX_OPTIONS ? 
-            `<button class="btn btn-sm btn-outline-primary me-2" 
-                     onclick="addOption(${questionId})" type="button">
-                 <i class="fas fa-plus me-1"></i>Add Option
-             </button>` : ''
-        }
         ${question.options.length > MIN_OPTIONS ? 
             `<button class="btn btn-sm btn-outline-danger" 
-                     onclick="removeLastOption(${questionId})" type="button">
-                 <i class="fas fa-minus me-1"></i>Remove Option
-             </button>` : ''
+                onclick="removeLastOption(${question.id})" type="button">
+                <i class="fas fa-minus me-1"></i>Remove Option
+            </button>` :
+            `<button class="btn btn-sm btn-outline-danger" 
+                onclick="removeLastOption(${question.id})" type="button" disabled>
+                <i class="fas fa-minus me-1"></i>Remove Option
+            </button>`
+        }
+        ${question.options.length < MAX_OPTIONS ? 
+            `<button class="btn btn-sm btn-outline-primary me-2" 
+                    onclick="addOption(${question.id})" type="button">
+                <i class="fas fa-plus me-1"></i>Add Option
+            </button>` : 
+            `<button class="btn btn-sm btn-outline-primary me-2" 
+                    onclick="addOption(${question.id})" type="button" disabled>
+                <i class="fas fa-plus me-1"></i>Add Option
+            </button>`
         }
     `;
     
-    // Restore values
+    // Restore values and apply colors
     setTimeout(() => {
         question.options.forEach(option => {
             const optionEl = document.getElementById(`option-${questionId}-${option.letter}`);
@@ -398,8 +424,12 @@ function refreshQuestionOptions(questionId) {
         if (question.correctAnswer) {
             selectCorrectAnswer(questionId, question.correctAnswer);
         }
+        
+        // Apply color classes
+        applyOptionColors();
     }, 50);
 }
+
 
 // =================== UPDATE FUNCTIONS ===================
 
@@ -565,21 +595,22 @@ function duplicateQuestion(questionId) {
             file: original.image.file
         } : null
     };
+    
+    // Handle image duplication
     setTimeout(() => {
         if (newQuestion.image && newQuestion.image.preview) {
             fetch(newQuestion.image.preview)
-                    .then(res => res.blob())
-                    .then(blob => {
-                        const fileName = `question_${newQuestion.id}_image.png`;
-                        const file = new File([blob], fileName, { type: blob.type || 'image/png' });
-                        newQuestion.image.file = file;
-                    })
-                    .catch(err => {
-                        console.error('Error creating file from image:', err);
-                    });
+                .then(res => res.blob())
+                .then(blob => {
+                    const fileName = `question_${newQuestion.id}_image.png`;
+                    const file = new File([blob], fileName, { type: blob.type || 'image/png' });
+                    newQuestion.image.file = file;
+                })
+                .catch(err => {
+                    console.error('Error creating file from image:', err);
+                });
         }
-
-    },100);
+    }, 100);
     
     questions.splice(idx + 1, 0, newQuestion);
     questions.forEach((q, i) => {
@@ -588,7 +619,51 @@ function duplicateQuestion(questionId) {
     renderAllQuestions();
     updateQuizStatistics();
     triggerAutoSave();
+    
+    // Apply colors after rendering
+    setTimeout(() => {
+        applyOptionColors();
+    }, 200);
+    
     showNotification('Question duplicated successfully!', 'success');
+}
+/**
+ * Color utility functions
+ */
+function getOptionColorClass(letter) {
+    return `letter-${letter.toLowerCase()}`;
+}
+
+function applyColorToElement(element, letter) {
+    const colorClass = getOptionColorClass(letter);
+    element.classList.add(colorClass);
+}
+
+/**
+ * Observer to apply colors to dynamically added elements
+ */
+function setupColorObserver() {
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Element node
+                    // Apply colors to any new option letters
+                    const optionLetters = node.querySelectorAll('.option-letter, .preview-option-letter, .option-indicator');
+                    optionLetters.forEach(element => {
+                        const letter = element.textContent.trim();
+                        if (letter && letter.length === 1) {
+                            applyColorToElement(element, letter);
+                        }
+                    });
+                }
+            });
+        });
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
 }
 
 function deleteQuestion(questionId) {
@@ -800,15 +875,18 @@ function displayCurrentQuestion() {
         `;
     }
     
-    // Add answer options
+    // Add answer options with color classes
     questionHTML += '<div class="preview-options">';
     question.options.forEach(option => {
         if (option.text && option.text.trim()) {
             const isCorrect = question.correctAnswer === option.letter;
+            const colorClass = `letter-${option.letter.toLowerCase()}`;
             questionHTML += `
-                <div class="preview-option ${isCorrect ? 'correct' : ''}" onclick="selectPreviewOption(this, '${option.letter}')">
+                <div class="preview-option ${isCorrect ? 'correct' : ''}" 
+                     data-letter="${option.letter}" 
+                     onclick="selectPreviewOption(this, '${option.letter}')">
                     <div class="preview-option-content">
-                        <div class="preview-option-letter">${option.letter}</div>
+                        <div class="preview-option-letter ${colorClass}">${option.letter}</div>
                         <div class="preview-option-text">${option.text}</div>
                         ${isCorrect ? '<div class="preview-option-status"><i class="fas fa-check-circle text-success"></i></div>' : ''}
                     </div>
@@ -820,11 +898,36 @@ function displayCurrentQuestion() {
     
     container.innerHTML = questionHTML;
     
+    // Apply color classes after DOM insertion
+    applyOptionColors();
+    
     // Start timer for this question
     startQuestionTimer(question.answerTime || DEFAULT_ANSWER_TIME);
     
     // Update navigation buttons
     updateNavigationButtons();
+}
+function applyOptionColors() {
+    // Apply colors to form editor option letters
+    document.querySelectorAll('.option-letter').forEach(element => {
+        const letter = element.textContent.trim();
+        const colorClass = `letter-${letter.toLowerCase()}`;
+        element.classList.add(colorClass);
+    });
+    
+    // Apply colors to preview option letters
+    document.querySelectorAll('.preview-option-letter').forEach(element => {
+        const letter = element.textContent.trim();
+        const colorClass = `letter-${letter.toLowerCase()}`;
+        element.classList.add(colorClass);
+    });
+    
+    // Apply colors to option indicators (for quiz preview page)
+    document.querySelectorAll('.option-indicator').forEach(element => {
+        const letter = element.textContent.trim();
+        const colorClass = `letter-${letter.toLowerCase()}`;
+        element.classList.add(colorClass);
+    });
 }
 
 /**
@@ -1348,3 +1451,6 @@ window.toggleScheduleSettings = toggleScheduleSettings;
 window.nextQuestion = nextQuestion;
 window.finishQuiz = finishQuiz;
 window.selectPreviewOption = selectPreviewOption;
+window.applyOptionColors = applyOptionColors;
+window.getOptionColorClass = getOptionColorClass;
+window.applyColorToElement = applyColorToElement;
