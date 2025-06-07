@@ -1,4 +1,4 @@
-// Standalone Quiz Preview JavaScript - Based on form.js preview logic
+// Standalone Quiz Preview JavaScript - Updated with header buttons
 let questions = [];
 let currentPreviewQuestion = 0;
 let previewTimer = null;
@@ -35,6 +35,7 @@ function initializePreview() {
             // Display first question
             displayCurrentQuestion();
             updateProgress();
+            updateButtonStates();
             
             console.log('Standalone preview initialized with', questions.length, 'questions');
         } catch (error) {
@@ -61,18 +62,15 @@ function displayCurrentQuestion() {
     // Reset selected answer for new question
     selectedAnswer = null;
     
-    // Update question progress indicator
-    document.getElementById('previewQuestionProgress').textContent = 
-        `${currentPreviewQuestion + 1} of ${questions.length}`;
-    
     // Build question HTML
     let questionHTML = `
-        <div class="preview-question-header">
-            <div class="preview-question-number">${currentPreviewQuestion + 1}</div>
-            <div class="preview-question-content">
-                <h5 class="preview-question-title">${question.content || 'Untitled Question'}</h5>
+        <div class="question-display-container">
+            <div class="preview-question-header">
+                <div class="preview-question-number">${currentPreviewQuestion + 1}</div>
+                <div class="preview-question-content">
+                    <h5 class="preview-question-title">${question.content || 'Untitled Question'}</h5>
+                </div>
             </div>
-        </div>
     `;
     
     // Add image if exists
@@ -103,7 +101,7 @@ function displayCurrentQuestion() {
             `;
         }
     });
-    questionHTML += '</div>';
+    questionHTML += '</div></div>';
     
     container.innerHTML = questionHTML;
     
@@ -115,8 +113,8 @@ function displayCurrentQuestion() {
     // Start timer for this question
     startQuestionTimer(question.answerTime || DEFAULT_ANSWER_TIME);
     
-    // Update navigation buttons
-    updateNavigationButtons();
+    // Update button states
+    updateButtonStates();
 }
 
 // =================== OPTION SELECTION ===================
@@ -145,9 +143,8 @@ function startQuestionTimer(seconds) {
     timeRemaining = seconds;
     isTimerActive = true;
     
-    // Hide next button initially
-    document.getElementById('nextBtn').style.display = 'none';
-    document.getElementById('finishBtn').style.display = 'none';
+    // Disable navigation buttons during timer
+    updateButtonStates();
     
     updateTimerDisplay();
     
@@ -168,6 +165,9 @@ function stopTimer() {
         previewTimer = null;
     }
     isTimerActive = false;
+    
+    // Enable navigation buttons after timer
+    updateButtonStates();
 }
 
 function updateTimerDisplay() {
@@ -190,6 +190,32 @@ function updateTimerDisplay() {
         timerCircle.classList.add('danger');
     } else if (percentageLeft <= 30) {
         timerCircle.classList.add('warning');
+    }
+}
+
+// =================== BUTTON STATE MANAGEMENT ===================
+
+function updateButtonStates() {
+    const nextBtn = document.getElementById('nextBtn');
+    const finishBtn = document.getElementById('finishBtn');
+    const rankingBtn = document.getElementById('rankingBtn');
+    
+    // Always show buttons but control their enabled/disabled state
+    if (nextBtn) {
+        nextBtn.style.display = 'inline-block';
+        // Enable Next button only when timer is not active and not on last question
+        nextBtn.disabled = isTimerActive || (currentPreviewQuestion >= questions.length - 1);
+    }
+    
+    if (finishBtn) {
+        finishBtn.style.display = 'inline-block';
+        // Enable Finish button only when timer is not active and on last question
+        finishBtn.disabled = isTimerActive || (currentPreviewQuestion < questions.length - 1);
+    }
+    
+    // Ranking button is always enabled
+    if (rankingBtn) {
+        rankingBtn.disabled = false;
     }
 }
 
@@ -218,13 +244,6 @@ function onTimeUp() {
         }
     });
     
-    // Show appropriate navigation button
-    if (currentPreviewQuestion < questions.length - 1) {
-        document.getElementById('nextBtn').style.display = 'inline-block';
-    } else {
-        document.getElementById('finishBtn').style.display = 'inline-block';
-    }
-    
     // Disable option selection
     options.forEach(option => {
         option.style.pointerEvents = 'none';
@@ -235,22 +254,13 @@ function onTimeUp() {
 // =================== NAVIGATION ===================
 
 function nextQuestion() {
-    if (currentPreviewQuestion < questions.length - 1) {
+    if (currentPreviewQuestion < questions.length - 1 && !isTimerActive) {
         currentPreviewQuestion++;
         selectedAnswer = null; // Reset for next question
         displayCurrentQuestion();
         updateProgress();
         console.log('Moved to question', currentPreviewQuestion + 1);
     }
-}
-
-function updateNavigationButtons() {
-    const nextBtn = document.getElementById('nextBtn');
-    const finishBtn = document.getElementById('finishBtn');
-    
-    // Next and Finish buttons are controlled by timer
-    nextBtn.style.display = 'none';
-    finishBtn.style.display = 'none';
 }
 
 function updateProgress() {
@@ -265,6 +275,8 @@ function updateProgress() {
 // =================== QUIZ COMPLETION ===================
 
 function finishQuiz() {
+    if (isTimerActive) return; // Can't finish during timer
+    
     stopTimer();
     
     // Show completion message with options
@@ -305,6 +317,25 @@ function restartPreview() {
     stopTimer();
     displayCurrentQuestion();
     updateProgress();
+}
+
+// =================== RANKING FUNCTION ===================
+
+function showRanking() {
+    // Placeholder for ranking functionality
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Ranking',
+            text: 'Ranking feature will be implemented here.',
+            icon: 'info',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#667eea'
+        });
+    } else {
+        alert('Ranking feature will be implemented here.');
+    }
+    
+    console.log('Show ranking clicked');
 }
 
 // =================== COLOR MANAGEMENT ===================
@@ -355,13 +386,15 @@ function setupColorObserver() {
 function showNoQuestionsMessage() {
     const container = document.getElementById('previewQuestionContainer');
     container.innerHTML = `
-        <div class="text-center py-5">
-            <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
-            <h5 class="text-muted">No Questions Available</h5>
-            <p class="text-muted">This quiz doesn't have any questions to preview.</p>
-            <a href="/quizzes" class="btn btn-primary">
-                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-            </a>
+        <div class="question-display-container">
+            <div class="text-center py-5">
+                <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Questions Available</h5>
+                <p class="text-muted">This quiz doesn't have any questions to preview.</p>
+                <a href="/quizzes" class="btn btn-primary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
         </div>
     `;
     
@@ -370,21 +403,29 @@ function showNoQuestionsMessage() {
     const progressElement = document.querySelector('.progress');
     if (timerElement) timerElement.style.display = 'none';
     if (progressElement) progressElement.style.display = 'none';
+    
+    // Disable all buttons
+    const buttons = document.querySelectorAll('#nextBtn, #finishBtn, #rankingBtn');
+    buttons.forEach(btn => {
+        if (btn) btn.disabled = true;
+    });
 }
 
 function showErrorMessage() {
     const container = document.getElementById('previewQuestionContainer');
     container.innerHTML = `
-        <div class="text-center py-5">
-            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-            <h5 class="text-warning">Error Loading Quiz</h5>
-            <p class="text-muted">There was an error loading the quiz data.</p>
-            <button onclick="location.reload()" class="btn btn-primary me-2">
-                <i class="fas fa-refresh me-2"></i>Retry
-            </button>
-            <a href="/quizzes" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-            </a>
+        <div class="question-display-container">
+            <div class="text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5 class="text-warning">Error Loading Quiz</h5>
+                <p class="text-muted">There was an error loading the quiz data.</p>
+                <button onclick="location.reload()" class="btn btn-primary me-2">
+                    <i class="fas fa-refresh me-2"></i>Retry
+                </button>
+                <a href="/quizzes" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
         </div>
     `;
     
@@ -393,6 +434,12 @@ function showErrorMessage() {
     const progressElement = document.querySelector('.progress');
     if (timerElement) timerElement.style.display = 'none';
     if (progressElement) progressElement.style.display = 'none';
+    
+    // Disable all buttons
+    const buttons = document.querySelectorAll('#nextBtn, #finishBtn, #rankingBtn');
+    buttons.forEach(btn => {
+        if (btn) btn.disabled = true;
+    });
 }
 
 // =================== GLOBAL FUNCTIONS ===================
@@ -402,3 +449,4 @@ window.selectPreviewOption = selectPreviewOption;
 window.nextQuestion = nextQuestion;
 window.finishQuiz = finishQuiz;
 window.restartPreview = restartPreview;
+window.showRanking = showRanking;

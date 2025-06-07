@@ -17,30 +17,49 @@
 <div class="container-fluid quiz-preview-container" style="padding: 10px;">
     <div class="row justify-content-center" style="margin-right: 0px;">
         <div class="col-12 col-lg-10 col-xl-8" style="padding-right: 0px !important;">
-            <!-- Simplified Quiz Header -->
+            <!-- Modern Quiz Header -->
             <div class="quiz-info-header">
-                <div class="quiz-info-compact">
-                    <div class="quiz-basic-info">
-                        <h5 class="quiz-title"><%= quiz.title %></h5>
-                        <span class="question-progress"><span id="previewQuestionProgress">1 of <%= quiz.questions.length %></span></span>
+                <div class="quiz-header-layout">
+                    <!-- Title Section -->
+                    <div class="quiz-title-section">
+                        <h1 class="quiz-title"><%= quiz.title %></h1>
+                        <p class="quiz-subtitle">
+                            <i class="fas fa-tasks me-1"></i>
+                            <%= quiz.questions.length %> Questions • Interactive Preview
+                        </p>
                     </div>
-                    <div class="quiz-timer-compact">
-                        <div class="timer-circle" id="timerCircle">
-                            <span class="timer-text" id="timerText">
-                                <span id="timerMinutes">00</span>:<span id="timerSeconds">30</span>
-                            </span>
+                    
+                    <!-- Timer Section -->
+                    <div class="quiz-timer-section">
+                        <div class="quiz-timer-compact">
+                            <div class="timer-circle" id="timerCircle">
+                                <span class="timer-text" id="timerText">
+                                    <span id="timerMinutes">00</span>:<span id="timerSeconds">30</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <% if(isPreview) { %>
-                        <div class="quiz-actions">
-                            <a href="/quizzes/<%= quiz._id %>/edit" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-edit"></i>
+                    
+                    <!-- Actions Section -->
+                    <div class="quiz-actions-section">
+                        <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()" disabled>
+                            <i class="fas fa-arrow-right me-1"></i>Next
+                        </button>
+                        
+                        <button class="btn btn-success" id="finishBtn" onclick="finishQuiz()" disabled>
+                            <i class="fas fa-flag-checkered me-1"></i>Finish
+                        </button>
+                        
+                        <button class="btn btn-secondary" id="rankingBtn" onclick="showRanking()" style="background: linear-gradient(to right, #f46b45, #d49741)">
+                            <i class="fas fa-trophy me-1"></i>Ranking
+                        </button>
+                        
+                        <% if(isPreview) { %>
+                            <a href="/quizzes" class="btn btn-info" style="background: linear-gradient(135deg, #9e597f, #ad3675)">
+                                <i class="fas fa-home me-1"></i>Dashboard
                             </a>
-                            <a href="/quizzes" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-arrow-left"></i>
-                            </a>
-                        </div>
-                    <% } %>
+                        <% } %>
+                    </div>
                 </div>
                 
                 <!-- Progress Bar -->
@@ -53,24 +72,13 @@
             </div>
 
             <!-- Question Display Container -->
-            <!-- <div class="question-display-container"> -->
-                <div id="previewQuestionContainer">
-                    <!-- Single question will be displayed here -->
-                </div>
-                
-                <!-- Navigation -->
-                <div class="preview-navigation">
-                    <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()" style="display: none;">
-                        Next<i class="fas fa-arrow-right ms-1"></i>
-                    </button>
-                    <button class="btn btn-success" id="finishBtn" onclick="finishQuiz()" style="display: none;">
-                        <i class="fas fa-flag-checkered me-1"></i>Finish Quiz
-                    </button>
-                </div>
-            <!-- </div> -->
+            <div id="previewQuestionContainer">
+                <!-- Single question will be displayed here -->
+            </div>
         </div>
     </div>
 </div>
+
 <!-- Hidden data for JavaScript -->
 <script id="quiz-data" type="application/json">
     <%- JSON.stringify({
@@ -86,10 +94,10 @@
         }))
     }) %>
 </script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <!-- Add SweetAlert2 JS before your scripts -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script src="/js/quiz_preview.js"></script>
 </body>
 </html>
