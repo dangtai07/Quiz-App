@@ -112,7 +112,7 @@ class QuizController {
 
             const quiz = await QuizService.createQuiz(quizData, req.files);
             
-            console.log(`✅ Quiz "${quiz.title}" created for ${roomCode.toUpperCase()} department by ${req.session.user.email}`);
+            console.log(`✅ Quiz "${quiz.title}" (Number: ${quiz.number}) created for ${roomCode.toUpperCase()} department by ${req.session.user.email}`);
             
             res.status(201).json(quiz);
         } catch (error) {
@@ -155,7 +155,7 @@ class QuizController {
 
             const updatedQuiz = await QuizService.updateQuiz(req.params.id, req.body, req.files);
             
-            console.log(`✅ Quiz "${updatedQuiz.title}" updated in ${quiz.roomCode?.toUpperCase()} department by ${req.session.user.email}`);
+            console.log(`✅ Quiz "${updatedQuiz.title}" (Number: ${updatedQuiz.number}) updated in ${quiz.roomCode?.toUpperCase()} department by ${req.session.user.email}`);
             
             res.json(updatedQuiz);
         } catch (error) {
@@ -178,7 +178,7 @@ class QuizController {
 
             const result = await QuizService.deleteQuiz(req.params.id);
             
-            console.log(`🗑️ Quiz "${quiz.title}" deleted from ${quiz.roomCode?.toUpperCase()} department by ${req.session.user.email}`);
+            console.log(`🗑️ Quiz "${quiz.title}" (Number: ${quiz.number}) deleted from ${quiz.roomCode?.toUpperCase()} department by ${req.session.user.email}`);
             
             res.json(result);
         } catch (error) {
@@ -223,7 +223,7 @@ class QuizController {
             const roomInfo = req.session?.selectedRoom;
             
             res.render('quiz/form', {
-                title: `Edit Quiz - ${getRoomName(roomInfo?.code || quiz.roomCode)}`,
+                title: `Edit Quiz #${quiz.number} - ${getRoomName(roomInfo?.code || quiz.roomCode)}`,
                 isEdit: true,
                 quiz: quiz,
                 user: req.session.user,
@@ -240,7 +240,7 @@ class QuizController {
         }
     }
 
-    // Enhanced getQuizzes method with room filtering
+    // Enhanced getQuizzes method with room filtering and quiz number support
     async getQuizzes(req, res) {
         try {
             const user = req.session.user;
@@ -256,7 +256,7 @@ class QuizController {
             const allQuizzes = await QuizService.getAllQuizzes();
             const quizzes = allQuizzes.filter(quiz => quiz.roomCode === roomCode);
             
-            // Add additional stats and formatting
+            // Add additional stats and formatting with quiz number support
             const enhancedQuizzes = quizzes.map(quiz => {
                 // Migrate quiz data if needed
                 const migratedQuiz = migrateQuizData(quiz);
@@ -285,6 +285,8 @@ class QuizController {
                 
                 return {
                     ...migratedQuiz.toObject ? migratedQuiz.toObject() : migratedQuiz,
+                    // IMPORTANT: Include quiz number
+                    number: quiz.number,
                     completionRate,
                     relativeTime,
                     isRecent: daysDiff <= 7,
@@ -311,7 +313,12 @@ class QuizController {
                 totalParticipants: enhancedQuizzes.reduce((sum, q) => sum + (q.totalCount || 0), 0),
                 averageQuestions: enhancedQuizzes.length > 0 ? 
                     Math.round(enhancedQuizzes.reduce((sum, q) => sum + q.questions.length, 0) / enhancedQuizzes.length) : 0,
-                totalDuration: enhancedQuizzes.reduce((sum, q) => sum + (q.totalDuration || 0), 0)
+                totalDuration: enhancedQuizzes.reduce((sum, q) => sum + (q.totalDuration || 0), 0),
+                // NEW: Quiz number stats
+                numberRange: enhancedQuizzes.length > 0 ? {
+                    lowest: Math.min(...enhancedQuizzes.map(q => q.number || 999999)),
+                    highest: Math.max(...enhancedQuizzes.map(q => q.number || 0))
+                } : null
             };
             
             res.render('quiz/list', {
@@ -351,7 +358,7 @@ class QuizController {
             quiz = migrateQuizData(quiz);
 
             res.render('quiz/preview', {
-                title: `Preview Quiz - ${getRoomName(quiz.roomCode)}`,
+                title: `Preview Quiz #${quiz.number} - ${getRoomName(quiz.roomCode)}`,
                 quiz: quiz,
                 isPreview: true,
                 user: req.session.user,
@@ -368,7 +375,7 @@ class QuizController {
         }
     }
 
-    // Enhanced duplication with room code preservation
+    // Enhanced duplication with room code preservation and new quiz number
     async duplicateQuiz(req, res) {
         try {
             const originalQuizId = req.params.id;
@@ -394,7 +401,7 @@ class QuizController {
             // Migrate data if needed
             originalQuiz = migrateQuizData(originalQuiz);
             
-            // Create new quiz data in new format with same room code
+            // Create new quiz data in new format with same room code (new quiz number will be auto-generated)
             const duplicateData = {
                 quizInfo: JSON.stringify({
                     title: `${originalQuiz.title} (Copy)`,
@@ -418,13 +425,14 @@ class QuizController {
             const duplicatedQuiz = await QuizService.createQuiz(duplicateData, null);
             
             // Log the action
-            console.log(`📋 Quiz "${originalQuiz.title}" duplicated in ${originalQuiz.roomCode?.toUpperCase()} department by user ${req.session.user.email}`);
+            console.log(`📋 Quiz "${originalQuiz.title}" (Number: ${originalQuiz.number}) duplicated as Quiz #${duplicatedQuiz.number} in ${originalQuiz.roomCode?.toUpperCase()} department by user ${req.session.user.email}`);
             
             res.json({
                 success: true,
-                message: 'Quiz duplicated successfully',
+                message: `Quiz duplicated successfully as Quiz #${duplicatedQuiz.number}`,
                 quiz: {
                     id: duplicatedQuiz._id,
+                    number: duplicatedQuiz.number,
                     title: duplicatedQuiz.title,
                     roomCode: duplicatedQuiz.roomCode
                 }
@@ -466,18 +474,18 @@ class QuizController {
             // Check if quiz has active participants (optional business logic)
             const hasActiveParticipants = quiz.totalCount > 0;
             if (hasActiveParticipants) {
-                console.log(`⚠️ Warning: Deleting quiz with ${quiz.totalCount} participants`);
+                console.log(`⚠️ Warning: Deleting quiz #${quiz.number} with ${quiz.totalCount} participants`);
             }
             
             // Delete the quiz
             await QuizService.deleteQuiz(quizId);
             
             // Log the action
-            console.log(`🗑️ Quiz "${quiz.title}" (ID: ${quizId}) deleted from ${quiz.roomCode?.toUpperCase()} department by user ${req.session.user.email}`);
+            console.log(`🗑️ Quiz "${quiz.title}" (Number: ${quiz.number}, ID: ${quizId}) deleted from ${quiz.roomCode?.toUpperCase()} department by user ${req.session.user.email}`);
             
             res.json({
                 success: true,
-                message: 'Quiz deleted successfully'
+                message: `Quiz #${quiz.number} deleted successfully`
             });
             
         } catch (error) {
@@ -490,7 +498,7 @@ class QuizController {
         }
     }
 
-    // Enhanced analytics method with room filtering
+    // Enhanced analytics method with room filtering and quiz number analytics
     async getAnalytics(req, res) {
         try {
             const roomCode = req.session?.selectedRoom?.code;
@@ -521,6 +529,14 @@ class QuizController {
                     online: migratedQuizzes.filter(q => q.mode === 'online').length,
                     offline: migratedQuizzes.filter(q => q.mode === 'offline').length
                 },
+                // NEW: Quiz number statistics
+                numberStats: migratedQuizzes.length > 0 ? {
+                    lowest: Math.min(...migratedQuizzes.map(q => q.number || 999999)),
+                    highest: Math.max(...migratedQuizzes.map(q => q.number || 0)),
+                    range: Math.max(...migratedQuizzes.map(q => q.number || 0)) - 
+                           Math.min(...migratedQuizzes.map(q => q.number || 999999)) + 1,
+                    total: migratedQuizzes.length
+                } : null,
                 questionStats: {
                     averageOptionsPerQuestion: this.calculateAverageOptions(migratedQuizzes),
                     averageTimePerQuestion: this.calculateAverageTime(migratedQuizzes),

@@ -53,6 +53,12 @@ const questionSchema = new mongoose.Schema({
 });
 
 const quizSchema = new mongoose.Schema({
+    // NEW: Auto-increment number field
+    number: {
+        type: Number,
+        unique: true
+        // Note: Removed 'required: true' to let pre-save middleware handle it
+    },
     title: {
         type: String,
         required: true
@@ -93,6 +99,39 @@ const quizSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Function to get next quiz number
+async function getNextQuizNumber() {
+    try {
+        // Try to find the highest quiz number and increment
+        const lastQuiz = await mongoose.model('Quiz').findOne({}, {}, { sort: { 'number': -1 } });
+        if (lastQuiz && lastQuiz.number) {
+            return lastQuiz.number + 1;
+        } else {
+            return 1; // Start from 1 for quiz numbers
+        }
+    } catch (error) {
+        console.error('Error getting next quiz number:', error);
+        // Fallback to timestamp-based number
+        return Date.now() % 1000000;
+    }
+}
+
+// Pre-save middleware to auto-increment quiz number
+quizSchema.pre('save', async function(next) {
+    if (this.isNew && !this.number) {
+        try {
+            this.number = await getNextQuizNumber();
+            console.log(`✅ Auto-generated quiz number: ${this.number} for "${this.title}"`);
+        } catch (error) {
+            console.error('Error generating quiz number:', error);
+            // Fallback: use timestamp-based number
+            this.number = Date.now() % 1000000;
+            console.log(`⚠️ Using fallback quiz number: ${this.number} for "${this.title}"`);
+        }
+    }
+    next();
+});
+
 // Pre-save middleware để tính tổng thời gian
 quizSchema.pre('save', function(next) {
     if (this.questions && this.questions.length > 0) {
@@ -106,5 +145,6 @@ quizSchema.pre('save', function(next) {
 // Index compound để tìm kiếm theo roomCode và các trường khác
 quizSchema.index({ roomCode: 1, createdAt: -1 });
 quizSchema.index({ roomCode: 1, mode: 1 });
+quizSchema.index({ number: 1 }); // Index for quiz number
 
 module.exports = mongoose.model('Quiz', quizSchema);

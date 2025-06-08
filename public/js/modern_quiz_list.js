@@ -103,7 +103,7 @@ function applyFilters() {
 }
 
 /**
- * Apply sorting to quiz cards
+ * Apply sorting to quiz cards - UPDATED with quiz number sorting
  */
 function applySorting() {
     const sortBy = document.getElementById('sortBy')?.value || 'newest';
@@ -118,6 +118,11 @@ function applySorting() {
                 return new Date(a.dataset.date) - new Date(b.dataset.date);
             case 'name':
                 return a.dataset.title.localeCompare(b.dataset.title);
+            case 'number':
+                // NEW: Sort by quiz number
+                const numberA = parseInt(a.dataset.number) || 0;
+                const numberB = parseInt(b.dataset.number) || 0;
+                return numberA - numberB; // Ascending order (1, 2, 3...)
             case 'questions':
                 return parseInt(b.dataset.questions) - parseInt(a.dataset.questions);
             default:
@@ -357,7 +362,7 @@ async function duplicateQuiz(quizId) {
     try {
         const result = await Swal.fire({
             title: 'Duplicate Quiz?',
-            text: "This will create an exact copy of the quiz with a new name.",
+            text: "This will create an exact copy of the quiz with a new number.",
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#667eea',
@@ -373,7 +378,7 @@ async function duplicateQuiz(quizId) {
             // Show loading
             Swal.fire({
                 title: 'Duplicating Quiz...',
-                text: 'Creating a copy of your quiz.',
+                text: 'Creating a copy of your quiz with a new quiz number.',
                 icon: 'info',
                 allowOutsideClick: false,
                 showConfirmButton: false,
@@ -387,7 +392,7 @@ async function duplicateQuiz(quizId) {
 
             Swal.fire({
                 title: 'Quiz Duplicated!',
-                text: 'The quiz copy has been created successfully.',
+                text: 'The quiz copy has been created successfully with a new quiz number.',
                 icon: 'success',
                 timer: 3000,
                 timerProgressBar: true,

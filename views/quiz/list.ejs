@@ -9,6 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="/css/modern_quiz_list.css" rel="stylesheet">
+    <link href="/css/quiz_list_number.css" rel="stylesheet">
     <!-- SweetAlert2 -->
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
 </head>
@@ -216,8 +217,8 @@
                                     <option value="offline">Offline</option>
                                 </select>
                             </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6">
-                                <select class="form-select filter-select" id="filterLanguage">
+                            <div class="col-lg-2 col-md-3 col-sm-6" d>
+                                <select class="form-select filter-select" id="filterLanguage" disabled>
                                     <option value="">All Languages</option>
                                     <option value="vietnamese">Vietnamese</option>
                                     <option value="english">English</option>
@@ -228,7 +229,6 @@
                                     <option value="newest">Newest First</option>
                                     <option value="oldest">Oldest First</option>
                                     <option value="name">Name A-Z</option>
-                                    <option value="questions">Most Questions</option>
                                 </select>
                             </div>
                             <div class="col-lg-2 col-md-6 col-sm-6">
@@ -286,7 +286,7 @@
                          data-mode="<%= quiz.mode %>" 
                          data-language="<%= quiz.language %>"
                          data-title="<%= quiz.title.toLowerCase() %>"
-                         data-questions="<%= quiz.questions.length %>"
+                         data-number="<%= quiz.number || index + 1 %>"
                          data-date="<%= quiz.updatedAt %>">
                         
                         <!-- Card Header -->
@@ -350,10 +350,11 @@
                                 <%= quiz.title %>
                             </h3>
                             
+                            <!-- UPDATED: Quiz Stats - showing number and participants only -->
                             <div class="quiz-stats">
                                 <div class="stat">
-                                    <i class="fas fa-question-circle"></i>
-                                    <span><%= quiz.questions.length %> Questions</span>
+                                    <i class="fas fa-list-ol"></i>
+                                    <span><%= quiz.number || (index + 1) %></span>
                                 </div>
                                 <div class="stat">
                                     <i class="fas fa-users"></i>
@@ -365,27 +366,13 @@
                                     <span>Scheduled</span>
                                 </div>
                                 <% } %>
-                                <!-- NEW: Department Info -->
-                                <% if (quiz.roomCode) { %>
                                 <div class="stat">
-                                    <i class="fas <%= quiz.roomCode === 'hrm' ? 'fa-users' : quiz.roomCode === 'hse' ? 'fa-shield-alt' : 'fa-crown' %>"></i>
-                                    <span><%= quiz.roomCode.toUpperCase() %> Dept</span>
+                                    <i class="fas fa-clock"></i>
+                                    <span><%= quiz.estimatedDuration || '0m' %></span>
                                 </div>
-                                <% } %>
                             </div>
 
-                            <!-- Progress Bar -->
-                            <div class="progress-section">
-                                <div class="progress-info">
-                                    <span class="progress-label">Completion Rate</span>
-                                    <span class="progress-value">
-                                        <%= quiz.totalCount > 0 ? Math.round((quiz.completedCount / quiz.totalCount) * 100) : 0 %>%
-                                    </span>
-                                </div>
-                                <div class="progress">
-                                    <div class="progress-bar" style="width: <%= quiz.totalCount > 0 ? (quiz.completedCount / quiz.totalCount) * 100 : 0 %>%"></div>
-                                </div>
-                            </div>
+                            <!-- REMOVED: Progress Section completely eliminated -->
 
                             <!-- Card Footer -->
                             <div class="card-footer">
