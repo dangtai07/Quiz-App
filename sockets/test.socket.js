@@ -123,12 +123,19 @@ class TestSocketHandler {
                     socket.emit('error', { message: error.message });
                 }
             });
-            
+            socket.on('admin:timeout', async (data) => {
+                const { testCode, questionNumber } = data;
+                    
+                    const test = await TestService.startQuestion(testCode, questionNumber, socket.id);
+                    
+                    // Update cache
+                    activeTests.set(testCode, test);
+            });
             // Admin requests question stats
             socket.on('admin:get_question_stats', async (data) => {
                 try {
                     const { testCode, questionNumber } = data;
-                    const test = activeTests.get(testCode) || await TestService.getTestByCode(testCode);
+                    const test = await TestService.getTestByCode(testCode);
                     
                     const stats = TestService.getQuestionStats(test, questionNumber);
                     
@@ -147,7 +154,7 @@ class TestSocketHandler {
             socket.on('admin:get_leaderboard', async (data) => {
                 try {
                     const { testCode } = data;
-                    const test = activeTests.get(testCode) || await TestService.getTestByCode(testCode);
+                    const test = await TestService.getTestByCode(testCode);
                     
                     const leaderboard = test.getLeaderboard(20);
                     
@@ -233,7 +240,7 @@ class TestSocketHandler {
                     console.log(`👤 Participant "${participantName}" joined test ${testCode}`);
                     
                 } catch (error) {
-                    console.error('Participant join error:', error);
+                    console.error('admin:start_question join error:', error);
                     socket.emit('error', { message: error.message });
                 }
             });
@@ -263,7 +270,7 @@ class TestSocketHandler {
                     // Update admin stats
                     const adminSocket = adminConnections.get(testCode);
                     if (adminSocket) {
-                        const test = activeTests.get(testCode) || await TestService.getTestByCode(testCode);
+                        const test = await TestService.getTestByCode(testCode);
                         const stats = TestService.getQuestionStats(test, questionNumber);
                         
                         adminSocket.emit('admin:answer_submitted', {

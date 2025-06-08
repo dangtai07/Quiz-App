@@ -170,11 +170,7 @@
                     </div>
                     <div class="col-lg-4 text-lg-end">
                         <div class="header-actions">
-                            <button class="btn btn-outline-light me-2" onclick="refreshQuizzes()">
-                                <i class="fas fa-sync-alt me-2"></i>
-                                Refresh
-                            </button>
-                            <button class="btn btn-warning me-2" onclick="openCreateTestModal()">
+                            <button class="btn btn-warning-custom me-2" onclick="openCreateTestModal()">
                                 <i class="fas fa-rocket me-2"></i>
                                 Create Test
                             </button>
@@ -182,6 +178,10 @@
                                 <i class="fas fa-plus me-2"></i>
                                 Create New Quiz
                             </a>
+                            <button class="btn btn-outline-light me-2" onclick="refreshQuizzes()">
+                                <i class="fas fa-sync-alt me-2"></i>
+                                Refresh
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -474,8 +474,8 @@
                                                 checked>
                                             <label class="form-check-label" for="modeOnline">
                                                 <div class="d-flex align-items-center">
-                                                    <i class="fas fa-globe text-success me-2"></i>
                                                     <div>
+                                                        <i class="fas fa-globe text-success me-2"></i>
                                                         <strong>Online (Real-time)</strong>
                                                         <small class="d-block text-muted">Live test with admin control</small>
                                                     </div>
@@ -492,8 +492,8 @@
                                                 value="offline">
                                             <label class="form-check-label" for="modeOffline">
                                                 <div class="d-flex align-items-center">
-                                                    <i class="fas fa-clock text-warning me-2"></i>
                                                     <div>
+                                                        <i class="fas fa-clock text-warning me-2"></i>
                                                         <strong>Offline (Scheduled)</strong>
                                                         <small class="d-block text-muted">Self-paced within time frame</small>
                                                     </div>

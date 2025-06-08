@@ -217,8 +217,24 @@ body {
     transition: var(--transition);
     box-shadow: var(--shadow-sm);
 }
+.btn-warning-custom {
+    background: linear-gradient(135deg, var(--warning-color), var(--danger-color));
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    color: white;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
 
 .btn-primary-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    color: white;
+    filter: brightness(1.1);
+}
+.btn-warning-custom:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow);
     color: white;

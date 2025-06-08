@@ -211,8 +211,6 @@ testSchema.methods.endQuestion = function() {
 
 // Method to submit answer
 testSchema.methods.submitAnswer = function(socketId, questionNumber, selectedAnswer, timeRemaining) {
-    console.log(this.participants);
-    console.log(`Submitting answer for socketId: ${socketId}`);
     const participant = this.participants.find(p => p.socketId === socketId && p.isActive);
     if (!participant) {
         throw new Error('Participant not found');
@@ -233,20 +231,20 @@ testSchema.methods.submitAnswer = function(socketId, questionNumber, selectedAns
     const points = this.calculatePoints(selectedAnswer, timeRemaining, questionNumber);
     const isCorrect = this.checkAnswer(selectedAnswer, questionNumber);
     
-    // Add answer
-    participant.answers.push({
+    const answer = {
         questionNumber: questionNumber,
         selectedAnswer: selectedAnswer,
         isCorrect: isCorrect,
         answerTime: this.getQuestionTime() - timeRemaining,
         timeRemaining: timeRemaining,
         points: points
-    });
-    
-    // Update score
-    participant.score += points;
-    
-    return { isCorrect, points, newScore: participant.score };
+    };
+
+    // Thay vì push và tăng score trực tiếp, trả về kết quả để updateOne ở ngoài
+    const updatedAnswers = [...participant.answers, answer];
+    const newScore = participant.score + points;
+
+    return { isCorrect, points, newScore, updatedAnswers, socketId };
 };
 
 // Helper method to calculate points

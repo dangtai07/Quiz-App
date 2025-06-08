@@ -275,13 +275,25 @@ class TestService {
             };
             
             const result = test.submitAnswer(socketId, questionNumber, selectedAnswer, timeRemaining);
-            await test.save();
+            await Test.updateOne(
+                { _id: test._id, 'participants.socketId': socketId },
+                {
+                    $set: {
+                    'participants.$.answers': result.updatedAnswers,
+                    'participants.$.score': result.newScore
+                    }
+                }
+            );
             
             console.log(`📝 Answer submitted in test ${testCode}: ${selectedAnswer} (${result.isCorrect ? 'correct' : 'wrong'})`);
             
             return {
                 ...result,
-                participant: test.participants.find(p => p.socketId === socketId)
+                participant: {
+                    socketId: result.socketId,
+                    answers: result.updatedAnswers,
+                    score: result.newScore
+                }
             };
             
         } catch (error) {

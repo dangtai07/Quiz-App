@@ -23,6 +23,24 @@
     
     <style>
         /* Additional styles for real-time test */
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+            --dark-color: #1e293b;
+            --light-color: #f8fafc;
+            --border-radius: 16px;
+            --border-radius-lg: 20px;
+            --border-radius-sm: 8px;
+            --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 25px 50px rgba(0, 0, 0, 0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }   
         .test-header {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
@@ -398,10 +416,6 @@
                                     <i class="fas fa-flag-checkered me-1"></i>Finish
                                 </button>
                                 <% } else { %>
-                                <!-- Participant Controls -->
-                                <button class="btn btn-secondary" id="playerRankingBtn" onclick="toggleLeaderboard()">
-                                    <i class="fas fa-trophy me-1"></i>Ranking
-                                </button>
                                 <% } %>
                             </div>
                         </div>
@@ -678,10 +692,12 @@
         }
 
         function handleQuestionStats(data) {
+            console.log('Question stats updated:', data);
             updateQuestionStats(data.stats);
         }
 
         function handleLeaderboard(data) {
+            console.log('Leaderboard updated:', data);
             updateLeaderboard(data.leaderboard);
         }
 
@@ -799,13 +815,19 @@
                 clearInterval(questionTimer);
                 questionTimer = null;
                 // Submit answer
-                if (testData.isAdmin) return;
-                socket.emit('participant:submit_answer', {
-                    testCode: testData.testCode,
-                    questionNumber: currentQuestion,
-                    selectedAnswer: selectedAnswer,
-                    timeRemaining: timeRemaining
-                });
+                if (testData.isAdmin) {
+                    socket.emit('admin:timeout', {
+                        testCode: testData.testCode,
+                        questionNumber: currentQuestion
+                    });
+                } else {
+                    socket.emit('participant:submit_answer', {
+                        testCode: testData.testCode,
+                        questionNumber: currentQuestion,
+                        selectedAnswer: selectedAnswer,
+                        timeRemaining: timeRemaining
+                    });
+                }
             }
         }
 
@@ -884,7 +906,7 @@
                     const count = stats.answerDistribution[option.letter] || 0;
                     const percentage = stats.totalAnswers > 0 ? 
                         Math.round((count / stats.totalAnswers) * 100) : 0;
-                    
+                    if (count === 0) return; 
                     statsHTML += `
                         <div class="stat-bar">
                             <div class="stat-label">${option.letter}</div>
@@ -944,7 +966,7 @@
             leaderboard.style.display = 'none';
             stats.style.display = 'none';
             previewQuestionContainer.style.display = 'block';
-            
+            document.getElementById('showRankingBtn').innerText = "RANKING";
             
             const nextQuestionIndex = currentQuestion + 1;
             
