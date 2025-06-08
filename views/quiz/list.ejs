@@ -174,6 +174,10 @@
                                 <i class="fas fa-sync-alt me-2"></i>
                                 Refresh
                             </button>
+                            <button class="btn btn-warning me-2" onclick="openCreateTestModal()">
+                                <i class="fas fa-rocket me-2"></i>
+                                Create Test
+                            </button>
                             <a href="/quizzes/create" class="btn btn-primary-custom">
                                 <i class="fas fa-plus me-2"></i>
                                 Create New Quiz
@@ -415,6 +419,190 @@
         </div>
     </div>
 
+    <div class="modal fade" id="createTestModal" tabindex="-1" aria-labelledby="createTestModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white;">
+                    <h5 class="modal-title" id="createTestModalLabel">
+                        <i class="fas fa-rocket me-2"></i>Create New Test Session
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createTestForm">
+                        <!-- Quiz Selection -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-primary mb-3">
+                                            <i class="fas fa-list-ol me-2"></i>Quiz Selection
+                                        </h6>
+                                        <div class="form-floating">
+                                            <input type="number" 
+                                                class="form-control" 
+                                                id="quizNumber" 
+                                                name="quizNumber" 
+                                                placeholder="Quiz Number"
+                                                min="1"
+                                                required>
+                                            <label for="quizNumber">Quiz Number</label>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Enter the number of the quiz you want to create a test for
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Test Mode -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-cog me-2"></i>Test Mode
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                type="radio" 
+                                                name="mode" 
+                                                id="modeOnline" 
+                                                value="online" 
+                                                checked>
+                                            <label class="form-check-label" for="modeOnline">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-globe text-success me-2"></i>
+                                                    <div>
+                                                        <strong>Online (Real-time)</strong>
+                                                        <small class="d-block text-muted">Live test with admin control</small>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                type="radio" 
+                                                name="mode" 
+                                                id="modeOffline" 
+                                                value="offline">
+                                            <label class="form-check-label" for="modeOffline">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-clock text-warning me-2"></i>
+                                                    <div>
+                                                        <strong>Offline (Scheduled)</strong>
+                                                        <small class="d-block text-muted">Self-paced within time frame</small>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Schedule Settings (for Offline mode) -->
+                        <div class="row mb-4" id="scheduleSettings" style="display: none;">
+                            <div class="col-12">
+                                <div class="card border-warning bg-warning bg-opacity-10">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-warning mb-3">
+                                            <i class="fas fa-calendar-alt me-2"></i>Schedule Settings
+                                        </h6>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-floating mb-3">
+                                                    <input type="datetime-local" 
+                                                        class="form-control" 
+                                                        id="startTime" 
+                                                        name="startTime">
+                                                    <label for="startTime">Start Time</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-floating mb-3">
+                                                    <input type="datetime-local" 
+                                                        class="form-control" 
+                                                        id="endTime" 
+                                                        name="endTime">
+                                                    <label for="endTime">End Time</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Participants can join and complete the test within this time frame
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Max Participants -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary mb-3">
+                                    <i class="fas fa-users me-2"></i>Participant Limit
+                                </h6>
+                                <div class="form-floating">
+                                    <input type="number" 
+                                        class="form-control" 
+                                        id="maxParticipants" 
+                                        name="maxParticipants" 
+                                        placeholder="Maximum Participants"
+                                        min="1"
+                                        max="1000"
+                                        value="50"
+                                        required>
+                                    <label for="maxParticipants">Maximum Participants</label>
+                                </div>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Maximum number of participants that can join this test (1-1000)
+                                </small>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="submit" form="createTestForm" class="btn btn-primary" id="createTestBtn">
+                        <i class="fas fa-rocket me-2"></i>Create Test
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Created Success Modal -->
+    <div class="modal fade" id="testCreatedModal" tabindex="-1" aria-labelledby="testCreatedModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="testCreatedModalLabel">
+                        <i class="fas fa-check-circle me-2"></i>Test Created Successfully!
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="testCreatedContent">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="startTestBtn" style="display: none;">
+                        <i class="fas fa-play me-2"></i>Start Test Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
@@ -584,5 +772,215 @@
             });
         });
     </script>
+    <script>
+        // Create Test Modal functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const createTestModal = new bootstrap.Modal(document.getElementById('createTestModal'));
+            const testCreatedModal = new bootstrap.Modal(document.getElementById('testCreatedModal'));
+            const createTestForm = document.getElementById('createTestForm');
+            const createTestBtn = document.getElementById('createTestBtn');
+            
+            // Mode change handler
+            document.querySelectorAll('input[name="mode"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const scheduleSettings = document.getElementById('scheduleSettings');
+                    const startTimeInput = document.getElementById('startTime');
+                    const endTimeInput = document.getElementById('endTime');
+                    
+                    if (this.value === 'offline') {
+                        scheduleSettings.style.display = 'block';
+                        startTimeInput.required = true;
+                        endTimeInput.required = true;
+                        
+                        // Set default times (start: now + 1 hour, end: now + 24 hours)
+                        const now = new Date();
+                        const startTime = new Date(now.getTime() + 60 * 60 * 1000);
+                        const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+                        
+                        startTimeInput.value = startTime.toISOString().slice(0, 16);
+                        endTimeInput.value = endTime.toISOString().slice(0, 16);
+                    } else {
+                        scheduleSettings.style.display = 'none';
+                        startTimeInput.required = false;
+                        endTimeInput.required = false;
+                    }
+                });
+            });
+            
+            // Form submission
+            createTestForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(this);
+                const data = {};
+                
+                for (let [key, value] of formData.entries()) {
+                    data[key] = value;
+                }
+                
+                // Add schedule settings for offline mode
+                if (data.mode === 'offline') {
+                    data.scheduleSettings = {
+                        startTime: data.startTime,
+                        endTime: data.endTime
+                    };
+                    delete data.startTime;
+                    delete data.endTime;
+                }
+                
+                // Show loading state
+                createTestBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating Test...';
+                createTestBtn.disabled = true;
+                
+                try {
+                    const response = await fetch('/test/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Hide create modal
+                        createTestModal.hide();
+                        
+                        // Show success modal
+                        showTestCreatedModal(result);
+                        
+                        // Reset form
+                        createTestForm.reset();
+                        document.getElementById('scheduleSettings').style.display = 'none';
+                    } else {
+                        throw new Error(result.message);
+                    }
+                    
+                } catch (error) {
+                    console.error('Create test error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error Creating Test',
+                        text: error.message,
+                        confirmButtonColor: '#667eea'
+                    });
+                } finally {
+                    // Reset button
+                    createTestBtn.innerHTML = '<i class="fas fa-rocket me-2"></i>Create Test';
+                    createTestBtn.disabled = false;
+                }
+            });
+            
+            function showTestCreatedModal(result) {
+                const { test, joinLink, qrCode } = result;
+                const contentDiv = document.getElementById('testCreatedContent');
+                const startTestBtn = document.getElementById('startTestBtn');
+                
+                let scheduleInfo = '';
+                if (test.mode === 'offline' && test.scheduleSettings) {
+                    const startTime = new Date(test.scheduleSettings.startTime);
+                    const endTime = new Date(test.scheduleSettings.endTime);
+                    scheduleInfo = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-clock me-2"></i>
+                            <strong>Schedule:</strong> ${startTime.toLocaleString()} - ${endTime.toLocaleString()}
+                        </div>
+                    `;
+                }
+                
+                contentDiv.innerHTML = `
+                    <div class="text-center mb-4">
+                        <div class="badge bg-success fs-6 mb-3">
+                            Test Code: <strong>${test.testCode}</strong>
+                        </div>
+                        <h6>Quiz #${test.quizNumber}: ${test.quizTitle}</h6>
+                        <p class="text-muted">Mode: ${test.mode.toUpperCase()} | Max Participants: ${test.maxParticipants}</p>
+                    </div>
+                    
+                    ${scheduleInfo}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <i class="fas fa-link me-2"></i>Join Link
+                                </div>
+                                <div class="card-body">
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" id="joinLinkInput" value="${joinLink}" readonly>
+                                        <button class="btn btn-outline-primary" onclick="copyJoinLink()">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Share this link with participants</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-secondary">
+                                <div class="card-header bg-secondary text-white">
+                                    <i class="fas fa-qrcode me-2"></i>QR Code
+                                </div>
+                                <div class="card-body text-center">
+                                    ${qrCode ? `<img src="${qrCode}" alt="QR Code" class="img-fluid" style="max-width: 150px;">` : '<p class="text-muted">QR Code not available</p>'}
+                                    <div class="mt-2">
+                                        <small class="text-muted">Scan to join test</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Instructions for participants:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Access via the join link above</li>
+                            <li>Or visit the app and enter test code: <strong>${test.testCode}</strong></li>
+                            ${test.mode === 'online' ? '<li>Wait in the lobby until you start the test</li>' : '<li>Can join anytime within the scheduled period</li>'}
+                        </ul>
+                    </div>
+                `;
+                
+                // Show/hide start test button for online mode
+                if (test.mode === 'online') {
+                    startTestBtn.style.display = 'inline-block';
+                    startTestBtn.onclick = function() {
+                        const adminUrl = `/test/room/${test.testCode}?admin=true`;
+                        window.open(adminUrl, '_blank');
+                        testCreatedModal.hide();
+                    };
+                } else {
+                    startTestBtn.style.display = 'none';
+                }
+                
+                testCreatedModal.show();
+            }
+            
+            // Global function for copying join link
+            window.copyJoinLink = function() {
+                const input = document.getElementById('joinLinkInput');
+                input.select();
+                document.execCommand('copy');
+                
+                // Show feedback
+                const button = event.target.closest('button');
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check text-success"></i>';
+                
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                }, 2000);
+                
+                showNotification('Join link copied to clipboard!', 'success');
+            };
+            
+            // Global function to open create test modal
+            window.openCreateTestModal = function() {
+                createTestModal.show();
+            };
+        });
+        </script>
 </body>
 </html>

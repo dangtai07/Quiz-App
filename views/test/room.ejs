@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <link href="/css/modern_quiz_form.css" rel="stylesheet">
+    <link href="/css/quiz_preview.css" rel="stylesheet">
+    
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
+    
+    <style>
+        /* Additional styles for real-time test */
+        .test-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .test-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(25%, -25%);
+        }
+
+        .test-info {
+            position: relative;
+            z-index: 2;
+        }
+
+        .participant-score {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+            display: block;
+        }
+
+        .score-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        .waiting-room {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .waiting-icon {
+            font-size: 4rem;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .participants-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 1rem;
+        }
+
+        .participant-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+
+        .participant-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 0.75rem;
+        }
+
+        .admin-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .floating-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--success-color);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+            transition: var(--transition);
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
+            color: white;
+        }
+
+        .question-stats {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-label {
+            width: 40px;
+            text-align: center;
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+
+        .stat-progress {
+            flex: 1;
+            height: 30px;
+            background: #f1f5f9;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 15px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            min-width: 30px;
+        }
+
+        .leaderboard {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .leaderboard-header {
+            background: linear-gradient(135deg, var(--warning-color), #d97706);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .leaderboard-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #f1f5f9;
+            transition: var(--transition);
+        }
+
+        .leaderboard-item:hover {
+            background: #f8fafc;
+        }
+
+        .rank-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin-right: 1rem;
+        }
+
+        .rank-1 { background: #ffd700; color: #b45309; }
+        .rank-2 { background: #c0c0c0; color: #374151; }
+        .rank-3 { background: #cd7f32; color: white; }
+        .rank-other { background: #e2e8f0; color: #64748b; }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-name {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .player-stats {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .player-score {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .test-header {
+                padding: 1rem;
+            }
+
+            .admin-controls {
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .floating-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.25rem;
+            }
+
+            .participants-list {
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid quiz-preview-container" style="padding: 10px;">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10 col-xl-8">
+                <!-- Test Header -->
+                <div class="test-header">
+                    <div class="test-info">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="h3 mb-1">
+                                    <i class="fas fa-rocket me-2"></i>
+                                    <%= quiz.title %>
+                                </h1>
+                                <p class="mb-0 opacity-75">
+                                    Test Code: <strong><%= test.testCode %></strong> | 
+                                    Quiz #<%= test.quizNumber %> | 
+                                    <%= quiz.questions.length %> Questions
+                                </p>
+                            </div>
+                            <div class="col-md-4">
+                                <% if (!isAdmin) { %>
+                                <div class="participant-score">
+                                    <span class="score-value" id="playerScore">0</span>
+                                    <div class="score-label">Your Score</div>
+                                </div>
+                                <% } else { %>
+                                <div class="text-end">
+                                    <div class="badge bg-warning fs-6">
+                                        <i class="fas fa-crown me-1"></i>Admin
+                                    </div>
+                                </div>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Waiting Room (shown initially) -->
+                <div id="waitingRoom" class="card">
+                    <div class="card-body waiting-room">
+                        <div class="waiting-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h4 class="mb-3">
+                            <% if (isAdmin) { %>
+                                Waiting for Participants
+                            <% } else { %>
+                                Waiting for Test to Start
+                            <% } %>
+                        </h4>
+                        <p class="text-muted mb-4">
+                            <span id="participantCount">0</span> / <%= test.maxParticipants %> participants joined
+                        </p>
+
+                        <!-- Participants List -->
+                        <div class="participants-list" id="participantsList">
+                            <!-- Participants will be populated by JavaScript -->
+                        </div>
+
+                        <% if (isAdmin) { %>
+                        <!-- Admin Start Button -->
+                        <div class="mt-4">
+                            <button class="btn btn-success btn-lg" id="startTestBtn" disabled>
+                                <i class="fas fa-play me-2"></i>Start Test
+                            </button>
+                        </div>
+                        <% } else { %>
+                        <div class="mt-4">
+                            <div class="spinner-border text-primary me-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            Waiting for admin to start the test...
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Quiz Content (hidden initially) -->
+                <div id="quizContent" style="display: none;">
+                    <!-- Enhanced Quiz Header -->
+                    <div class="quiz-info-header">
+                        <div class="quiz-header-layout">
+                            <!-- Title Section -->
+                            <div class="quiz-title-section">
+                                <h1 class="quiz-title" id="quizTitle"><%= quiz.title %></h1>
+                                <p class="quiz-subtitle" id="quizSubtitle">
+                                    <i class="fas fa-tasks me-1"></i>
+                                    Question <span id="currentQuestionNum">1</span> of <%= quiz.questions.length %>
+                                </p>
+                            </div>
+                            
+                            <!-- Timer Section -->
+                            <div class="quiz-timer-section">
+                                <div class="quiz-timer-compact">
+                                    <div class="timer-circle" id="timerCircle">
+                                        <span class="timer-text" id="timerText">
+                                            <span id="timerMinutes">00</span>:<span id="timerSeconds">30</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions Section -->
+                            <div class="quiz-actions-section">
+                                <% if (isAdmin) { %>
+                                <!-- Admin Controls -->
+                                <button class="btn btn-secondary" id="showStatsBtn" onclick="toggleQuestionStats()" style="display: none;">
+                                    <i class="fas fa-chart-bar me-1"></i>Stats
+                                </button>
+                                
+                                <button class="btn btn-secondary" id="showRankingBtn" onclick="toggleLeaderboard()">
+                                    <i class="fas fa-trophy me-1"></i>Ranking
+                                </button>
+                                
+                                <button class="btn btn-primary" id="nextQuestionBtn" onclick="nextQuestion()">
+                                    <i class="fas fa-arrow-right me-1"></i>Next
+                                </button>
+                                
+                                <button class="btn btn-success" id="finishTestBtn" onclick="finishTest()" style="display: none;">
+                                    <i class="fas fa-flag-checkered me-1"></i>Finish
+                                </button>
+                                <% } else { %>
+                                <!-- Participant Controls -->
+                                <button class="btn btn-secondary" id="playerRankingBtn" onclick="toggleLeaderboard()">
+                                    <i class="fas fa-trophy me-1"></i>Ranking
+                                </button>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Question Display Container -->
+                    <div id="previewQuestionContainer">
+                        <!-- Questions will be populated by JavaScript -->
+                    </div>
+
+                    <!-- Question Statistics (Admin only) -->
+                    <% if (isAdmin) { %>
+                    <div id="questionStats" class="question-stats" style="display: none;">
+                        <h5 class="mb-3">
+                            <i class="fas fa-chart-bar me-2"></i>Answer Statistics
+                        </h5>
+                        <div id="statsContent">
+                            <!-- Stats will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <!-- Leaderboard (hidden initially) -->
+                    <div id="leaderboard" class="leaderboard" style="display: none;">
+                        <div class="leaderboard-header">
+                            <h4 class="mb-0">
+                                <i class="fas fa-trophy me-2"></i>Live Leaderboard
+                            </h4>
+                        </div>
+                        <div class="leaderboard-list" id="leaderboardContent">
+                            <!-- Leaderboard will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Data -->
+    <script id="quiz-data" type="application/json">
+        <%- JSON.stringify({
+            testCode: test.testCode,
+            isAdmin: isAdmin,
+            quiz: {
+                title: quiz.title,
+                number: quiz.number,
+                questions: quiz.questions.map((q, i) => ({
+                    id: i,
+                    content: q.content,
+                    options: q.options,
+                    correctAnswer: q.correctAnswer,
+                    answerTime: q.answerTime || 30,
+                    image: q.image
+                }))
+            },
+            user: user
+        }) %>
+    </script>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/quiz_preview.js"></script>
+    
+    <script>
+        // Real-time test functionality
+        let socket;
+        let testData;
+        let currentQuestion = 0;
+        let questionStartTime = 0;
+        let questionTimer = null;
+        // let timeRemaining = 0;
+        let playerScore = 0;
+        let isQuestionActive = false;
+        // let selectedAnswer = null;
+        let showingLeaderboard = false;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Parse test data
+            testData = JSON.parse(document.getElementById('quiz-data').textContent);
+            
+            // Initialize Socket.IO
+            socket = io();
+            
+            // Setup socket events
+            setupSocketEvents();
+            
+            // Join test room
+            if (testData.isAdmin) {
+                joinAsAdmin();
+            } else {
+                joinAsParticipant();
+            }
+        });
+
+        function setupSocketEvents() {
+            // Connection events
+            socket.on('connect', () => {
+                console.log('Connected to server');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+                showConnectionError();
+            });
+
+            socket.on('error', (error) => {
+                console.error('Socket error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message,
+                    confirmButtonColor: '#667eea'
+                });
+            });
+
+            // Admin events
+            if (testData.isAdmin) {
+                socket.on('admin:joined', handleAdminJoined);
+                socket.on('admin:participant_joined', handleParticipantJoined);
+                socket.on('admin:answer_submitted', handleAnswerSubmitted);
+                socket.on('admin:question_stats', handleQuestionStats);
+                socket.on('admin:leaderboard', handleLeaderboard);
+            } else {
+                // Participant events
+                socket.on('participant:joined', handleParticipantJoined);
+                socket.on('participant:answer_submitted', handleAnswerSubmitted);
+            }
+
+            // Common events
+            socket.on('test:started', handleTestStarted);
+            socket.on('question:started', handleQuestionStarted);
+            socket.on('question:ended', handleQuestionEnded);
+            socket.on('test:completed', handleTestCompleted);
+            socket.on('participant:user_joined', handleUserJoined);
+            socket.on('participant:user_left', handleUserLeft);
+        }
+
+        function joinAsAdmin() {
+            socket.emit('admin:join', {
+                testCode: testData.testCode,
+                adminId: testData.user.id
+            });
+        }
+
+        function joinAsParticipant() {
+            // Get participant data from sessionStorage
+            const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
+            
+            if (!testSession.participantName) {
+                window.location.href = `/test/join/${testData.testCode}`;
+                return;
+            }
+
+            socket.emit('participant:join', {
+                testCode: testData.testCode,
+                participantName: testSession.participantName
+            });
+        }
+
+        // Event Handlers
+        function handleAdminJoined(data) {
+            console.log('Admin joined:', data);
+            updateWaitingRoom(data.waitingRoom);
+        }
+
+        function handleParticipantJoined(data) {
+            console.log('Participant joined:', data);
+            if (testData.isAdmin) {
+                updateWaitingRoom(data.waitingRoom);
+            } else {
+                updateWaitingRoom(data.waitingRoom);
+            }
+        }
+
+        function handleTestStarted(data) {
+            console.log('Test started:', data);
+            document.getElementById('waitingRoom').style.display = 'none';
+            document.getElementById('quizContent').style.display = 'block';
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Test Started!',
+                text: 'Get ready for the first question...',
+                timer: 2000,
+                showConfirmButton: false
+            })
+            startQuestion();
+        }
+
+        function handleQuestionStarted(data) {
+            console.log('Question started:', data);
+            isQuestionActive = true;
+            selectedAnswer = null;
+            currentQuestion = data.questionNumber;
+            questionStartTime = data.startTime;
+            timeRemaining = data.timeLimit;
+            
+            displayQuestion(data.question);
+            startQuestionTimer(data.timeLimit);
+            
+            // Update UI
+            document.getElementById('currentQuestionNum').textContent = data.questionNumber + 1;
+            
+            if (testData.isAdmin) {
+                document.getElementById('nextQuestionBtn').disabled = true;
+                document.getElementById('showStatsBtn').style.display = 'none';
+            }
+        }
+
+        function handleQuestionEnded(data) {
+            console.log('Question ended:', data);
+            isQuestionActive = false;
+            stopQuestionTimer();
+            
+            // Show correct answer
+            highlightCorrectAnswer(data.correctAnswer);
+            
+            if (testData.isAdmin) {
+                document.getElementById('nextQuestionBtn').disabled = false;
+                document.getElementById('showStatsBtn').style.display = 'inline-block';
+                
+                // Show finish button if last question
+                if (currentQuestion >= testData.quiz.questions.length - 1) {
+                    document.getElementById('nextQuestionBtn').style.display = 'none';
+                    document.getElementById('finishTestBtn').style.display = 'inline-block';
+                }
+                
+                // Update stats
+                updateQuestionStats(data.stats);
+            }
+        }
+
+        function handleAnswerSubmitted(data) {
+            if (!testData.isAdmin) {
+                console.log('Answer submitted:', data);
+                playerScore = data.newScore;
+                document.getElementById('playerScore').textContent = playerScore;
+                
+                // Show feedback
+                const isCorrect = data.isCorrect;
+                const message = isCorrect ? 
+                    `Correct! +${data.points} points` : 
+                    'Incorrect answer';
+                    
+                showAnswerFeedback(isCorrect, message);
+            }
+        }
+
+        function handleTestCompleted(data) {
+            console.log('Test completed:', data);
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Test Completed!',
+                text: 'Thank you for participating!',
+                showConfirmButton: true,
+                confirmButtonText: 'View Results'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `/test/results/${testData.testCode}`;
+                }
+            });
+        }
+
+        function handleUserJoined(data) {
+            updateParticipantCount(data.participantCount);
+            showNotification(`${data.participantName} joined`, 'info');
+        }
+
+        function handleUserLeft(data) {
+            showNotification(`${data.participantName} left`, 'warning');
+        }
+
+        function handleQuestionStats(data) {
+            updateQuestionStats(data.stats);
+        }
+
+        function handleLeaderboard(data) {
+            updateLeaderboard(data.leaderboard);
+        }
+
+        // UI Functions
+        function updateWaitingRoom(waitingRoom) {
+            document.getElementById('participantCount').textContent = waitingRoom.participantCount;
+            
+            const participantsList = document.getElementById('participantsList');
+            participantsList.innerHTML = '';
+            
+            waitingRoom.participants.forEach((participant, index) => {
+                const participantEl = document.createElement('div');
+                participantEl.className = 'participant-item';
+                participantEl.innerHTML = `
+                    <div class="participant-avatar">
+                        ${participant.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">${participant.name}</div>
+                        <small class="text-muted">Joined ${new Date(participant.joinedAt).toLocaleTimeString()}</small>
+                    </div>
+                `;
+                participantsList.appendChild(participantEl);
+            });
+            
+            // Enable start button for admin if participants exist
+            if (testData.isAdmin) {
+                const startBtn = document.getElementById('startTestBtn');
+                startBtn.disabled = waitingRoom.participantCount === 0;
+            }
+        }
+
+        function displayQuestion(question) {
+            const container = document.getElementById('previewQuestionContainer');
+            
+            let questionHTML = `
+                <div class="question-display-container">
+                    <div class="preview-question-header">
+                        <div class="preview-question-number">${question.number}</div>
+                        <div class="preview-question-content">
+                            <h5 class="preview-question-title">${question.content}</h5>
+                        </div>
+                    </div>
+            `;
+            
+            if (question.image) {
+                questionHTML += `
+                    <div class="preview-question-image">
+                        <img src="${question.image}" alt="Question Image">
+                    </div>
+                `;
+            }
+            
+            questionHTML += '<div class="preview-options">';
+            question.options.forEach(option => {
+                if (option.text && option.text.trim()) {
+                    const colorClass = `letter-${option.letter.toLowerCase()}`;
+                    questionHTML += `
+                        <div class="preview-option" 
+                             data-letter="${option.letter}" 
+                             onclick="${testData.isAdmin ? '' : `selectAnswer('${option.letter}')`}">
+                            <div class="preview-option-content">
+                                <div class="preview-option-letter ${colorClass}">${option.letter}</div>
+                                <div class="preview-option-text">${option.text}</div>
+                                <div class="preview-option-status"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            questionHTML += '</div></div>';
+            
+            container.innerHTML = questionHTML;
+            
+            // Apply option styling
+            setTimeout(() => {
+                if (typeof applyOptionColors === 'function') {
+                    applyOptionColors();
+                }
+            }, 100);
+        }
+
+        function selectAnswer(letter) {
+            if (!isQuestionActive || testData.isAdmin) return;
+            
+            selectedAnswer = letter;
+            // Visual selection
+            const options = document.querySelectorAll('.preview-option');
+            options.forEach(opt => opt.classList.remove('selected'));
+            
+            const selectedOption = document.querySelector(`[data-letter="${selectedAnswer}"]`);
+            if (selectedOption) {
+                selectedOption.classList.add('selected');
+            }
+            
+        }
+
+        function startQuestionTimer(seconds) {
+            document.getElementsByClassName('quiz-timer-compact')[0].style.display = 'block';
+            timeRemaining = seconds;
+            updateTimerDisplay();
+            
+            questionTimer = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+                
+                if (timeRemaining <= 0) {
+                    stopQuestionTimer();
+                }
+            }, 1000);
+        }
+
+        function stopQuestionTimer() {
+            if (questionTimer) {
+                clearInterval(questionTimer);
+                questionTimer = null;
+                // Submit answer
+                if (testData.isAdmin) return;
+                socket.emit('participant:submit_answer', {
+                    testCode: testData.testCode,
+                    questionNumber: currentQuestion,
+                    selectedAnswer: selectedAnswer,
+                    timeRemaining: timeRemaining
+                });
+            }
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            
+            document.getElementById('timerMinutes').textContent = minutes.toString().padStart(2, '0');
+            document.getElementById('timerSeconds').textContent = seconds.toString().padStart(2, '0');
+            
+            // Update timer circle color
+            const timerCircle = document.querySelector('.timer-circle');
+            if (timerCircle) {
+                const question = testData.quiz.questions[currentQuestion];
+                const totalTime = question ? question.answerTime : 30;
+                const percentageLeft = (timeRemaining / totalTime) * 100;
+                
+                timerCircle.classList.remove('warning', 'danger');
+                
+                if (percentageLeft <= 10) {
+                    timerCircle.classList.add('danger');
+                } else if (percentageLeft <= 30) {
+                    timerCircle.classList.add('warning');
+                }
+            }
+        }
+
+        function highlightCorrectAnswer(correctAnswer) {
+            const options = document.querySelectorAll('.preview-option');
+            options.forEach(option => {
+                const letter = option.getAttribute('data-letter');
+                const statusElement = option.querySelector('.preview-option-status');
+                
+                if (letter === correctAnswer) {
+                    option.classList.add('correct');
+                    statusElement.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
+                } else if (selectedAnswer === letter) {
+                    option.classList.add('wrong');
+                    statusElement.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
+                }
+                
+                // Disable further selection
+                option.style.pointerEvents = 'none';
+            });
+        }
+
+        function updateQuestionStats(stats) {
+            if (!testData.isAdmin) return;
+            
+            const statsContent = document.getElementById('statsContent');
+            let statsHTML = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h5>${stats.totalAnswers}</h5>
+                                <small>Total Answers</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h5>${stats.correctAnswers}</h5>
+                                <small>Correct Answers</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Answer distribution
+            const question = testData.quiz.questions[currentQuestion];
+            if (question && question.options) {
+                question.options.forEach(option => {
+                    const count = stats.answerDistribution[option.letter] || 0;
+                    const percentage = stats.totalAnswers > 0 ? 
+                        Math.round((count / stats.totalAnswers) * 100) : 0;
+                    
+                    statsHTML += `
+                        <div class="stat-bar">
+                            <div class="stat-label">${option.letter}</div>
+                            <div class="stat-progress">
+                                <div class="stat-fill" style="width: ${percentage}%">
+                                    ${count} (${percentage}%)
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            statsContent.innerHTML = statsHTML;
+        }
+
+        function updateLeaderboard(leaderboard) {
+            const content = document.getElementById('leaderboardContent');
+            content.innerHTML = '';
+            
+            leaderboard.forEach((player, index) => {
+                const rank = index + 1;
+                const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
+                const trophy = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+                
+                const item = document.createElement('div');
+                item.className = 'leaderboard-item';
+                item.innerHTML = `
+                    <div class="rank-badge ${rankClass}">
+                        ${trophy || rank}
+                    </div>
+                    <div class="player-info">
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-stats">${player.correctAnswers} correct answers</div>
+                    </div>
+                    <div class="player-score">${player.score}</div>
+                `;
+                content.appendChild(item);
+            });
+        }
+
+        // Admin Functions
+        function startTest() {
+            if (!testData.isAdmin) return;
+            
+            socket.emit('admin:start_test', {
+                testCode: testData.testCode
+            });
+        }
+
+        function nextQuestion() {
+            if (!testData.isAdmin) return;
+            const leaderboard = document.getElementById('leaderboard');
+            const previewQuestionContainer = document.getElementById('previewQuestionContainer');
+            const stats = document.getElementById('questionStats');
+
+            leaderboard.style.display = 'none';
+            stats.style.display = 'none';
+            previewQuestionContainer.style.display = 'block';
+            
+            
+            const nextQuestionIndex = currentQuestion + 1;
+            
+            if (nextQuestionIndex < testData.quiz.questions.length) {
+                socket.emit('admin:start_question', {
+                    testCode: testData.testCode,
+                    questionNumber: nextQuestionIndex
+                });
+            }
+        }
+        function startQuestion() {
+            if (!testData.isAdmin) return;
+            
+            const nextQuestionIndex = 0;
+
+            if (nextQuestionIndex < testData.quiz.questions.length) {
+                socket.emit('admin:start_question', {
+                    testCode: testData.testCode,
+                    questionNumber: nextQuestionIndex
+                });
+            }
+        }
+
+        function finishTest() {
+            if (!testData.isAdmin) return;
+            
+            Swal.fire({
+                title: 'Finish Test?',
+                text: 'This will end the test for all participants.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Finish Test',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    socket.emit('admin:complete_test', {
+                        testCode: testData.testCode
+                    });
+                }
+            });
+        }
+
+        function toggleQuestionStats() {
+            if (!testData.isAdmin) return;
+            
+            const stats = document.getElementById('questionStats');
+            const leaderboard = document.getElementById('leaderboard');
+            const previewQuestionContainer = document.getElementById('previewQuestionContainer');
+            
+            if (stats.style.display === 'none') {
+                stats.style.display = 'block';
+                leaderboard.style.display = 'none';
+                previewQuestionContainer.style.display = 'none';
+                
+                // Request fresh stats
+                socket.emit('admin:get_question_stats', {
+                    testCode: testData.testCode,
+                    questionNumber: currentQuestion
+                });
+            } else {
+                stats.style.display = 'none';
+                previewQuestionContainer.style.display = 'block';
+            }
+        }
+
+        function toggleLeaderboard() {
+            const leaderboard = document.getElementById('leaderboard');
+            const previewQuestionContainer = document.getElementById('previewQuestionContainer');
+            const stats = document.getElementById('questionStats');
+            const curRankingBtn = document.getElementById('showRankingBtn').innerText;
+            if (leaderboard.style.display === 'none' && curRankingBtn === 'RANKING') {
+                leaderboard.style.display = 'block';
+                previewQuestionContainer.style.display = 'none';
+                
+                showingLeaderboard = true;
+                
+                // Update button text
+                const rankingBtn = testData.isAdmin ? 
+                    document.getElementById('showRankingBtn') : 
+                    document.getElementById('playerRankingBtn');
+                    
+                if (rankingBtn) {
+                    rankingBtn.innerHTML = '<i class="fas fa-eye me-1"></i>Quiz';
+                }
+                
+                // Request fresh leaderboard
+                socket.emit(testData.isAdmin ? 'admin:get_leaderboard' : 'participant:get_leaderboard', {
+                    testCode: testData.testCode
+                });
+            } else {
+                leaderboard.style.display = 'none';
+                previewQuestionContainer.style.display = 'block';
+                
+                showingLeaderboard = false;
+                
+                // Update button text
+                const rankingBtn = testData.isAdmin ? 
+                    document.getElementById('showRankingBtn') : 
+                    document.getElementById('playerRankingBtn');
+                    
+                if (rankingBtn) {
+                    rankingBtn.innerHTML = '<i class="fas fa-trophy me-1"></i>Ranking';
+                }
+            }
+            if (stats) stats.style.display = 'none';
+        }
+
+        // Utility Functions
+        function showAnswerFeedback(isCorrect, message) {
+            const toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+
+            toast.fire({
+                icon: isCorrect ? 'success' : 'error',
+                title: message
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            const toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000
+            });
+
+            toast.fire({
+                icon: type,
+                title: message
+            });
+        }
+
+        function showConnectionError() {
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Lost',
+                text: 'Connection to the test server was lost. Please refresh the page.',
+                confirmButtonText: 'Refresh Page'
+            }).then(() => {
+                window.location.reload();
+            });
+        }
+
+        function updateParticipantCount(count) {
+            const element = document.getElementById('participantCount');
+            if (element) {
+                element.textContent = count;
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('startTestBtn')?.addEventListener('click', startTest);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (testData.isAdmin) {
+                if (e.key === 'ArrowRight' && !document.getElementById('nextQuestionBtn').disabled) {
+                    nextQuestion();
+                }
+                if (e.key === 's' || e.key === 'S') {
+                    toggleQuestionStats();
+                }
+            }
+            
+            if (e.key === 'r' || e.key === 'R') {
+                toggleLeaderboard();
+            }
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (socket) {
+                socket.disconnect();
+            }
+        });
+    </script>
+</body>
+</html>

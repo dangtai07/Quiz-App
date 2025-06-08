@@ -3,12 +3,26 @@ const expressLayouts = require('express-ejs-layouts');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const path = require('path');
+const http = require('http');
+const socketIo = require('socket.io');
 const app = express();
+
+// Create HTTP server and Socket.IO
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
+
 const connectDB = require('./config/db.mongdb.cloud');
 const multer = require('multer');
 const AuthService = require('./services/auth.service');
-const PlayerService = require('./services/player.service'); // Add this import
-const QuizService = require('./services/quiz.service'); // Add this import
+const PlayerService = require('./services/player.service');
+const QuizService = require('./services/quiz.service');
+const TestService = require('./services/test.service'); // NEW: Test service
+const TestSocketHandler = require('./sockets/test.socket'); // NEW: Socket handler
 require('dotenv').config();
 
 // Body parser middleware
@@ -46,12 +60,29 @@ app.set('layout', 'layouts/main');
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// NEW: Initialize Socket.IO for real-time tests
+const testSocketHandler = new TestSocketHandler(io);
+
 // Connect to MongoDB and create initial admin user
 connectDB().then(async () => {
     try {
         // Create initial admin and demo users
         await AuthService.createInitialAdmin();
         await AuthService.createInitialUsers();
+        
+        // NEW: Start test cleanup scheduler
+        console.log('🧹 Starting test cleanup scheduler...');
+        setInterval(async () => {
+            try {
+                const cleanedCount = await TestService.cleanupExpiredTests();
+                if (cleanedCount > 0) {
+                    console.log(`🧹 Cleaned up ${cleanedCount} expired tests`);
+                }
+            } catch (error) {
+                console.error('Test cleanup error:', error);
+            }
+        }, 60 * 60 * 1000); // Run every hour
+        
     } catch (error) {
         console.error('❌ Error setting up initial users:', error);
     }
@@ -60,10 +91,14 @@ connectDB().then(async () => {
 // Routes
 const quizRoutes = require('./routes/quiz.route');
 const authRoutes = require('./routes/auth.route');
+const testRoutes = require('./routes/test.route'); // NEW: Test routes
 const { requireAuth, requireAdmin } = require('./controllers/auth.controller');
 
 // Auth routes (no middleware needed)
 app.use('/auth', authRoutes);
+
+// NEW: Test routes (public and authenticated)
+app.use('/test', testRoutes);
 
 // ========================================
 // QUIZ OPERATION LOGGING MIDDLEWARE
@@ -577,8 +612,8 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                 <div class="header-icon">
                     <i class="fas fa-gamepad"></i>
                 </div>
-                <h1 class="card-title">Join a Quiz</h1>
-                <p class="card-subtitle">Enter your 6-digit quiz code and your name to continue.</p>
+                <h1 class="card-title">Join a Test</h1>
+                <p class="card-subtitle">Enter your 6-digit test code to continue.</p>
             </div>
             
             <div class="card-body">
@@ -590,39 +625,24 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                     <div class="user-email">${user.email}</div>
                 </div>
 
-                <form id="joinQuizForm" action="/player/join-quiz" method="POST">
-                    <div class="form-floating">
-                        <input type="number" 
-                               class="form-control pin-code-input" 
-                               id="pinCode" 
-                               name="pinCode"
-                               placeholder="000000" 
-                               min="100000" 
-                               max="999999"
-                               maxlength="6"
-                               required>
-                        <label for="pinCode">
-                            <i class="fas fa-key me-2"></i>6-Digit Quiz PIN
-                        </label>
-                    </div>
-
+                <form id="joinTestForm" action="/test/join" method="POST">
                     <div class="form-floating">
                         <input type="text" 
-                               class="form-control" 
-                               id="playerName" 
-                               name="playerName"
-                               placeholder="Your Name" 
-                               maxlength="50"
-                               value="${user.name}"
+                               class="form-control pin-code-input" 
+                               id="testCode" 
+                               name="testCode"
+                               placeholder="000000" 
+                               maxlength="6"
+                               pattern="[0-9]{6}"
                                required>
-                        <label for="playerName">
-                            <i class="fas fa-user me-2"></i>Your Display Name
+                        <label for="testCode">
+                            <i class="fas fa-key me-2"></i>6-Digit Test Code
                         </label>
                     </div>
 
-                    <button type="submit" class="btn btn-start-quiz" id="startQuizBtn">
+                    <button type="submit" class="btn btn-start-quiz" id="startTestBtn">
                         <i class="fas fa-play me-2"></i>
-                        Start Quiz
+                        Join Test
                     </button>
                 </form>
 
@@ -646,35 +666,26 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('joinQuizForm');
-            const pinCodeInput = document.getElementById('pinCode');
-            const playerNameInput = document.getElementById('playerName');
-            const startQuizBtn = document.getElementById('startQuizBtn');
+            const form = document.getElementById('joinTestForm');
+            const codeInput = document.getElementById('testCode');
+            const startTestBtn = document.getElementById('startTestBtn');
 
-            pinCodeInput.addEventListener('input', function(e) {
+            codeInput.addEventListener('input', function(e) {
                 let value = e.target.value.replace(/\\D/g, '');
                 if (value.length > 6) {
                     value = value.slice(0, 6);
                 }
                 e.target.value = value;
-                
-                if (value.length === 6) {
-                    playerNameInput.focus();
-                }
             });
 
             function validateForm() {
-                const pinCode = pinCodeInput.value;
-                const playerName = playerNameInput.value.trim();
-                
-                const isValid = pinCode.length === 6 && playerName.length >= 2;
-                startQuizBtn.disabled = !isValid;
-                
+                const testCode = codeInput.value;
+                const isValid = testCode.length === 6;
+                startTestBtn.disabled = !isValid;
                 return isValid;
             }
 
-            pinCodeInput.addEventListener('input', validateForm);
-            playerNameInput.addEventListener('input', validateForm);
+            codeInput.addEventListener('input', validateForm);
             validateForm();
 
             form.addEventListener('submit', function(e) {
@@ -683,38 +694,30 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                 if (!validateForm()) {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Invalid Input',
-                        text: 'Please enter a valid 6-digit PIN code and your name (at least 2 characters).',
+                        title: 'Invalid Code',
+                        text: 'Please enter a valid 6-digit test code.',
                         confirmButtonColor: '#667eea'
                     });
                     return;
                 }
 
-                const originalContent = startQuizBtn.innerHTML;
-                startQuizBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Joining Quiz...';
-                startQuizBtn.disabled = true;
+                const originalContent = startTestBtn.innerHTML;
+                startTestBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Finding Test...';
+                startTestBtn.disabled = true;
 
-                fetch('/player/join-quiz', {
+                fetch('/test/join', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        pinCode: pinCodeInput.value,
-                        playerName: playerNameInput.value.trim()
+                        testCode: codeInput.value
                     })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Joined Quiz!',
-                            text: data.message,
-                            timer: 2000,
-                            timerProgressBar: true,
-                            showConfirmButton: false
-                        });
+                        window.location.href = data.redirectUrl;
                     } else {
                         Swal.fire({
                             icon: 'error',
@@ -733,8 +736,8 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                     });
                 })
                 .finally(() => {
-                    startQuizBtn.innerHTML = originalContent;
-                    startQuizBtn.disabled = false;
+                    startTestBtn.innerHTML = originalContent;
+                    startTestBtn.disabled = false;
                 });
             });
         });
@@ -746,44 +749,28 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
 
 app.post('/player/join-quiz', requireAuth, async (req, res) => {
     try {
-        const { pinCode, playerName } = req.body;
+        const { testCode } = req.body;
         
         // Validate input
-        if (!pinCode || pinCode.toString().length !== 6) {
+        if (!testCode || testCode.toString().length !== 6) {
             return res.status(400).json({
                 success: false,
-                message: 'Please enter a valid 6-digit PIN code'
-            });
-        }
-        
-        if (!playerName || playerName.trim().length < 2) {
-            return res.status(400).json({
-                success: false,
-                message: 'Please enter a valid name (at least 2 characters)'
+                message: 'Please enter a valid 6-digit test code'
             });
         }
 
-        // For now, simulate successful join (implement actual quiz joining logic later)
-        console.log(`🎮 Player ${playerName} attempting to join quiz with PIN: ${pinCode}`);
-        
-        // Store quiz session
-        req.session.currentQuiz = {
-            pinCode: pinCode.toString(),
-            playerName: playerName.trim(),
-            joinedAt: new Date()
-        };
-
+        // Redirect to test join page
         res.json({
             success: true,
-            message: 'Successfully joined quiz! Redirecting to quiz lobby...',
-            redirectUrl: `/quiz/${pinCode}/lobby`
+            message: 'Redirecting to test...',
+            redirectUrl: `/test/join/${testCode}`
         });
 
     } catch (error) {
-        console.error('Join quiz error:', error);
+        console.error('Join test error:', error);
         res.status(500).json({
             success: false,
-            message: 'An error occurred while joining the quiz'
+            message: 'An error occurred while joining the test'
         });
     }
 });
@@ -893,10 +880,10 @@ function getWelcomeMessage() {
 function getQuickActions() {
     return [
         {
-            name: 'Join Quiz',
+            name: 'Join Test',
             icon: 'fas fa-play',
             url: '/player/join-quiz',
-            description: 'Enter a quiz PIN to join',
+            description: 'Enter a test code to join',
             primary: true
         },
         {
@@ -1038,11 +1025,12 @@ app.use((req, res) => {
 });
 
 // ========================================
-// SERVER STARTUP - KEEP EXISTING
+// SERVER STARTUP - UPDATED FOR SOCKET.IO
 // ========================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
+    console.log(`🔌 Socket.IO server ready for real-time tests`);
     console.log(`\n👤 Demo credentials:`);
     console.log(`   🔑 Admin: admin@quizapp.com / admin123`);
     console.log(`   🔑 Teacher: teacher@quizapp.com / teacher123`);
@@ -1059,4 +1047,8 @@ app.listen(PORT, () => {
     console.log(`   ✅ Quiz analytics and statistics`);
     console.log(`   ✅ Enhanced player dashboard`);
     console.log(`   ✅ API endpoints for real-time data`);
+    console.log(`   🆕 Real-time test functionality with Socket.IO`);
+    console.log(`   🆕 Test creation and management`);
+    console.log(`   🆕 Live quiz sessions with admin controls`);
+    console.log(`   🆕 Real-time scoring and leaderboards`);
 });
