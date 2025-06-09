@@ -482,671 +482,831 @@
     <script src="/js/quiz_preview.js"></script>
     
     <script>
-        // Real-time test functionality
-        let socket;
-        let testData;
-        let currentQuestion = 0;
-        let questionStartTime = 0;
-        let questionTimer = null;
-        // let timeRemaining = 0;
-        let playerScore = 0;
-        let isQuestionActive = false;
-        // let selectedAnswer = null;
-        let showingLeaderboard = false;
+    // Real-time test functionality - FIXED with reconnection handling
+    let socket;
+    let testData;
+    let currentQuestion = 0;
+    let questionStartTime = 0;
+    let questionTimer = null;
+    //let timeRemaining = 0;
+    let playerScore = 0;
+    let isQuestionActive = false;
+    //let selectedAnswer = null;
+    let showingLeaderboard = false;
+    let reconnectAttempts = 0;
+    let maxReconnectAttempts = 5;
+    let hasSubmittedAnswer = false; // Track if answer was submitted
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Parse test data
-            testData = JSON.parse(document.getElementById('quiz-data').textContent);
+    document.addEventListener('DOMContentLoaded', function() {
+        testData = JSON.parse(document.getElementById('quiz-data').textContent);
+        initializeSocket();
+        setupConnectionHealthCheck();
+    });
+
+    function initializeSocket() {
+        socket = io({
+            transports: ['websocket', 'polling'],
+            timeout: 20000,
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            maxReconnectionAttempts: 5
+        });
+        
+        setupSocketEvents();
+        
+        if (testData.isAdmin) {
+            joinAsAdmin();
+        } else {
+            joinAsParticipant();
+        }
+    }
+
+    function setupSocketEvents() {
+        // Connection events
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            reconnectAttempts = 0;
+            hideConnectionError();
             
-            // Initialize Socket.IO
-            socket = io();
-            
-            // Setup socket events
-            setupSocketEvents();
-            
-            // Join test room
             if (testData.isAdmin) {
                 joinAsAdmin();
-            } else {
+            } else if (socket.rejoining) {
                 joinAsParticipant();
             }
         });
 
-        function setupSocketEvents() {
-            // Connection events
-            socket.on('connect', () => {
-                console.log('Connected to server');
-            });
+        socket.on('disconnect', (reason) => {
+            console.log('Disconnected from server:', reason);
+            if (reason === 'io server disconnect') {
+                socket.connect();
+            }
+            showConnectionError('Connection lost. Attempting to reconnect...');
+        });
 
-            socket.on('disconnect', () => {
-                console.log('Disconnected from server');
-                showConnectionError();
-            });
+        socket.on('connect_error', (error) => {
+            console.error('Connection error:', error);
+            reconnectAttempts++;
+            
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                showConnectionError('Unable to connect to server. Please refresh the page.');
+            } else {
+                showConnectionError(`Connection failed. Retrying... (${reconnectAttempts}/${maxReconnectAttempts})`);
+            }
+        });
 
-            socket.on('error', (error) => {
-                console.error('Socket error:', error);
+        socket.on('reconnect', (attemptNumber) => {
+            console.log(`Reconnected after ${attemptNumber} attempts`);
+            hideConnectionError();
+            socket.rejoining = true;
+        });
+
+        socket.on('error', (error) => {
+            console.error('Socket error:', error);
+            
+            if (error.message && error.message.includes('Name already taken')) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Name Conflict',
+                    text: 'Someone else is using this name. Please choose a different name.',
+                    confirmButtonColor: '#667eea'
+                }).then(() => {
+                    window.location.href = `/test/join/${testData.testCode}`;
+                });
+            } else if (error.message && error.message.includes('Test is full')) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Test Full',
+                    text: 'This test session is full. Please try again later.',
+                    confirmButtonColor: '#667eea'
+                });
+            } else {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: error.message,
+                    text: error.message || 'An unexpected error occurred.',
                     confirmButtonColor: '#667eea'
                 });
-            });
-
-            // Admin events
-            if (testData.isAdmin) {
-                socket.on('admin:joined', handleAdminJoined);
-                socket.on('admin:participant_joined', handleParticipantJoined);
-                socket.on('admin:answer_submitted', handleAnswerSubmitted);
-                socket.on('admin:question_stats', handleQuestionStats);
-                socket.on('admin:leaderboard', handleLeaderboard);
-            } else {
-                // Participant events
-                socket.on('participant:joined', handleParticipantJoined);
-                socket.on('participant:answer_submitted', handleAnswerSubmitted);
             }
+        });
 
-            // Common events
-            socket.on('test:started', handleTestStarted);
-            socket.on('question:started', handleQuestionStarted);
-            socket.on('question:ended', handleQuestionEnded);
-            socket.on('test:completed', handleTestCompleted);
-            socket.on('participant:user_joined', handleUserJoined);
-            socket.on('participant:user_left', handleUserLeft);
+        // Admin events
+        if (testData.isAdmin) {
+            socket.on('admin:joined', handleAdminJoined);
+            socket.on('admin:participant_joined', handleParticipantJoined);
+            socket.on('admin:participant_left', handleParticipantLeft);
+            socket.on('admin:answer_submitted', handleAnswerSubmitted);
+            socket.on('admin:question_stats', handleQuestionStats);
+            socket.on('admin:leaderboard', handleLeaderboard);
+        } else {
+            socket.on('participant:joined', handleParticipantJoined);
+            socket.on('participant:answer_submitted', handleAnswerSubmitted);
+            socket.on('participant:leaderboard', handleLeaderboard);
         }
 
-        function joinAsAdmin() {
-            socket.emit('admin:join', {
-                testCode: testData.testCode,
-                adminId: testData.user.id
-            });
-        }
+        // Common events
+        socket.on('test:started', handleTestStarted);
+        socket.on('question:started', handleQuestionStarted);
+        socket.on('question:ended', handleQuestionEnded);
+        socket.on('test:completed', handleTestCompleted);
+        socket.on('participant:user_joined', handleUserJoined);
+        socket.on('participant:user_left', handleUserLeft);
+        socket.on('admin:disconnected', handleAdminDisconnected);
+    }
 
-        function joinAsParticipant() {
-            // Get participant data from sessionStorage
-            const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
-            
-            if (!testSession.participantName) {
-                window.location.href = `/test/join/${testData.testCode}`;
-                return;
+    function setupConnectionHealthCheck() {
+        setInterval(() => {
+            if (socket && socket.connected) {
+                socket.emit('ping');
             }
+        }, 30000);
+        
+        socket.on('pong', () => {
+            hideConnectionError();
+        });
+    }
 
-            socket.emit('participant:join', {
-                testCode: testData.testCode,
-                participantName: testSession.participantName
-            });
+    function joinAsAdmin() {
+        if (!socket || !socket.connected) {
+            setTimeout(() => joinAsAdmin(), 1000);
+            return;
+        }
+        
+        socket.emit('admin:join', {
+            testCode: testData.testCode,
+            adminId: testData.user.id
+        });
+    }
+
+    function joinAsParticipant() {
+        if (!socket || !socket.connected) {
+            setTimeout(() => joinAsParticipant(), 1000);
+            return;
+        }
+        
+        const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
+        
+        if (!testSession.participantName) {
+            window.location.href = `/test/join/${testData.testCode}`;
+            return;
         }
 
-        // Event Handlers
-        function handleAdminJoined(data) {
-            console.log('Admin joined:', data);
+        socket.emit('participant:join', {
+            testCode: testData.testCode,
+            participantName: testSession.participantName
+        });
+    }
+
+    // Event Handlers
+    function handleAdminJoined(data) {
+        console.log('Admin joined:', data);
+        updateWaitingRoom(data.waitingRoom);
+    }
+
+    function handleParticipantJoined(data) {
+        console.log('Participant joined:', data);
+        if (testData.isAdmin) {
+            updateWaitingRoom(data.waitingRoom);
+        } else {
+            updateWaitingRoom(data.waitingRoom);
+            socket.rejoining = false;
+        }
+    }
+
+    function handleParticipantLeft(data) {
+        console.log('Participant left:', data);
+        if (testData.isAdmin && data.waitingRoom) {
             updateWaitingRoom(data.waitingRoom);
         }
+    }
 
-        function handleParticipantJoined(data) {
-            console.log('Participant joined:', data);
-            if (testData.isAdmin) {
-                updateWaitingRoom(data.waitingRoom);
-            } else {
-                updateWaitingRoom(data.waitingRoom);
+    function handleTestStarted(data) {
+        console.log('Test started:', data);
+        document.getElementById('waitingRoom').style.display = 'none';
+        document.getElementById('quizContent').style.display = 'block';
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Test Started!',
+            text: 'Get ready for the first question...',
+            timer: 2000,
+            showConfirmButton: false
+        });
+        
+        startQuestion();
+    }
+
+    function handleQuestionStarted(data) {
+        console.log('Question started:', data);
+        isQuestionActive = true;
+        selectedAnswer = null;
+        hasSubmittedAnswer = false; // Reset submission flag
+        currentQuestion = data.questionNumber;
+        questionStartTime = data.startTime;
+        timeRemaining = data.timeLimit;
+        
+        displayQuestion(data.question);
+        startQuestionTimer(data.timeLimit);
+        
+        // Update UI
+        document.getElementById('currentQuestionNum').textContent = data.questionNumber + 1;
+        
+        if (testData.isAdmin) {
+            document.getElementById('nextQuestionBtn').disabled = true;
+            const statsBtn = document.getElementById('showStatsBtn');
+            if (statsBtn) statsBtn.style.display = 'none';
+        }
+        
+    }
+
+    function handleQuestionEnded(data) {
+        console.log('Question ended:', data);
+        isQuestionActive = false;
+        stopQuestionTimer();
+        
+        // Show correct answer
+        highlightCorrectAnswer(data.correctAnswer);
+        
+        if (testData.isAdmin) {
+            document.getElementById('nextQuestionBtn').disabled = false;
+            const statsBtn = document.getElementById('showStatsBtn');
+            if (statsBtn) statsBtn.style.display = 'inline-block';
+            
+            // Show finish button if last question
+            if (currentQuestion >= testData.quiz.questions.length - 1) {
+                document.getElementById('nextQuestionBtn').style.display = 'none';
+                document.getElementById('finishTestBtn').style.display = 'inline-block';
             }
-        }
-
-        function handleTestStarted(data) {
-            console.log('Test started:', data);
-            document.getElementById('waitingRoom').style.display = 'none';
-            document.getElementById('quizContent').style.display = 'block';
             
-            Swal.fire({
-                icon: 'success',
-                title: 'Test Started!',
-                text: 'Get ready for the first question...',
-                timer: 2000,
-                showConfirmButton: false
-            })
-            startQuestion();
-        }
-
-        function handleQuestionStarted(data) {
-            console.log('Question started:', data);
-            isQuestionActive = true;
-            selectedAnswer = null;
-            currentQuestion = data.questionNumber;
-            questionStartTime = data.startTime;
-            timeRemaining = data.timeLimit;
-            
-            displayQuestion(data.question);
-            startQuestionTimer(data.timeLimit);
-            
-            // Update UI
-            document.getElementById('currentQuestionNum').textContent = data.questionNumber + 1;
-            
-            if (testData.isAdmin) {
-                document.getElementById('nextQuestionBtn').disabled = true;
-                document.getElementById('showStatsBtn').style.display = 'none';
-            }
-        }
-
-        function handleQuestionEnded(data) {
-            console.log('Question ended:', data);
-            isQuestionActive = false;
-            stopQuestionTimer();
-            
-            // Show correct answer
-            highlightCorrectAnswer(data.correctAnswer);
-            
-            if (testData.isAdmin) {
-                document.getElementById('nextQuestionBtn').disabled = false;
-                document.getElementById('showStatsBtn').style.display = 'inline-block';
-                
-                // Show finish button if last question
-                if (currentQuestion >= testData.quiz.questions.length - 1) {
-                    document.getElementById('nextQuestionBtn').style.display = 'none';
-                    document.getElementById('finishTestBtn').style.display = 'inline-block';
-                }
-                
-                // Update stats
-                updateQuestionStats(data.stats);
-            }
-        }
-
-        function handleAnswerSubmitted(data) {
-            if (!testData.isAdmin) {
-                console.log('Answer submitted:', data);
-                playerScore = data.newScore;
-                document.getElementById('playerScore').textContent = playerScore;
-                
-                // Show feedback
-                const isCorrect = data.isCorrect;
-                const message = isCorrect ? 
-                    `Correct! +${data.points} points` : 
-                    'Incorrect answer';
-                    
-                showAnswerFeedback(isCorrect, message);
-            }
-        }
-
-        function handleTestCompleted(data) {
-            console.log('Test completed:', data);
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Test Completed!',
-                text: 'Thank you for participating!',
-                showConfirmButton: true,
-                confirmButtonText: 'View Results'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = `/test/results/${testData.testCode}`;
-                }
-            });
-        }
-
-        function handleUserJoined(data) {
-            updateParticipantCount(data.participantCount);
-            showNotification(`${data.participantName} joined`, 'info');
-        }
-
-        function handleUserLeft(data) {
-            showNotification(`${data.participantName} left`, 'warning');
-        }
-
-        function handleQuestionStats(data) {
-            console.log('Question stats updated:', data);
             updateQuestionStats(data.stats);
         }
+    }
 
-        function handleLeaderboard(data) {
-            console.log('Leaderboard updated:', data);
-            updateLeaderboard(data.leaderboard);
+    function handleAnswerSubmitted(data) {
+        if (!testData.isAdmin) {
+            console.log('Answer submitted:', data);
+            playerScore = data.newScore;
+            document.getElementById('playerScore').textContent = playerScore;
+            
+            const isCorrect = data.isCorrect;
+            const message = isCorrect ? 
+                `Correct! +${data.points} points` : 
+                'Incorrect answer';
+                
+            showAnswerFeedback(isCorrect, message);
+            hasSubmittedAnswer = true;
         }
+    }
 
-        // UI Functions
-        function updateWaitingRoom(waitingRoom) {
-            document.getElementById('participantCount').textContent = waitingRoom.participantCount;
-            
-            const participantsList = document.getElementById('participantsList');
-            participantsList.innerHTML = '';
-            
-            waitingRoom.participants.forEach((participant, index) => {
-                const participantEl = document.createElement('div');
-                participantEl.className = 'participant-item';
-                participantEl.innerHTML = `
-                    <div class="participant-avatar">
-                        ${participant.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div class="flex-grow-1">
-                        <div class="fw-semibold">${participant.name}</div>
-                        <small class="text-muted">Joined ${new Date(participant.joinedAt).toLocaleTimeString()}</small>
-                    </div>
-                `;
-                participantsList.appendChild(participantEl);
+    function handleTestCompleted(data) {
+        console.log('Test completed:', data);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Test Completed!',
+            text: 'Thank you for participating!',
+            showConfirmButton: true,
+            confirmButtonText: 'View Results'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = `/test/results/${testData.testCode}`;
+            }
+        });
+    }
+
+    function handleUserJoined(data) {
+        updateParticipantCount(data.participantCount);
+        showNotification(`${data.participantName} joined`, 'info');
+    }
+
+    function handleUserLeft(data) {
+        updateParticipantCount(data.participantCount);
+        showNotification(`${data.participantName} left`, 'warning');
+    }
+
+    function handleAdminDisconnected() {
+        showNotification('Admin disconnected', 'error');
+        if (!testData.isAdmin) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Admin Disconnected',
+                text: 'The test administrator has disconnected. The test may be paused.',
+                confirmButtonColor: '#667eea'
             });
-            
-            // Enable start button for admin if participants exist
-            if (testData.isAdmin) {
-                const startBtn = document.getElementById('startTestBtn');
+        }
+    }
+
+    function handleQuestionStats(data) {
+        console.log('Question stats updated:', data);
+        updateQuestionStats(data.stats);
+    }
+
+    function handleLeaderboard(data) {
+        console.log('Leaderboard updated:', data);
+        updateLeaderboard(data.leaderboard);
+    }
+
+    // UI Functions
+    function updateWaitingRoom(waitingRoom) {
+        document.getElementById('participantCount').textContent = waitingRoom.participantCount;
+        
+        const participantsList = document.getElementById('participantsList');
+        participantsList.innerHTML = '';
+        
+        waitingRoom.participants.forEach((participant, index) => {
+            const participantEl = document.createElement('div');
+            participantEl.className = 'participant-item';
+            participantEl.innerHTML = `
+                <div class="participant-avatar">
+                    ${participant.name.charAt(0).toUpperCase()}
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">${participant.name}</div>
+                    <small class="text-muted">Score: ${participant.score || 0} | Joined ${new Date(participant.joinedAt).toLocaleTimeString()}</small>
+                </div>
+                ${participant.isActive ? '<span class="badge bg-success">Online</span>' : '<span class="badge bg-secondary">Offline</span>'}
+            `;
+            participantsList.appendChild(participantEl);
+        });
+        
+        if (testData.isAdmin) {
+            const startBtn = document.getElementById('startTestBtn');
+            if (startBtn) {
                 startBtn.disabled = waitingRoom.participantCount === 0;
             }
         }
+    }
 
-        function displayQuestion(question) {
-            const container = document.getElementById('previewQuestionContainer');
-            
-            let questionHTML = `
-                <div class="question-display-container">
-                    <div class="preview-question-header">
-                        <div class="preview-question-number">${question.number}</div>
-                        <div class="preview-question-content">
-                            <h5 class="preview-question-title">${question.content}</h5>
-                        </div>
+    function displayQuestion(question) {
+        const container = document.getElementById('previewQuestionContainer');
+        
+        let questionHTML = `
+            <div class="question-display-container">
+                <div class="preview-question-header">
+                    <div class="preview-question-number">${question.number}</div>
+                    <div class="preview-question-content">
+                        <h5 class="preview-question-title">${question.content}</h5>
                     </div>
+                </div>
+        `;
+        
+        if (question.image) {
+            questionHTML += `
+                <div class="preview-question-image">
+                    <img src="${question.image}" alt="Question Image">
+                </div>
             `;
-            
-            if (question.image) {
+        }
+        
+        questionHTML += '<div class="preview-options">';
+        question.options.forEach(option => {
+            if (option.text && option.text.trim()) {
+                const colorClass = `letter-${option.letter.toLowerCase()}`;
+                const clickHandler = testData.isAdmin ? '' : `onclick="selectAnswer('${option.letter}')"`;
+                const cursorStyle = testData.isAdmin ? 'cursor: default;' : 'cursor: pointer;';
+                
                 questionHTML += `
-                    <div class="preview-question-image">
-                        <img src="${question.image}" alt="Question Image">
+                    <div class="preview-option" 
+                        data-letter="${option.letter}" 
+                        style="${cursorStyle}"
+                        ${clickHandler}>
+                        <div class="preview-option-content">
+                            <div class="preview-option-letter ${colorClass}">${option.letter}</div>
+                            <div class="preview-option-text">${option.text}</div>
+                            <div class="preview-option-status"></div>
+                        </div>
                     </div>
                 `;
             }
-            
-            questionHTML += '<div class="preview-options">';
-            question.options.forEach(option => {
-                if (option.text && option.text.trim()) {
-                    const colorClass = `letter-${option.letter.toLowerCase()}`;
-                    questionHTML += `
-                        <div class="preview-option" 
-                             data-letter="${option.letter}" 
-                             onclick="${testData.isAdmin ? '' : `selectAnswer('${option.letter}')`}">
-                            <div class="preview-option-content">
-                                <div class="preview-option-letter ${colorClass}">${option.letter}</div>
-                                <div class="preview-option-text">${option.text}</div>
-                                <div class="preview-option-status"></div>
-                            </div>
-                        </div>
-                    `;
-                }
-            });
-            questionHTML += '</div></div>';
-            
-            container.innerHTML = questionHTML;
-            
-            // Apply option styling
-            setTimeout(() => {
-                if (typeof applyOptionColors === 'function') {
-                    applyOptionColors();
-                }
-            }, 100);
-        }
-
-        function selectAnswer(letter) {
-            if (!isQuestionActive || testData.isAdmin) return;
-            
-            selectedAnswer = letter;
-            // Visual selection
-            const options = document.querySelectorAll('.preview-option');
-            options.forEach(opt => opt.classList.remove('selected'));
-            
-            const selectedOption = document.querySelector(`[data-letter="${selectedAnswer}"]`);
-            if (selectedOption) {
-                selectedOption.classList.add('selected');
+        });
+        questionHTML += '</div></div>';
+        
+        container.innerHTML = questionHTML;
+        
+        setTimeout(() => {
+            if (typeof applyOptionColors === 'function') {
+                applyOptionColors();
             }
+        }, 100);
+    }
+
+    // IMPROVED: Allow answer selection without immediate submission
+    function selectAnswer(letter) {
+        if (!isQuestionActive || testData.isAdmin || hasSubmittedAnswer) return;
+        
+        // Allow changing answer until time runs out
+        selectedAnswer = letter;
+        
+        // Visual selection - remove previous selection
+        const options = document.querySelectorAll('.preview-option');
+        options.forEach(opt => {
+            opt.classList.remove('selected');
+            opt.classList.remove('pulse-selection');
+        });
+        
+        // Add selection to new option
+        const selectedOption = document.querySelector(`[data-letter="${selectedAnswer}"]`);
+        if (selectedOption) {
+            selectedOption.classList.add('selected');
+            selectedOption.classList.add('pulse-selection');
             
         }
+        
+        console.log(`Selected answer: ${selectedAnswer} (can change until time runs out)`);
+    }
 
-        function startQuestionTimer(seconds) {
-            document.getElementsByClassName('quiz-timer-compact')[0].style.display = 'block';
-            timeRemaining = seconds;
-            updateTimerDisplay();
-            
-            questionTimer = setInterval(() => {
+    function startQuestionTimer(seconds) {
+        const timerElement = document.getElementsByClassName('quiz-timer-compact')[0];
+        if (timerElement) {
+            timerElement.style.display = 'block';
+        }
+        let counter = 0;
+        let intervalTime = 50;
+        let randomNumber = Math.floor(Math.random() * 1000) + 1 - intervalTime;
+        timeRemaining = seconds;
+        updateTimerDisplay();
+        questionTimer = setInterval(() => {
+            counter += intervalTime;
+            if (counter >= 1000) {
+                counter = 0;
                 timeRemaining--;
+                updateTimerDisplay();            
+            }
+            if (timeRemaining <= 1 && counter > Math.max(randomNumber, 400)) {
+                timeRemaining=0;
+                counter = 0;
                 updateTimerDisplay();
-                
-                if (timeRemaining <= 0) {
-                    stopQuestionTimer();
-                }
-            }, 1000);
-        }
+                stopQuestionTimer();
+            }
 
-        function stopQuestionTimer() {
-            if (questionTimer) {
-                clearInterval(questionTimer);
-                questionTimer = null;
-                // Submit answer
-                if (testData.isAdmin) {
-                    socket.emit('admin:timeout', {
-                        testCode: testData.testCode,
-                        questionNumber: currentQuestion
-                    });
-                } else {
-                    socket.emit('participant:submit_answer', {
-                        testCode: testData.testCode,
-                        questionNumber: currentQuestion,
-                        selectedAnswer: selectedAnswer,
-                        timeRemaining: timeRemaining
-                    });
-                }
+        }, intervalTime);
+    }
+
+    // IMPROVED: Submit answer only when timer stops
+    function stopQuestionTimer() {
+        if (questionTimer) {
+            clearInterval(questionTimer);
+            questionTimer = null;
+            
+            // Submit answer if participant and hasn't submitted yet
+            if (!testData.isAdmin && !hasSubmittedAnswer) {
+                // Show submission feedback
+                showSubmissionFeedback();
+                
+                socket.emit('participant:submit_answer', {
+                    testCode: testData.testCode,
+                    questionNumber: currentQuestion,
+                    selectedAnswer: selectedAnswer,
+                    timeRemaining: 0 // Always 0 when timer stops
+                });
+                
+                console.log(`Time up! Submitted answer: ${selectedAnswer || 'No answer'}`);
             }
         }
+    }
 
-        function updateTimerDisplay() {
-            const minutes = Math.floor(timeRemaining / 60);
-            const seconds = timeRemaining % 60;
+    function showSubmissionFeedback() {
+        const feedback = document.createElement('div');
+        feedback.className = 'submission-feedback';
+        feedback.innerHTML = `
+            <div class="alert alert-success d-flex align-items-center justify-content-center" 
+                style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                        z-index: 1001; min-width: 300px; border-radius: 12px; 
+                        background: linear-gradient(135deg, #10b981, #059669); 
+                        color: white; border: none; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+                        animation: fadeIn 0.5s ease;">
+                <i class="fas fa-paper-plane me-2"></i>
+                <span>Answer submitted: <strong>${selectedAnswer || 'No answer'}</strong></span>
+            </div>
+        `;
+        document.body.appendChild(feedback);
+        
+        setTimeout(() => {
+            if (feedback.parentNode) {
+                feedback.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => feedback.remove(), 300);
+            }
+        }, 2000);
+    }
+
+    function updateTimerDisplay() {
+        const minutes = Math.floor(timeRemaining / 60);
+        const seconds = timeRemaining % 60;
+        
+        const minutesEl = document.getElementById('timerMinutes');
+        const secondsEl = document.getElementById('timerSeconds');
+        
+        if (minutesEl) minutesEl.textContent = minutes.toString().padStart(2, '0');
+        if (secondsEl) secondsEl.textContent = seconds.toString().padStart(2, '0');
+        
+        // Update timer circle color
+        const timerCircle = document.querySelector('.timer-circle');
+        if (timerCircle) {
+            const question = testData.quiz.questions[currentQuestion];
+            const totalTime = question ? question.answerTime : 30;
+            const percentageLeft = (timeRemaining / totalTime) * 100;
             
-            document.getElementById('timerMinutes').textContent = minutes.toString().padStart(2, '0');
-            document.getElementById('timerSeconds').textContent = seconds.toString().padStart(2, '0');
+            timerCircle.classList.remove('warning', 'danger');
             
-            // Update timer circle color
-            const timerCircle = document.querySelector('.timer-circle');
-            if (timerCircle) {
-                const question = testData.quiz.questions[currentQuestion];
-                const totalTime = question ? question.answerTime : 30;
-                const percentageLeft = (timeRemaining / totalTime) * 100;
-                
-                timerCircle.classList.remove('warning', 'danger');
-                
-                if (percentageLeft <= 10) {
-                    timerCircle.classList.add('danger');
-                } else if (percentageLeft <= 30) {
-                    timerCircle.classList.add('warning');
-                }
+            if (percentageLeft <= 10) {
+                timerCircle.classList.add('danger');
+            } else if (percentageLeft <= 30) {
+                timerCircle.classList.add('warning');
             }
         }
+    }
 
-        function highlightCorrectAnswer(correctAnswer) {
-            const options = document.querySelectorAll('.preview-option');
-            options.forEach(option => {
-                const letter = option.getAttribute('data-letter');
-                const statusElement = option.querySelector('.preview-option-status');
-                
-                if (letter === correctAnswer) {
-                    option.classList.add('correct');
-                    statusElement.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
-                } else if (selectedAnswer === letter) {
-                    option.classList.add('wrong');
-                    statusElement.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
-                }
-                
-                // Disable further selection
-                option.style.pointerEvents = 'none';
+    function highlightCorrectAnswer(correctAnswer) {
+        const options = document.querySelectorAll('.preview-option');
+        options.forEach(option => {
+            const letter = option.getAttribute('data-letter');
+            const statusElement = option.querySelector('.preview-option-status');
+            
+            if (letter === correctAnswer) {
+                option.classList.add('correct');
+                statusElement.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
+            } else if (selectedAnswer === letter) {
+                option.classList.add('wrong');
+                statusElement.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
+            }
+            
+            // Disable further selection
+            option.style.pointerEvents = 'none';
+            option.classList.remove('pulse-selection');
+        });
+    }
+
+    // Admin Functions
+    function startTest() {
+        if (!testData.isAdmin) return;
+        
+        socket.emit('admin:start_test', {
+            testCode: testData.testCode
+        });
+    }
+
+    function nextQuestion() {
+        if (!testData.isAdmin) return;
+        
+        const leaderboard = document.getElementById('leaderboard');
+        const previewQuestionContainer = document.getElementById('previewQuestionContainer');
+        const stats = document.getElementById('questionStats');
+
+        leaderboard.style.display = 'none';
+        stats.style.display = 'none';
+        previewQuestionContainer.style.display = 'block';
+        document.getElementById('showRankingBtn').innerText = "RANKING";
+        
+        const nextQuestionIndex = currentQuestion + 1;
+        
+        if (nextQuestionIndex < testData.quiz.questions.length) {
+            socket.emit('admin:start_question', {
+                testCode: testData.testCode,
+                questionNumber: nextQuestionIndex
             });
         }
+    }
 
-        function updateQuestionStats(stats) {
-            if (!testData.isAdmin) return;
-            
-            const statsContent = document.getElementById('statsContent');
-            let statsHTML = `
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="card bg-primary text-white">
-                            <div class="card-body text-center">
-                                <h5>${stats.totalAnswers}</h5>
-                                <small>Total Answers</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="card bg-success text-white">
-                            <div class="card-body text-center">
-                                <h5>${stats.correctAnswers}</h5>
-                                <small>Correct Answers</small>
-                            </div>
+    function startQuestion() {
+        if (!testData.isAdmin) return;
+        
+        const nextQuestionIndex = 0;
+
+        if (nextQuestionIndex < testData.quiz.questions.length) {
+            socket.emit('admin:start_question', {
+                testCode: testData.testCode,
+                questionNumber: nextQuestionIndex
+            });
+        }
+    }
+
+    function finishTest() {
+        if (!testData.isAdmin) return;
+        
+        Swal.fire({
+            title: 'Finish Test?',
+            text: 'This will end the test for all participants.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Finish Test',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                socket.emit('admin:complete_test', {
+                    testCode: testData.testCode
+                });
+            }
+        });
+    }
+
+    // Utility Functions
+    function showAnswerFeedback(isCorrect, message) {
+        const toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+
+        toast.fire({
+            icon: isCorrect ? 'success' : 'error',
+            title: message
+        });
+    }
+
+    function showNotification(message, type = 'info') {
+        const toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000
+        });
+
+        toast.fire({
+            icon: type,
+            title: message
+        });
+    }
+
+    function showConnectionError(message = 'Connection lost. Please check your internet connection.') {
+        hideConnectionError();
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'connectionError';
+        errorDiv.className = 'alert alert-danger position-fixed';
+        errorDiv.style.cssText = 'top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px; text-align: center;';
+        errorDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${message}
+        `;
+        
+        document.body.appendChild(errorDiv);
+    }
+
+    function hideConnectionError() {
+        const errorDiv = document.getElementById('connectionError');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+
+    function updateParticipantCount(count) {
+        const element = document.getElementById('participantCount');
+        if (element) {
+            element.textContent = count;
+        }
+    }
+
+    // Event Listeners
+    document.getElementById('startTestBtn')?.addEventListener('click', startTest);
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (socket) {
+            socket.disconnect();
+        }
+    });
+
+    // Additional functions for leaderboard, stats, etc. remain the same...
+    function updateQuestionStats(stats) {
+        if (!testData.isAdmin) return;
+        
+        const statsContent = document.getElementById('statsContent');
+        if (!statsContent) return;
+        
+        let statsHTML = `
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h5>${stats.totalAnswers}</h5>
+                            <small>Total Answers</small>
                         </div>
                     </div>
                 </div>
-            `;
-            
-            // Answer distribution
-            const question = testData.quiz.questions[currentQuestion];
-            if (question && question.options) {
-                question.options.forEach(option => {
-                    const count = stats.answerDistribution[option.letter] || 0;
-                    const percentage = stats.totalAnswers > 0 ? 
-                        Math.round((count / stats.totalAnswers) * 100) : 0;
-                    if (count === 0) return; 
-                    statsHTML += `
-                        <div class="stat-bar">
-                            <div class="stat-label">${option.letter}</div>
-                            <div class="stat-progress">
-                                <div class="stat-fill" style="width: ${percentage}%">
-                                    ${count} (${percentage}%)
-                                </div>
+                <div class="col-md-6">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h5>${stats.correctAnswers}</h5>
+                            <small>Correct Answers</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const question = testData.quiz.questions[currentQuestion];
+        if (question && question.options) {
+            question.options.forEach(option => {
+                const count = stats.answerDistribution[option.letter] || 0;
+                const percentage = stats.totalAnswers > 0 ? 
+                    Math.round((count / stats.totalAnswers) * 100) : 0;
+                if (count === 0) return; 
+                statsHTML += `
+                    <div class="stat-bar">
+                        <div class="stat-label">${option.letter}</div>
+                        <div class="stat-progress">
+                            <div class="stat-fill" style="width: ${percentage}%">
+                                ${count} (${percentage}%)
                             </div>
                         </div>
-                    `;
-                });
-            }
-            
-            statsContent.innerHTML = statsHTML;
-        }
-
-        function updateLeaderboard(leaderboard) {
-            const content = document.getElementById('leaderboardContent');
-            content.innerHTML = '';
-            
-            leaderboard.forEach((player, index) => {
-                const rank = index + 1;
-                const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
-                const trophy = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
-                
-                const item = document.createElement('div');
-                item.className = 'leaderboard-item';
-                item.innerHTML = `
-                    <div class="rank-badge ${rankClass}">
-                        ${trophy || rank}
                     </div>
-                    <div class="player-info">
-                        <div class="player-name">${player.name}</div>
-                        <div class="player-stats">${player.correctAnswers} correct answers</div>
-                    </div>
-                    <div class="player-score">${player.score}</div>
                 `;
-                content.appendChild(item);
             });
         }
+        
+        statsContent.innerHTML = statsHTML;
+    }
 
-        // Admin Functions
-        function startTest() {
-            if (!testData.isAdmin) return;
+    function updateLeaderboard(leaderboard) {
+        const content = document.getElementById('leaderboardContent');
+        if (!content) return;
+        
+        content.innerHTML = '';
+        
+        leaderboard.forEach((player, index) => {
+            const rank = index + 1;
+            const rankClass = rank <= 3 ? `rank-${rank}` : 'rank-other';
+            const trophy = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
             
-            socket.emit('admin:start_test', {
-                testCode: testData.testCode
-            });
-        }
+            const item = document.createElement('div');
+            item.className = 'leaderboard-item';
+            item.innerHTML = `
+                <div class="rank-badge ${rankClass}">
+                    ${trophy || rank}
+                </div>
+                <div class="player-info">
+                    <div class="player-name">${player.name}</div>
+                    <div class="player-stats">${player.correctAnswers} correct answers</div>
+                </div>
+                <div class="player-score">${player.score}</div>
+            `;
+            content.appendChild(item);
+        });
+    }
 
-        function nextQuestion() {
-            if (!testData.isAdmin) return;
-            const leaderboard = document.getElementById('leaderboard');
-            const previewQuestionContainer = document.getElementById('previewQuestionContainer');
-            const stats = document.getElementById('questionStats');
-
+    function toggleQuestionStats() {
+        if (!testData.isAdmin) return;
+        
+        const stats = document.getElementById('questionStats');
+        const leaderboard = document.getElementById('leaderboard');
+        const previewQuestionContainer = document.getElementById('previewQuestionContainer');
+        
+        if (stats.style.display === 'none') {
+            stats.style.display = 'block';
             leaderboard.style.display = 'none';
+            previewQuestionContainer.style.display = 'none';
+            
+            socket.emit('admin:get_question_stats', {
+                testCode: testData.testCode,
+                questionNumber: currentQuestion
+            });
+        } else {
             stats.style.display = 'none';
             previewQuestionContainer.style.display = 'block';
-            document.getElementById('showRankingBtn').innerText = "RANKING";
-            
-            const nextQuestionIndex = currentQuestion + 1;
-            
-            if (nextQuestionIndex < testData.quiz.questions.length) {
-                socket.emit('admin:start_question', {
-                    testCode: testData.testCode,
-                    questionNumber: nextQuestionIndex
-                });
-            }
         }
-        function startQuestion() {
-            if (!testData.isAdmin) return;
-            
-            const nextQuestionIndex = 0;
+    }
 
-            if (nextQuestionIndex < testData.quiz.questions.length) {
-                socket.emit('admin:start_question', {
-                    testCode: testData.testCode,
-                    questionNumber: nextQuestionIndex
-                });
-            }
-        }
-
-        function finishTest() {
-            if (!testData.isAdmin) return;
+    function toggleLeaderboard() {
+        const leaderboard = document.getElementById('leaderboard');
+        const previewQuestionContainer = document.getElementById('previewQuestionContainer');
+        const stats = document.getElementById('questionStats');
+        const curRankingBtn = document.getElementById('showRankingBtn').innerText;
+        
+        if (leaderboard.style.display === 'none' && curRankingBtn === 'RANKING') {
+            leaderboard.style.display = 'block';
+            previewQuestionContainer.style.display = 'none';
             
-            Swal.fire({
-                title: 'Finish Test?',
-                text: 'This will end the test for all participants.',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Finish Test',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    socket.emit('admin:complete_test', {
-                        testCode: testData.testCode
-                    });
-                }
-            });
-        }
-
-        function toggleQuestionStats() {
-            if (!testData.isAdmin) return;
+            showingLeaderboard = true;
             
-            const stats = document.getElementById('questionStats');
-            const leaderboard = document.getElementById('leaderboard');
-            const previewQuestionContainer = document.getElementById('previewQuestionContainer');
-            
-            if (stats.style.display === 'none') {
-                stats.style.display = 'block';
-                leaderboard.style.display = 'none';
-                previewQuestionContainer.style.display = 'none';
+            const rankingBtn = testData.isAdmin ? 
+                document.getElementById('showRankingBtn') : 
+                document.getElementById('playerRankingBtn');
                 
-                // Request fresh stats
-                socket.emit('admin:get_question_stats', {
-                    testCode: testData.testCode,
-                    questionNumber: currentQuestion
-                });
-            } else {
-                stats.style.display = 'none';
-                previewQuestionContainer.style.display = 'block';
-            }
-        }
-
-        function toggleLeaderboard() {
-            const leaderboard = document.getElementById('leaderboard');
-            const previewQuestionContainer = document.getElementById('previewQuestionContainer');
-            const stats = document.getElementById('questionStats');
-            const curRankingBtn = document.getElementById('showRankingBtn').innerText;
-            if (leaderboard.style.display === 'none' && curRankingBtn === 'RANKING') {
-                leaderboard.style.display = 'block';
-                previewQuestionContainer.style.display = 'none';
-                
-                showingLeaderboard = true;
-                
-                // Update button text
-                const rankingBtn = testData.isAdmin ? 
-                    document.getElementById('showRankingBtn') : 
-                    document.getElementById('playerRankingBtn');
-                    
-                if (rankingBtn) {
-                    rankingBtn.innerHTML = '<i class="fas fa-eye me-1"></i>Quiz';
-                }
-                
-                // Request fresh leaderboard
-                socket.emit(testData.isAdmin ? 'admin:get_leaderboard' : 'participant:get_leaderboard', {
-                    testCode: testData.testCode
-                });
-            } else {
-                leaderboard.style.display = 'none';
-                previewQuestionContainer.style.display = 'block';
-                
-                showingLeaderboard = false;
-                
-                // Update button text
-                const rankingBtn = testData.isAdmin ? 
-                    document.getElementById('showRankingBtn') : 
-                    document.getElementById('playerRankingBtn');
-                    
-                if (rankingBtn) {
-                    rankingBtn.innerHTML = '<i class="fas fa-trophy me-1"></i>Ranking';
-                }
-            }
-            if (stats) stats.style.display = 'none';
-        }
-
-        // Utility Functions
-        function showAnswerFeedback(isCorrect, message) {
-            const toast = Swal.mixin({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            });
-
-            toast.fire({
-                icon: isCorrect ? 'success' : 'error',
-                title: message
-            });
-        }
-
-        function showNotification(message, type = 'info') {
-            const toast = Swal.mixin({
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 2000
-            });
-
-            toast.fire({
-                icon: type,
-                title: message
-            });
-        }
-
-        function showConnectionError() {
-            Swal.fire({
-                icon: 'error',
-                title: 'Connection Lost',
-                text: 'Connection to the test server was lost. Please refresh the page.',
-                confirmButtonText: 'Refresh Page'
-            }).then(() => {
-                window.location.reload();
-            });
-        }
-
-        function updateParticipantCount(count) {
-            const element = document.getElementById('participantCount');
-            if (element) {
-                element.textContent = count;
-            }
-        }
-
-        // Event Listeners
-        document.getElementById('startTestBtn')?.addEventListener('click', startTest);
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (testData.isAdmin) {
-                if (e.key === 'ArrowRight' && !document.getElementById('nextQuestionBtn').disabled) {
-                    nextQuestion();
-                }
-                if (e.key === 's' || e.key === 'S') {
-                    toggleQuestionStats();
-                }
+            if (rankingBtn) {
+                rankingBtn.innerHTML = '<i class="fas fa-eye me-1"></i>Quiz';
             }
             
-            if (e.key === 'r' || e.key === 'R') {
-                toggleLeaderboard();
+            socket.emit(testData.isAdmin ? 'admin:get_leaderboard' : 'participant:get_leaderboard', {
+                testCode: testData.testCode
+            });
+        } else {
+            leaderboard.style.display = 'none';
+            previewQuestionContainer.style.display = 'block';
+            
+            showingLeaderboard = false;
+            
+            const rankingBtn = testData.isAdmin ? 
+                document.getElementById('showRankingBtn') : 
+                document.getElementById('playerRankingBtn');
+                
+            if (rankingBtn) {
+                rankingBtn.innerHTML = '<i class="fas fa-trophy me-1"></i>Ranking';
             }
-        });
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-            if (socket) {
-                socket.disconnect();
-            }
-        });
+        }
+        if (stats) stats.style.display = 'none';
+    }
     </script>
 </body>
 </html>

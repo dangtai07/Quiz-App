@@ -98,7 +98,7 @@ class TestService {
     }
     
     /**
-     * Join test as participant
+     * Join test as participant - FIXED with atomic operation and reconnect handling
      */
     async joinTest(testCode, participantName, socketId) {
         try {
@@ -125,16 +125,106 @@ class TestService {
                 throw new Error('Test has been cancelled');
             }
             
-            // Add participant
-            const participant = test.addParticipant(participantName, socketId);
-            await test.save();
+            // First, try to reactivate existing inactive participant with same name
+            const reactivateResult = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    status: 'waiting',
+                    'participants.name': participantName,
+                    'participants.isActive': false
+                },
+                {
+                    $set: {
+                        'participants.$.socketId': socketId,
+                        'participants.$.isActive': true,
+                        'participants.$.joinedAt': new Date()
+                    }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
+            
+            if (reactivateResult) {
+                const participant = reactivateResult.participants.find(p => p.name === participantName && p.isActive);
+                console.log(`🔄 Participant "${participantName}" rejoined test ${testCode}`);
+                
+                return {
+                    test: reactivateResult,
+                    participant,
+                    waitingRoom: this.getWaitingRoomData(reactivateResult)
+                };
+            }
+            
+            // If no inactive participant found, try to add new participant
+            const addResult = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    status: 'waiting',
+                    $expr: { 
+                        $and: [
+                            { $lt: [{ $size: { $filter: { input: '$participants', as: 'p', cond: '$$p.isActive' } } }, '$maxParticipants'] },
+                            { $not: { $in: [participantName, { $map: { input: { $filter: { input: '$participants', as: 'p', cond: '$$p.isActive' } }, as: 'ap', in: '$$ap.name' } }] } }
+                        ]
+                    }
+                },
+                {
+                    $push: {
+                        participants: {
+                            name: participantName,
+                            socketId: socketId,
+                            score: 0,
+                            answers: [],
+                            joinedAt: new Date(),
+                            isActive: true
+                        }
+                    }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
+            
+            if (!addResult) {
+                // Get current test state to provide specific error
+                const currentTest = await Test.findOne({ testCode });
+                if (!currentTest) {
+                    throw new Error('Test not found');
+                }
+                if (currentTest.status !== 'waiting') {
+                    throw new Error('Test has already started');
+                }
+                
+                const activeParticipants = currentTest.participants.filter(p => p.isActive);
+                if (activeParticipants.length >= currentTest.maxParticipants) {
+                    throw new Error('Test is full');
+                }
+                if (activeParticipants.some(p => p.name === participantName)) {
+                    throw new Error('Name already taken');
+                }
+                
+                console.error('Join test failed with conditions:', {
+                    testCode,
+                    participantName,
+                    status: currentTest.status,
+                    activeCount: activeParticipants.length,
+                    maxParticipants: currentTest.maxParticipants,
+                    nameExists: activeParticipants.some(p => p.name === participantName)
+                });
+                
+                throw new Error('Unable to join test. Please try again.');
+            }
+            
+            const participant = addResult.participants[addResult.participants.length - 1];
             
             console.log(`👤 Participant "${participantName}" joined test ${testCode}`);
             
             return {
-                test,
+                test: addResult,
                 participant,
-                waitingRoom: this.getWaitingRoomData(test)
+                waitingRoom: this.getWaitingRoomData(addResult)
             };
             
         } catch (error) {
@@ -144,22 +234,26 @@ class TestService {
     }
     
     /**
-     * Leave test
+     * Leave test - FIXED with atomic operation
      */
     async leaveTest(testCode, socketId) {
         try {
-            const test = await Test.findOne({ testCode });
-            if (!test) {
-                return false;
-            }
+            const updateResult = await Test.updateOne(
+                { 
+                    testCode: testCode,
+                    'participants.socketId': socketId 
+                },
+                { 
+                    $set: { 'participants.$.isActive': false } 
+                }
+            );
             
-            const removed = test.removeParticipant(socketId);
-            if (removed) {
-                await test.save();
+            if (updateResult.modifiedCount > 0) {
                 console.log(`👋 Participant left test ${testCode}`);
+                return true;
             }
             
-            return removed;
+            return false;
         } catch (error) {
             console.error('Leave test error:', error);
             return false;
@@ -167,10 +261,11 @@ class TestService {
     }
     
     /**
-     * Start test (admin only)
+     * Start test (admin only) - FIXED with atomic operation
      */
     async startTest(testCode, adminSocketId) {
         try {
+            // First get test to verify admin
             const test = await this.getTestByCode(testCode);
             
             // Verify admin
@@ -178,17 +273,45 @@ class TestService {
                 throw new Error('Unauthorized: Only the test creator can start the test');
             }
             
-            // Check if test can be started
-            if (test.getActiveParticipants().length === 0) {
-                throw new Error('Cannot start test with no participants');
-            }
+            // Update test status atomically
+            const updateResult = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    status: 'waiting',
+                    adminSocketId: adminSocketId,
+                    $expr: { $gt: [{ $size: { $filter: { input: '$participants', as: 'p', cond: '$$p.isActive' } } }, 0] }
+                },
+                {
+                    $set: {
+                        status: 'active',
+                        currentQuestion: 0,
+                        isQuestionActive: false
+                    }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
             
-            test.startTest();
-            await test.save();
+            if (!updateResult) {
+                // Get current state for specific error
+                const currentTest = await Test.findOne({ testCode });
+                if (!currentTest) {
+                    throw new Error('Test not found');
+                }
+                if (currentTest.status !== 'waiting') {
+                    throw new Error('Test has already started or completed');
+                }
+                if (currentTest.getActiveParticipants().length === 0) {
+                    throw new Error('Cannot start test with no participants');
+                }
+                throw new Error('Failed to start test');
+            }
             
             console.log(`🚀 Test ${testCode} started by admin`);
             
-            return test;
+            return updateResult;
         } catch (error) {
             console.error('Start test error:', error);
             throw error;
@@ -196,27 +319,36 @@ class TestService {
     }
     
     /**
-     * Start question (admin only)
+     * Start question (admin only) - FIXED with atomic operation
      */
     async startQuestion(testCode, questionNumber, adminSocketId) {
         try {
-            const test = await this.getTestByCode(testCode);
+            const updateResult = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    status: 'active',
+                    adminSocketId: adminSocketId
+                },
+                {
+                    $set: {
+                        currentQuestion: questionNumber,
+                        isQuestionActive: true,
+                        questionStartTime: new Date()
+                    }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
             
-            // Verify admin
-            if (test.adminSocketId !== adminSocketId) {
-                throw new Error('Unauthorized');
+            if (!updateResult) {
+                throw new Error('Test not found or unauthorized');
             }
-            
-            if (test.status !== 'active') {
-                throw new Error('Test is not active');
-            }
-            
-            test.startQuestion(questionNumber);
-            await test.save();
             
             console.log(`❓ Question ${questionNumber} started in test ${testCode}`);
             
-            return test;
+            return updateResult;
         } catch (error) {
             console.error('Start question error:', error);
             throw error;
@@ -224,23 +356,33 @@ class TestService {
     }
     
     /**
-     * End question (admin only)
+     * End question (admin only) - FIXED with atomic operation
      */
     async endQuestion(testCode, adminSocketId) {
         try {
-            const test = await this.getTestByCode(testCode);
+            const updateResult = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    adminSocketId: adminSocketId
+                },
+                {
+                    $set: {
+                        isQuestionActive: false
+                    }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
             
-            // Verify admin
-            if (test.adminSocketId !== adminSocketId) {
-                throw new Error('Unauthorized');
+            if (!updateResult) {
+                throw new Error('Test not found or unauthorized');
             }
-            
-            test.endQuestion();
-            await test.save();
             
             console.log(`⏹️ Question ended in test ${testCode}`);
             
-            return test;
+            return updateResult;
         } catch (error) {
             console.error('End question error:', error);
             throw error;
@@ -248,7 +390,7 @@ class TestService {
     }
     
     /**
-     * Submit answer (participant)
+     * Submit answer (participant) - COMPLETELY FIXED with proper validation
      */
     async submitAnswer(testCode, socketId, questionNumber, selectedAnswer, timeRemaining) {
         try {
@@ -263,50 +405,100 @@ class TestService {
             const question = quiz.questions[questionNumber];
             const isCorrect = question.correctAnswer === selectedAnswer;
             
-            // Override the checkAnswer method with actual quiz data
-            test.checkAnswer = function(answer, qNum) {
-                const q = quiz.questions[qNum];
-                return q && q.correctAnswer === answer;
+            // Calculate points
+            const points = this.calculatePoints(selectedAnswer, timeRemaining, questionNumber, question);
+            
+            const answer = {
+                questionNumber: questionNumber,
+                selectedAnswer: selectedAnswer,
+                isCorrect: isCorrect,
+                answerTime: (question.answerTime || 30) - timeRemaining,
+                timeRemaining: timeRemaining,
+                points: points
             };
             
-            test.getQuestionTime = function(qNum) {
-                const q = quiz.questions[qNum];
-                return q ? q.answerTime || 30 : 30;
-            };
+            // Check current state first for better error messages
+            const currentTest = await Test.findOne({ testCode }).lean();
+            const participant = currentTest.participants.find(p => p.socketId === socketId);
             
-            const result = test.submitAnswer(socketId, questionNumber, selectedAnswer, timeRemaining);
-            await Test.updateOne(
-                { _id: test._id, 'participants.socketId': socketId },
+            if (!participant) {
+                throw new Error('Participant not found');
+            }
+            
+            if (!participant.isActive) {
+                throw new Error('Participant is not active');
+            }
+            
+            if (currentTest.currentQuestion !== questionNumber) {
+                throw new Error(`Wrong question - current is ${currentTest.currentQuestion}, submitted ${questionNumber}`);
+            }
+            
+            if (!currentTest.isQuestionActive) {
+                throw new Error('Question is not active');
+            }
+            
+            // Check if already answered - FIXED to properly check nested array
+            const alreadyAnswered = participant.answers.some(a => a.questionNumber === questionNumber);
+            if (alreadyAnswered) {
+                throw new Error('Already answered this question');
+            }
+            
+            // Simple atomic update without complex conditions
+            const updateResult = await Test.findOneAndUpdate(
                 {
-                    $set: {
-                    'participants.$.answers': result.updatedAnswers,
-                    'participants.$.score': result.newScore
-                    }
-                }
+                    testCode: testCode,
+                    'participants.socketId': socketId
+                },
+                {
+                    $push: { 'participants.$.answers': answer },
+                    $inc: { 'participants.$.score': points }
+                },
+                { new: true }
             );
             
-            console.log(`📝 Answer submitted in test ${testCode}: ${selectedAnswer} (${result.isCorrect ? 'correct' : 'wrong'})`);
+            if (!updateResult) {
+                // More detailed error checking
+                const latestTest = await Test.findOne({ testCode });
+                console.error('Submit answer failed - current state:', {
+                    testCode,
+                    currentQuestion: latestTest.currentQuestion,
+                    isQuestionActive: latestTest.isQuestionActive,
+                    participantFound: !!latestTest.participants.find(p => p.socketId === socketId),
+                    questionNumber
+                });
+                throw new Error('Cannot submit answer - test state changed');
+            }
+            
+            console.log(`📝 Answer submitted in test ${testCode}: ${selectedAnswer} (${isCorrect ? 'correct' : 'wrong'}) by ${participant.name}`);
+            
+            // Find updated participant
+            const updatedParticipant = updateResult.participants.find(p => p.socketId === socketId);
             
             return {
-                ...result,
+                isCorrect,
+                points,
+                newScore: updatedParticipant.score,
+                updatedAnswers: updatedParticipant.answers,
+                socketId,
                 participant: {
-                    socketId: result.socketId,
-                    answers: result.updatedAnswers,
-                    score: result.newScore
+                    socketId: updatedParticipant.socketId,
+                    answers: updatedParticipant.answers,
+                    score: updatedParticipant.score
                 }
             };
             
         } catch (error) {
-            console.error('Submit answer error:', error);
+            console.error('Submit answer error:', error.message);
             throw error;
         }
     }
     
     /**
-     * Complete test
+     * Complete test - FIXED with atomic operation
      */
     async completeTest(testCode, adminSocketId) {
         try {
+            // First get the test data to calculate final results
             const test = await this.getTestByCode(testCode);
             
             // Verify admin
@@ -314,16 +506,80 @@ class TestService {
                 throw new Error('Unauthorized');
             }
             
-            test.completeTest();
-            await test.save();
+            // Calculate final results
+            const activeParticipants = test.getActiveParticipants();
+            const finalResults = activeParticipants
+                .sort((a, b) => b.score - a.score)
+                .map((participant, index) => ({
+                    rank: index + 1,
+                    name: participant.name,
+                    score: participant.score,
+                    correctAnswers: participant.answers.filter(a => a.isCorrect).length,
+                    totalQuestions: participant.answers.length,
+                    completionTime: Math.round((new Date() - participant.joinedAt) / 1000)
+                }));
+            
+            // Atomic update
+            const updateResult = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    adminSocketId: adminSocketId
+                },
+                {
+                    $set: {
+                        status: 'completed',
+                        isQuestionActive: false,
+                        finalResults: finalResults
+                    }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
+            
+            if (!updateResult) {
+                throw new Error('Test not found or unauthorized');
+            }
             
             console.log(`🏁 Test ${testCode} completed`);
             
-            return test;
+            return updateResult;
         } catch (error) {
             console.error('Complete test error:', error);
             throw error;
         }
+    }
+    
+    /**
+     * Set admin socket ID - NEW atomic operation
+     */
+    async setAdminSocketId(testCode, adminSocketId) {
+        try {
+            const updateResult = await Test.updateOne(
+                { testCode: testCode },
+                { $set: { adminSocketId: adminSocketId } }
+            );
+            
+            return updateResult.modifiedCount > 0;
+        } catch (error) {
+            console.error('Set admin socket ID error:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Helper method to calculate points
+     */
+    calculatePoints(selectedAnswer, timeRemaining, questionNumber, question) {
+        const isCorrect = question.correctAnswer === selectedAnswer;
+        if (!isCorrect) return 0;
+        
+        const questionTime = question.answerTime || 30;
+        const timePercentage = timeRemaining / questionTime;
+        
+        // Base points (10) + time bonus (up to 10 more)
+        return Math.round(10 + (10 * timePercentage));
     }
     
     /**
@@ -368,7 +624,9 @@ class TestService {
             maxParticipants: test.maxParticipants,
             participants: activeParticipants.slice(0, 10).map(p => ({ // First 10 only
                 name: p.name,
-                joinedAt: p.joinedAt
+                joinedAt: p.joinedAt,
+                score: p.score || 0,
+                isActive: p.isActive
             })),
             quiz: test.quizId ? {
                 title: test.quizId.title,
