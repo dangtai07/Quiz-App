@@ -492,6 +492,7 @@
     let playerScore = 0;
     let isQuestionActive = false;
     //let selectedAnswer = null;
+    let selectedTimeRemaining = 0; // Track time remaining for selected answer
     let showingLeaderboard = false;
     let reconnectAttempts = 0;
     let maxReconnectAttempts = 5;
@@ -700,6 +701,7 @@
         console.log('Question started:', data);
         isQuestionActive = true;
         selectedAnswer = null;
+        selectedTimeRemaining = 0;
         hasSubmittedAnswer = false; // Reset submission flag
         currentQuestion = data.questionNumber;
         questionStartTime = data.startTime;
@@ -889,6 +891,7 @@
         
         // Allow changing answer until time runs out
         selectedAnswer = letter;
+        selectedTimeRemaining = timeRemaining;
         
         // Visual selection - remove previous selection
         const options = document.querySelectorAll('.preview-option');
@@ -943,43 +946,16 @@
             
             // Submit answer if participant and hasn't submitted yet
             if (!testData.isAdmin && !hasSubmittedAnswer) {
-                // Show submission feedback
-                showSubmissionFeedback();
-                
                 socket.emit('participant:submit_answer', {
                     testCode: testData.testCode,
                     questionNumber: currentQuestion,
                     selectedAnswer: selectedAnswer,
-                    timeRemaining: 0 // Always 0 when timer stops
+                    timeRemaining: selectedTimeRemaining
                 });
                 
                 console.log(`Time up! Submitted answer: ${selectedAnswer || 'No answer'}`);
             }
         }
-    }
-
-    function showSubmissionFeedback() {
-        const feedback = document.createElement('div');
-        feedback.className = 'submission-feedback';
-        feedback.innerHTML = `
-            <div class="alert alert-success d-flex align-items-center justify-content-center" 
-                style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                        z-index: 1001; min-width: 300px; border-radius: 12px; 
-                        background: linear-gradient(135deg, #10b981, #059669); 
-                        color: white; border: none; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
-                        animation: fadeIn 0.5s ease;">
-                <i class="fas fa-paper-plane me-2"></i>
-                <span>Answer submitted: <strong>${selectedAnswer || 'No answer'}</strong></span>
-            </div>
-        `;
-        document.body.appendChild(feedback);
-        
-        setTimeout(() => {
-            if (feedback.parentNode) {
-                feedback.style.animation = 'fadeOut 0.3s ease';
-                setTimeout(() => feedback.remove(), 300);
-            }
-        }, 2000);
     }
 
     function updateTimerDisplay() {
