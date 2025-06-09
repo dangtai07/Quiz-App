@@ -747,13 +747,6 @@
             console.log('Answer submitted:', data);
             playerScore = data.newScore;
             document.getElementById('playerScore').textContent = playerScore;
-            
-            const isCorrect = data.isCorrect;
-            const message = isCorrect ? 
-                `Correct! +${data.points} points` : 
-                'Incorrect answer';
-                
-            showAnswerFeedback(isCorrect, message);
             hasSubmittedAnswer = true;
         }
     }
@@ -1096,22 +1089,6 @@
                     testCode: testData.testCode
                 });
             }
-        });
-    }
-
-    // Utility Functions
-    function showAnswerFeedback(isCorrect, message) {
-        const toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
-
-        toast.fire({
-            icon: isCorrect ? 'success' : 'error',
-            title: message
         });
     }
 
