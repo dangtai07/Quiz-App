@@ -456,114 +456,113 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Test Mode -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="text-primary mb-3">
-                                    <i class="fas fa-cog me-2"></i>Test Mode
-                                </h6>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" 
-                                                type="radio" 
-                                                name="mode" 
-                                                id="modeOnline" 
-                                                value="online" 
-                                                checked>
-                                            <label class="form-check-label" for="modeOnline">
-                                                <div class="d-flex align-items-center">
-                                                    <div>
-                                                        <i class="fas fa-globe text-success me-2"></i>
-                                                        <strong>Online (Real-time)</strong>
-                                                        <small class="d-block text-muted">Live test with admin control</small>
+                        <div class="card-body">
+                            <!-- Test Mode -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-cog me-2"></i>Test Mode
+                                    </h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                    type="radio" 
+                                                    name="mode" 
+                                                    id="modeOnline" 
+                                                    value="online" 
+                                                    checked>
+                                                <label class="form-check-label" for="modeOnline">
+                                                    <div class="d-flex align-items-center">
+                                                        <div>
+                                                            <i class="fas fa-globe text-success me-2"></i>
+                                                            <strong>Online (Real-time)</strong>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </label>
+                                                </label>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" 
-                                                type="radio" 
-                                                name="mode" 
-                                                id="modeOffline" 
-                                                value="offline">
-                                            <label class="form-check-label" for="modeOffline">
-                                                <div class="d-flex align-items-center">
-                                                    <div>
-                                                        <i class="fas fa-clock text-warning me-2"></i>
-                                                        <strong>Offline (Scheduled)</strong>
-                                                        <small class="d-block text-muted">Self-paced within time frame</small>
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" 
+                                                    type="radio" 
+                                                    name="mode" 
+                                                    id="modeOffline" 
+                                                    value="offline">
+                                                <label class="form-check-label" for="modeOffline">
+                                                    <div class="d-flex align-items-center">
+                                                        <div>
+                                                            <i class="fas fa-clock text-warning me-2"></i>
+                                                            <strong>Offline (Scheduled)</strong>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </label>
+                                                </label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Schedule Settings (for Offline mode) -->
-                        <div class="row mb-4" id="scheduleSettings" style="display: none;">
-                            <div class="col-12">
-                                <div class="card border-warning bg-warning bg-opacity-10">
-                                    <div class="card-body">
-                                        <h6 class="card-title text-warning mb-3">
-                                            <i class="fas fa-calendar-alt me-2"></i>Schedule Settings
-                                        </h6>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="form-floating mb-3">
-                                                    <input type="datetime-local" 
-                                                        class="form-control" 
-                                                        id="startTime" 
-                                                        name="startTime">
-                                                    <label for="startTime">Start Time</label>
+                            <!-- Schedule Settings (for Offline mode) -->
+                            <div class="row mb-4" id="scheduleSettings" style="display: none;">
+                                <div class="col-12">
+                                    <div class="card border-warning bg-warning bg-opacity-10">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-warning mb-3">
+                                                <i class="fas fa-calendar-alt me-2"></i>Schedule Settings
+                                            </h6>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="form-floating mb-3">
+                                                        <input type="datetime-local" 
+                                                            class="form-control" 
+                                                            id="startTime" 
+                                                            name="startTime">
+                                                        <label for="startTime">Start Time</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="form-floating mb-3">
+                                                        <input type="datetime-local" 
+                                                            class="form-control" 
+                                                            id="endTime" 
+                                                            name="endTime">
+                                                        <label for="endTime">End Time</label>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="col-md-6">
-                                                <div class="form-floating mb-3">
-                                                    <input type="datetime-local" 
-                                                        class="form-control" 
-                                                        id="endTime" 
-                                                        name="endTime">
-                                                    <label for="endTime">End Time</label>
-                                                </div>
-                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Participants can join and complete the test within this time frame
+                                            </small>
                                         </div>
-                                        <small class="text-muted">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            Participants can join and complete the test within this time frame
-                                        </small>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Max Participants -->
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <h6 class="text-primary mb-3">
-                                    <i class="fas fa-users me-2"></i>Participant Limit
-                                </h6>
-                                <div class="form-floating">
-                                    <input type="number" 
-                                        class="form-control" 
-                                        id="maxParticipants" 
-                                        name="maxParticipants" 
-                                        placeholder="Maximum Participants"
-                                        min="1"
-                                        max="1000"
-                                        value="50"
-                                        required>
-                                    <label for="maxParticipants">Maximum Participants</label>
+                            <!-- Max Participants -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-users me-2"></i>Participant Limit
+                                    </h6>
+                                    <div class="form-floating">
+                                        <input type="number" 
+                                            class="form-control" 
+                                            id="maxParticipants" 
+                                            name="maxParticipants" 
+                                            placeholder="Maximum Participants"
+                                            min="1"
+                                            max="1000"
+                                            value="50"
+                                            required>
+                                        <label for="maxParticipants">Maximum Participants</label>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Maximum number of participants that can join this test (1-1000)
+                                    </small>
                                 </div>
-                                <small class="text-muted mt-2 d-block">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Maximum number of participants that can join this test (1-1000)
-                                </small>
                             </div>
                         </div>
                     </form>

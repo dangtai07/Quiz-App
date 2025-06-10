@@ -165,10 +165,10 @@
             transition: var(--transition);
         }
         .preview-option.submitted {
-            border: 3px solid #10b981 !important;
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+            border: 3px solid #10b981;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
             transform: scale(1.02);
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3) !important;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
         }
         .preview-option.pulse-selection {
             animation: pulseSelection 0.6s ease-in-out;
@@ -560,42 +560,32 @@
                 <!-- Quiz Content (hidden initially) -->
                 <div id="quizContent" style="display: none;">
                     <!-- Enhanced Quiz Header -->
-                    <div class="quiz-info-header">
-                        <div class="quiz-header-layout">
-                            <!-- Title Section -->
-                            <div class="quiz-title-section">
-                                <h1 class="quiz-title" id="quizTitle"><%= quiz.title %></h1>
-                                <p class="quiz-subtitle" id="quizSubtitle">
-                                    <i class="fas fa-tasks me-1"></i>
-                                    Question <span id="currentQuestionNum">1</span> of <%= quiz.questions.length %>
-                                </p>
-                            </div>
-                            
-                            <!-- Actions Section -->
-                            <div class="quiz-actions-section">
-                                <% if (isAdmin) { %>
-                                <!-- Admin Controls -->
-                                <button class="btn btn-secondary" id="showStatsBtn" onclick="toggleQuestionStats()" style="display: none;">
-                                    <i class="fas fa-chart-bar me-1"></i>Stats
-                                </button>
-                                
-                                <button class="btn btn-secondary" id="showRankingBtn" onclick="toggleLeaderboard()">
-                                    <i class="fas fa-trophy me-1"></i>Ranking
-                                </button>
-                                
-                                <button class="btn btn-primary" id="nextQuestionBtn" onclick="nextQuestion()">
-                                    <i class="fas fa-arrow-right me-1"></i>Next
-                                </button>
-                                
-                                <button class="btn btn-success" id="finishTestBtn" onclick="finishTest()" style="display: none;">
-                                    <i class="fas fa-flag-checkered me-1"></i>Finish
-                                </button>
-                                <% } else { %>
-                                <% } %>
+                    <% if (isAdmin) { %>
+                        <div class="quiz-info-header">
+                            <div class="quiz-header-layout">
+                                <!-- Actions Section -->
+                                <div class="quiz-actions-section">
+                                    <!-- Admin Controls -->
+                                    <button class="btn btn-secondary" id="showStatsBtn" onclick="toggleQuestionStats()" style="display: none; background: linear-gradient(135deg, #9e597f, #ad3675)">
+                                        <i class="fas fa-chart-bar me-1"></i>Stats
+                                    </button>
+                                    
+                                    <button class="btn btn-secondary" id="showRankingBtn" onclick="toggleLeaderboard()" style="background: linear-gradient(to right, #f46b45, #d49741)">
+                                        <i class="fas fa-trophy me-1"></i>Ranking
+                                    </button>
+                                    
+                                    <button class="btn btn-primary" id="nextQuestionBtn" onclick="nextQuestion()">
+                                        <i class="fas fa-arrow-right me-1"></i>Next
+                                    </button>
+                                    
+                                    <button class="btn btn-success" id="finishTestBtn" onclick="finishTest()" style="display: none;">
+                                        <i class="fas fa-flag-checkered me-1"></i>Finish
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
+                    <% } else { %>
+                    <% } %>
                     <!-- Question Display Container -->
                     <div id="previewQuestionContainer">
                         <!-- Questions will be populated by JavaScript -->
@@ -882,9 +872,6 @@
         displayQuestion(data.question);
         startQuestionTimer(data.timeLimit);
         
-        // Update UI
-        document.getElementById('currentQuestionNum').textContent = data.questionNumber + 1;
-        
         if (testData.isAdmin) {
             document.getElementById('nextQuestionBtn').disabled = true;
             const statsBtn = document.getElementById('showStatsBtn');
@@ -893,7 +880,6 @@
     }
 
     function handleQuestionEnded(data) {
-        console.log('Question ended:', data);
         isQuestionActive = false;
         stopQuestionTimer();
         
@@ -924,7 +910,6 @@
 
     function handleAnswerSubmitted(data) {
         if (!testData.isAdmin) {
-            console.log('Answer confirmed:', data);
             playerScore = data.newScore;
             document.getElementById('playerScore').textContent = playerScore;
             
@@ -937,9 +922,13 @@
                 notification.className = `alert ${isCorrect ? 'alert-success' : 'alert-warning'}`;
                 notification.innerHTML = `
                     <i class="fas fa-${isCorrect ? 'check-circle' : 'times-circle'} me-2"></i>
-                    ${isCorrect ? 'Correct!' : 'Incorrect!'} +${points} points (Total: ${playerScore})
+                    ${isCorrect ? 'Correct!' : 'Incorrect!'} +${points} points
                 `;
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 3000);
             }
+            highlightCorrectAnswer(data.correctAnswer);
         }
     }
 
@@ -1097,7 +1086,6 @@
             selectedOption.classList.add('pulse-selection');
         }
         
-        // THAY ĐỔI CHÍNH: Submit answer ngay lập tức
         hasSubmittedAnswer = true;
         
         socket.emit('participant:submit_answer', {
@@ -1109,8 +1097,6 @@
         
         // Hiển thị trạng thái đã submit
         showSubmissionStatus();
-        
-        console.log(`Answer submitted immediately: ${selectedAnswer} with ${selectedTimeRemaining}s remaining`);
     }
     function showSubmittedNotification() {
         // Tạo notification element
@@ -1248,7 +1234,7 @@
             if (letter === correctAnswer) {
                 option.classList.add('correct');
                 statusElement.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
-            } else if (selectedAnswer === letter) {
+            } else if (selectedAnswer === letter && selectedAnswer !== correctAnswer) {
                 option.classList.add('wrong');
                 statusElement.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
             }

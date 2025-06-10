@@ -351,50 +351,20 @@
             </div>
             
             <div class="card-body">
-                <!-- Test Information -->
-                <div class="test-info">
-                    <div class="test-info-title">
-                        <i class="fas fa-info-circle"></i>
-                        Test Information
-                    </div>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="info-value"><%= test.quizId.title.length > 20 ? test.quizId.title.substring(0, 20) + '...' : test.quizId.title %></span>
-                            <div class="info-label">Quiz Title</div>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-value">#<%= test.quizNumber %></span>
-                            <div class="info-label">Quiz Number</div>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-value"><%= test.quizId.questions.length %></span>
-                            <div class="info-label">Questions</div>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-value status-badge status-<%= test.status %>">
-                                <%= test.status.charAt(0).toUpperCase() + test.status.slice(1) %>
-                            </span>
-                            <div class="info-label">Status</div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Instructions -->
                 <div class="alert alert-custom alert-info-custom">
                     <div class="d-flex align-items-start">
-                        <i class="fas fa-lightbulb me-3 mt-1"></i>
                         <div>
+                            <i class="fas fa-lightbulb me-3 mt-1"></i>
                             <strong>Instructions:</strong>
                             <ul class="mb-0 mt-2">
                                 <li>Enter your name to join the test</li>
                                 <% if (test.mode === 'online') { %>
                                     <li>You'll be placed in a waiting room until the test starts</li>
-                                    <li>Follow the admin's instructions during the test</li>
                                 <% } else { %>
                                     <li>You can start the test immediately after joining</li>
                                     <li>Complete the test at your own pace</li>
                                 <% } %>
-                                <li>Make sure you have a stable internet connection</li>
                             </ul>
                         </div>
                     </div>
