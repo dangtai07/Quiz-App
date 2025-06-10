@@ -394,7 +394,7 @@
 /* =================== ANSWER REVEAL STATES =================== */
 .preview-option.correct {
     border-color: #10b981 !important;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)) !important;
+    background: linear-gradient(135deg, rgb(16 185 129 / 20%), rgb(16 185 129 / 29%)) !important;
     box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25) !important;
     animation: correctReveal 0.6s ease-out;
 }

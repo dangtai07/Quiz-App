@@ -62,6 +62,16 @@
             border-radius: 50%;
             transform: translate(25%, -25%);
         }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
 
         .test-info {
             position: relative;
@@ -154,7 +164,20 @@
             box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
             transition: var(--transition);
         }
-
+        .preview-option.submitted {
+            border: 3px solid #10b981 !important;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3) !important;
+        }
+        .preview-option.pulse-selection {
+            animation: pulseSelection 0.6s ease-in-out;
+        }
+        @keyframes pulseSelection {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1.02); }
+        }
         .floating-btn:hover {
             transform: scale(1.1);
             box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5);
@@ -291,6 +314,159 @@
             .participants-list {
                 max-height: 200px;
             }
+        }@keyframes pulseSelection {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1.02); }
+        }
+
+        /* Styling cho trạng thái disabled sau khi submit */
+        .preview-option.disabled {
+            pointer-events: none;
+            opacity: 0.6;
+            filter: grayscale(0.3);
+        }
+
+        /* Override cho option đã submit để vẫn hiển thị rõ */
+        .preview-option.submitted.disabled {
+            opacity: 1 !important;
+            filter: none !important;
+        }
+
+        /* Styling cho submission notification */
+        #submissionNotification {
+            border-radius: 12px;
+            border: 2px solid #10b981;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        #submissionNotification.alert-success {
+            color: #059669;
+            border-color: #10b981;
+        }
+
+        #submissionNotification.alert-warning {
+            color: #d97706;
+            border-color: #f59e0b;
+            background: rgba(254, 252, 232, 0.95) !important;
+        }
+
+        /* Icon status trong option */
+        .preview-option-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.2rem;
+        }
+
+        /* Responsive design cho notification */
+        @media (max-width: 576px) {
+            #submissionNotification {
+                min-width: 280px;
+                left: 10px;
+                right: 10px;
+                transform: none;
+                top: 80px;
+            }
+        }
+
+        /* Loading state cho options khi đang submit */
+        .preview-option.submitting {
+            position: relative;
+            pointer-events: none;
+        }
+
+        .preview-option.submitting::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            border: 2px solid #10b981;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: translateY(-50%) rotate(0deg); }
+            100% { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        /* Success checkmark animation */
+        .preview-option-status .fa-check {
+            animation: checkmarkPop 0.5s ease-out;
+        }
+
+        @keyframes checkmarkPop {
+            0% { 
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% { 
+                transform: scale(1.2);
+                opacity: 1;
+            }
+            100% { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Timer warning states */
+        .timer-circle.submitted {
+            border-color: #10b981 !important;
+        }
+
+        .timer-circle.submitted .timer-text {
+            color: #10b981 !important;
+        }
+
+        /* Waiting state styling */
+        .waiting-for-others {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #0ea5e9;
+            color: #0369a1;
+            padding: 1rem;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+
+        .waiting-for-others .spinner-border {
+            width: 1.2rem;
+            height: 1.2rem;
+            margin-right: 0.5rem;
+        }
+
+        /* Hide question content partially after submission */
+        .question-submitted .preview-question-content {
+            opacity: 0.8;
+        }
+
+        .question-submitted .preview-options {
+            pointer-events: none;
+        }
+
+        .question-submitted .preview-options .preview-option:not(.submitted) {
+            opacity: 0.5;
+            filter: grayscale(0.5);
+        }
+
+        /* Smooth transitions */
+        .preview-option {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .preview-option:hover:not(.disabled):not(.submitted) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
         }
     </style>
 </head>
@@ -326,6 +502,16 @@
                                     </div>
                                 </div>
                                 <% } %>
+                                <!-- Timer Section -->
+                                <div class="quiz-timer-section">
+                                    <div class="quiz-timer-compact">
+                                        <div class="timer-circle" id="timerCircle">
+                                            <span class="timer-text" id="timerText">
+                                                <span id="timerMinutes">00</span>:<span id="timerSeconds">30</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -383,17 +569,6 @@
                                     <i class="fas fa-tasks me-1"></i>
                                     Question <span id="currentQuestionNum">1</span> of <%= quiz.questions.length %>
                                 </p>
-                            </div>
-                            
-                            <!-- Timer Section -->
-                            <div class="quiz-timer-section">
-                                <div class="quiz-timer-compact">
-                                    <div class="timer-circle" id="timerCircle">
-                                        <span class="timer-text" id="timerText">
-                                            <span id="timerMinutes">00</span>:<span id="timerSeconds">30</span>
-                                        </span>
-                                    </div>
-                                </div>
                             </div>
                             
                             <!-- Actions Section -->
@@ -685,15 +860,6 @@
         console.log('Test started:', data);
         document.getElementById('waitingRoom').style.display = 'none';
         document.getElementById('quizContent').style.display = 'block';
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Test Started!',
-            text: 'Get ready for the first question...',
-            timer: 2000,
-            showConfirmButton: false
-        });
-        
         startQuestion();
     }
 
@@ -707,6 +873,12 @@
         questionStartTime = data.startTime;
         timeRemaining = data.timeLimit;
         
+        // Ẩn notification của câu trước
+        const notification = document.getElementById('submissionNotification');
+        if (notification) {
+            notification.style.display = 'none';
+        }
+        
         displayQuestion(data.question);
         startQuestionTimer(data.timeLimit);
         
@@ -718,13 +890,18 @@
             const statsBtn = document.getElementById('showStatsBtn');
             if (statsBtn) statsBtn.style.display = 'none';
         }
-        
     }
 
     function handleQuestionEnded(data) {
         console.log('Question ended:', data);
         isQuestionActive = false;
         stopQuestionTimer();
+        
+        // Ẩn submission notification
+        const notification = document.getElementById('submissionNotification');
+        if (notification) {
+            notification.style.display = 'none';
+        }
         
         // Show correct answer
         highlightCorrectAnswer(data.correctAnswer);
@@ -744,12 +921,25 @@
         }
     }
 
+
     function handleAnswerSubmitted(data) {
         if (!testData.isAdmin) {
-            console.log('Answer submitted:', data);
+            console.log('Answer confirmed:', data);
             playerScore = data.newScore;
             document.getElementById('playerScore').textContent = playerScore;
-            hasSubmittedAnswer = true;
+            
+            // Cập nhật notification với điểm số
+            const notification = document.getElementById('submissionNotification');
+            if (notification && hasSubmittedAnswer) {
+                const isCorrect = data.isCorrect;
+                const points = data.points;
+                
+                notification.className = `alert ${isCorrect ? 'alert-success' : 'alert-warning'}`;
+                notification.innerHTML = `
+                    <i class="fas fa-${isCorrect ? 'check-circle' : 'times-circle'} me-2"></i>
+                    ${isCorrect ? 'Correct!' : 'Incorrect!'} +${points} points (Total: ${playerScore})
+                `;
+            }
         }
     }
 
@@ -889,7 +1079,7 @@
     function selectAnswer(letter) {
         if (!isQuestionActive || testData.isAdmin || hasSubmittedAnswer) return;
         
-        // Allow changing answer until time runs out
+        // Set selected answer
         selectedAnswer = letter;
         selectedTimeRemaining = timeRemaining;
         
@@ -905,10 +1095,73 @@
         if (selectedOption) {
             selectedOption.classList.add('selected');
             selectedOption.classList.add('pulse-selection');
-            
         }
         
-        console.log(`Selected answer: ${selectedAnswer} (can change until time runs out)`);
+        // THAY ĐỔI CHÍNH: Submit answer ngay lập tức
+        hasSubmittedAnswer = true;
+        
+        socket.emit('participant:submit_answer', {
+            testCode: testData.testCode,
+            questionNumber: currentQuestion,
+            selectedAnswer: selectedAnswer,
+            timeRemaining: selectedTimeRemaining
+        });
+        
+        // Hiển thị trạng thái đã submit
+        showSubmissionStatus();
+        
+        console.log(`Answer submitted immediately: ${selectedAnswer} with ${selectedTimeRemaining}s remaining`);
+    }
+    function showSubmittedNotification() {
+        // Tạo notification element
+        let notification = document.getElementById('submissionNotification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'submissionNotification';
+            notification.className = 'alert alert-success';
+            notification.style.cssText = `
+                position: fixed;
+                top: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 9999;
+                min-width: 300px;
+                text-align: center;
+                animation: slideDown 0.3s ease-out;
+            `;
+            document.body.appendChild(notification);
+        }
+        
+        notification.innerHTML = `
+            <i class="fas fa-check-circle me-2"></i>
+            Answer submitted! Waiting for other participants...
+        `;
+        
+        notification.style.display = 'block';
+    }
+    function showSubmissionStatus() {
+        // Disable tất cả options
+        const options = document.querySelectorAll('.preview-option');
+        options.forEach(option => {
+            option.style.pointerEvents = 'none';
+            option.style.opacity = '0.7';
+        });
+        
+        // Highlight option đã chọn
+        const selectedOption = document.querySelector(`[data-letter="${selectedAnswer}"]`);
+        if (selectedOption) {
+            selectedOption.style.opacity = '1';
+            selectedOption.classList.add('submitted');
+            
+            // Thêm icon submitted
+            const statusElement = selectedOption.querySelector('.preview-option-status');
+            if (statusElement) {
+                statusElement.innerHTML = '<i class="fas fa-check text-success"></i>';
+            }
+        }
+        
+        // Hiển thị thông báo đã submit
+        showSubmittedNotification();
     }
 
     function startQuestionTimer(seconds) {
@@ -938,22 +1191,23 @@
         }, intervalTime);
     }
 
-    // IMPROVED: Submit answer only when timer stops
     function stopQuestionTimer() {
         if (questionTimer) {
             clearInterval(questionTimer);
             questionTimer = null;
             
-            // Submit answer if participant and hasn't submitted yet
+            // Chỉ submit nếu chưa submit và không phải admin
             if (!testData.isAdmin && !hasSubmittedAnswer) {
+                // Submit với no answer nếu không chọn gì
                 socket.emit('participant:submit_answer', {
                     testCode: testData.testCode,
                     questionNumber: currentQuestion,
-                    selectedAnswer: selectedAnswer,
-                    timeRemaining: selectedTimeRemaining
+                    selectedAnswer: null, // No answer selected
+                    timeRemaining: 0
                 });
                 
-                console.log(`Time up! Submitted answer: ${selectedAnswer || 'No answer'}`);
+                hasSubmittedAnswer = true;
+                console.log('Time up! No answer submitted');
             }
         }
     }
