@@ -890,7 +890,7 @@
         }
         
         // Show correct answer
-        highlightCorrectAnswer(data.correctAnswer);
+        highlightCorrectAnswer(data);
         
         if (testData.isAdmin) {
             document.getElementById('nextQuestionBtn').disabled = false;
@@ -928,7 +928,8 @@
                     notification.style.display = 'none';
                 }, 3000);
             }
-            highlightCorrectAnswer(data.correctAnswer);
+            console.log(selectedAnswer === data.selectedAnswer ? 'Correct answer submitted' : 'Wrong answer submitted');
+            highlightCorrectAnswer(data);
         }
     }
 
@@ -1225,16 +1226,16 @@
         }
     }
 
-    function highlightCorrectAnswer(correctAnswer) {
+    function highlightCorrectAnswer(data) {
         const options = document.querySelectorAll('.preview-option');
         options.forEach(option => {
             const letter = option.getAttribute('data-letter');
             const statusElement = option.querySelector('.preview-option-status');
             
-            if (letter === correctAnswer) {
+            if (data.isCorrect && letter === data.selectedAnswer) {
                 option.classList.add('correct');
                 statusElement.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
-            } else if (selectedAnswer === letter && selectedAnswer !== correctAnswer) {
+            } else if (!data.isCorrect && letter === data.selectedAnswer) {
                 option.classList.add('wrong');
                 statusElement.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
             }
