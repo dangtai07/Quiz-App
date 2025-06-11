@@ -148,7 +148,6 @@ class TestService {
             
             if (reactivateResult) {
                 const participant = reactivateResult.participants.find(p => p.name === participantName && p.isActive);
-                console.log(`🔄 Participant "${participantName}" rejoined test ${testCode}`);
                 
                 return {
                     test: reactivateResult,
@@ -219,8 +218,6 @@ class TestService {
             
             const participant = addResult.participants[addResult.participants.length - 1];
             
-            console.log(`👤 Participant "${participantName}" joined test ${testCode}`);
-            
             return {
                 test: addResult,
                 participant,
@@ -249,7 +246,6 @@ class TestService {
             );
             
             if (updateResult.modifiedCount > 0) {
-                console.log(`👋 Participant left test ${testCode}`);
                 return true;
             }
             
@@ -309,8 +305,6 @@ class TestService {
                 throw new Error('Failed to start test');
             }
             
-            console.log(`🚀 Test ${testCode} started by admin`);
-            
             return updateResult;
         } catch (error) {
             console.error('Start test error:', error);
@@ -346,8 +340,6 @@ class TestService {
                 throw new Error('Test not found or unauthorized');
             }
             
-            console.log(`❓ Question ${questionNumber} started in test ${testCode}`);
-            
             return updateResult;
         } catch (error) {
             console.error('Start question error:', error);
@@ -379,8 +371,6 @@ class TestService {
             if (!updateResult) {
                 throw new Error('Test not found or unauthorized');
             }
-            
-            console.log(`⏹️ Question ended in test ${testCode}`);
             
             return updateResult;
         } catch (error) {
@@ -468,8 +458,6 @@ class TestService {
                 });
                 throw new Error('Cannot submit answer - test state changed');
             }
-            
-            console.log(`📝 Answer submitted in test ${testCode}: ${selectedAnswer} (${isCorrect ? 'correct' : 'wrong'}) by ${participant.name}`);
             
             // Find updated participant
             const updatedParticipant = updateResult.participants.find(p => p.socketId === socketId);
