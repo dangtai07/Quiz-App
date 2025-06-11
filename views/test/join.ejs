@@ -399,228 +399,132 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('joinTestForm');
-        const nameInput = document.getElementById('participantName');
-        const joinBtn = document.getElementById('joinTestBtn');
-        const testCode = '<%= test.testCode %>';
-        let isSubmitting = false;
+            const form = document.getElementById('joinTestForm');
+            const nameInput = document.getElementById('participantName');
+            const joinBtn = document.getElementById('joinTestBtn');
+            const testCode = '<%= test.testCode %>';
+            let isSubmitting = false;
 
-        // Form validation
-        nameInput.addEventListener('input', function() {
-            const isValid = this.value.trim().length >= 2;
-            joinBtn.disabled = !isValid || isSubmitting;
-        });
-
-        // Form submission with better error handling
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (isSubmitting) return; // Prevent double submission
-            
-            const participantName = nameInput.value.trim();
-            
-            if (participantName.length < 2) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Invalid Name',
-                    text: 'Please enter a name with at least 2 characters.',
-                    confirmButtonColor: '#667eea'
-                });
-                return;
-            }
-
-            isSubmitting = true;
-
-            // Show loading state
-            const originalContent = joinBtn.innerHTML;
-            joinBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Joining Test...';
-            joinBtn.disabled = true;
-
-            // Clear any existing session data
-            sessionStorage.removeItem('testSession');
-
-            // Connect to Socket.IO with retry logic
-            const socket = io({
-                transports: ['websocket', 'polling'],
-                timeout: 10000,
-                reconnection: false // Disable auto reconnection for join process
-            });
-            
-            let joinTimeout = setTimeout(() => {
-                socket.disconnect();
-                handleJoinError(new Error('Connection timeout'), socket, originalContent);
-            }, 15000); // 15 second timeout
-
-            socket.on('connect', () => {
-                console.log('Connected to server, attempting to join...');
-                
-                socket.emit('participant:join', {
-                    testCode: testCode,
-                    participantName: participantName
-                });
+            // Form validation
+            nameInput.addEventListener('input', function() {
+                const isValid = this.value.trim().length >= 2;
+                joinBtn.disabled = !isValid || isSubmitting;
             });
 
-            // Handle successful join
-            socket.on('participant:joined', function(data) {
-                clearTimeout(joinTimeout);
-                console.log('Successfully joined test:', data);
-                
-                // Store participant data
-                sessionStorage.setItem('testSession', JSON.stringify({
-                    testCode: testCode,
-                    participantName: participantName,
-                    participant: data.participant
-                }));
-                
-                // Show success message briefly
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Joined Successfully!',
-                    text: 'Redirecting to test room...',
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    // Redirect to test room
-                    window.location.href = `/test/room/${testCode}`;
-                });
-            });
-
-            // Handle errors with specific messages
-            socket.on('error', function(error) {
-                clearTimeout(joinTimeout);
-                console.error('Join error:', error);
-                handleJoinError(error, socket, originalContent);
-            });
-
-            // Handle connection errors
-            socket.on('connect_error', function(error) {
-                clearTimeout(joinTimeout);
-                console.error('Connection error:', error);
-                handleJoinError({
-                    message: 'Unable to connect to the test server. Please check your internet connection and try again.'
-                }, socket, originalContent);
-            });
-
-            socket.on('disconnect', function(reason) {
-                clearTimeout(joinTimeout);
-                if (reason !== 'io client disconnect') {
-                    console.error('Unexpected disconnect:', reason);
-                    handleJoinError({
-                        message: 'Connection was lost while joining. Please try again.'
-                    }, socket, originalContent);
-                }
-            });
-        });
-
-        function handleJoinError(error, socket, originalContent) {
-            if (isSubmitting) {
-                isSubmitting = false;
-                
-                // Disconnect socket
-                if (socket) {
-                    socket.disconnect();
-                }
-                
-                let errorMessage = 'Failed to join test. Please try again.';
-                let errorTitle = 'Join Failed';
-                
-                // Handle specific error messages
-                if (error.message) {
-                    if (error.message.includes('Name already taken')) {
-                        errorTitle = 'Name Unavailable';
-                        errorMessage = 'This name is already being used by another participant. Please choose a different name.';
-                        // Clear the name input
-                        nameInput.value = '';
-                        nameInput.focus();
-                    } else if (error.message.includes('Test is full')) {
-                        errorTitle = 'Test Full';
-                        errorMessage = 'This test session is full. Please try again later or contact your instructor.';
-                    } else if (error.message.includes('Test has already started')) {
-                        errorTitle = 'Test In Progress';
-                        errorMessage = 'This test has already started and is no longer accepting new participants.';
-                    } else if (error.message.includes('Test has already completed')) {
-                        errorTitle = 'Test Completed';
-                        errorMessage = 'This test has already finished.';
-                        // Redirect to results page after a delay
-                        setTimeout(() => {
-                            window.location.href = `/test/results/${testCode}`;
-                        }, 3000);
-                    } else if (error.message.includes('Connection timeout') || error.message.includes('Unable to connect')) {
-                        errorTitle = 'Connection Error';
-                        errorMessage = 'Unable to connect to the test server. Please check your internet connection and try again.';
-                    } else {
-                        errorMessage = error.message;
-                    }
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: errorTitle,
-                    text: errorMessage,
-                    confirmButtonColor: '#667eea',
-                    confirmButtonText: 'Try Again'
-                }).then(() => {
-                    // Reset button only if not redirecting
-                    if (!errorMessage.includes('finished')) {
-                        joinBtn.innerHTML = originalContent;
-                        nameInput.dispatchEvent(new Event('input')); // Revalidate
-                    }
-                });
-            }
-        }
-
-        // Initial validation
-        nameInput.dispatchEvent(new Event('input'));
-
-        // Auto-focus name input
-        nameInput.focus();
-
-        // Handle page visibility change (detect if user switches tabs)
-        document.addEventListener('visibilitychange', function() {
-            if (document.visibilityState === 'visible' && nameInput) {
-                nameInput.focus();
-            }
-        });
-
-        // Prevent form submission on Enter if invalid
-        nameInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
+            form.addEventListener('submit', function(e) {
                 e.preventDefault();
-                if (!joinBtn.disabled) {
-                    form.dispatchEvent(new Event('submit'));
-                }
-            }
-        });
-
-        // Add character counter
-        nameInput.addEventListener('input', function() {
-            const currentLength = this.value.length;
-            const maxLength = 50;
-            
-            // Remove existing counter
-            const existingCounter = document.getElementById('nameCounter');
-            if (existingCounter) {
-                existingCounter.remove();
-            }
-            
-            if (currentLength > 0) {
-                const counter = document.createElement('small');
-                counter.id = 'nameCounter';
-                counter.className = currentLength >= maxLength ? 'text-danger' : 'text-muted';
-                counter.textContent = `${currentLength}/${maxLength} characters`;
-                counter.style.cssText = 'position: absolute; bottom: -20px; right: 0; font-size: 0.75rem;';
                 
-                this.parentElement.style.position = 'relative';
-                this.parentElement.appendChild(counter);
-            }
-        });
+                if (isSubmitting) return;
+                
+                const participantName = nameInput.value.trim();
+                
+                if (participantName.length < 2) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Invalid Name',
+                        text: 'Please enter a name with at least 2 characters.',
+                        confirmButtonColor: '#667eea'
+                    });
+                    return;
+                }
 
-        // Handle browser back button
-        window.addEventListener('popstate', function(event) {
-            // Clear session data if user goes back
-            sessionStorage.removeItem('testSession');
+                isSubmitting = true;
+
+                // Show loading state
+                const originalContent = joinBtn.innerHTML;
+                joinBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing...';
+                joinBtn.disabled = true;
+
+                // First validate test availability
+                fetch('/test/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ testCode: testCode })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Store participant data for room page
+                        sessionStorage.setItem('testSession', JSON.stringify({
+                            testCode: testCode,
+                            participantName: participantName,
+                            readyToJoin: true // Flag to indicate ready to join
+                        }));
+
+                        // Show success message and redirect
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Ready to Join!',
+                            text: 'Redirecting to test room...',
+                            timer: 1000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Direct redirect without socket connection
+                            window.location.href = `/test/room/${testCode}`;
+                        });
+                    } else {
+                        throw new Error(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Validate test error:', error);
+                    
+                    isSubmitting = false;
+                    joinBtn.innerHTML = originalContent;
+                    joinBtn.disabled = false;
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Test Not Available',
+                        text: error.message || 'Please check your code and try again.',
+                        confirmButtonColor: '#667eea'
+                    });
+                });
+            });
+
+            // Initial validation
+            nameInput.dispatchEvent(new Event('input'));
+            nameInput.focus();
+
+            // Handle character counter and other existing functionality...
+            nameInput.addEventListener('input', function() {
+                const currentLength = this.value.length;
+                const maxLength = 50;
+                
+                const existingCounter = document.getElementById('nameCounter');
+                if (existingCounter) {
+                    existingCounter.remove();
+                }
+                
+                if (currentLength > 0) {
+                    const counter = document.createElement('small');
+                    counter.id = 'nameCounter';
+                    counter.className = currentLength >= maxLength ? 'text-danger' : 'text-muted';
+                    counter.textContent = `${currentLength}/${maxLength} characters`;
+                    counter.style.cssText = 'position: absolute; bottom: -20px; right: 0; font-size: 0.75rem;';
+                    
+                    this.parentElement.style.position = 'relative';
+                    this.parentElement.appendChild(counter);
+                }
+            });
+
+            // Prevent form submission on Enter if invalid
+            nameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (!joinBtn.disabled) {
+                        form.dispatchEvent(new Event('submit'));
+                    }
+                }
+            });
+
+            // Handle browser back button
+            window.addEventListener('popstate', function(event) {
+                sessionStorage.removeItem('testSession');
+            });
         });
-    });
     </script>
 </body>
 </html>

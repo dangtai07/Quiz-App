@@ -646,22 +646,24 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/quiz_preview.js"></script>
     
-    <script>
-    // Real-time test functionality - FIXED with reconnection handling
+<script>
+    // Real-time test functionality - FIXED with single join logic
     let socket;
     let testData;
     let currentQuestion = 0;
     let questionStartTime = 0;
     let questionTimer = null;
-    //let timeRemaining = 0;
     let playerScore = 0;
     let isQuestionActive = false;
-    //let selectedAnswer = null;
-    let selectedTimeRemaining = 0; // Track time remaining for selected answer
+    let selectedTimeRemaining = 0;
     let showingLeaderboard = false;
     let reconnectAttempts = 0;
     let maxReconnectAttempts = 5;
-    let hasSubmittedAnswer = false; // Track if answer was submitted
+    let hasSubmittedAnswer = false;
+    
+    // ADDED: Track join status
+    let hasJoinedTest = false;
+    let participantData = null;
 
     document.addEventListener('DOMContentLoaded', function() {
         testData = JSON.parse(document.getElementById('quiz-data').textContent);
@@ -681,9 +683,10 @@
         
         setupSocketEvents();
         
+        // MODIFIED: Only join on first load
         if (testData.isAdmin) {
             joinAsAdmin();
-        } else {
+        } else if (!hasJoinedTest) {
             joinAsParticipant();
         }
     }
@@ -691,19 +694,22 @@
     function setupSocketEvents() {
         // Connection events
         socket.on('connect', () => {
-            console.log('Connected to server');
             reconnectAttempts = 0;
             hideConnectionError();
             
-            if (testData.isAdmin) {
+            // MODIFIED: Handle reconnection properly
+            if (testData.isAdmin && !hasJoinedTest) {
                 joinAsAdmin();
-            } else if (socket.rejoining) {
+            } else if (!testData.isAdmin && hasJoinedTest && participantData) {
+                // If already joined, just rejoin with existing data
+                rejoinAsParticipant();
+            } else if (!testData.isAdmin && !hasJoinedTest) {
+                // First time join
                 joinAsParticipant();
             }
         });
 
         socket.on('disconnect', (reason) => {
-            console.log('Disconnected from server:', reason);
             if (reason === 'io server disconnect') {
                 socket.connect();
             }
@@ -721,11 +727,7 @@
             }
         });
 
-        socket.on('reconnect', (attemptNumber) => {
-            console.log(`Reconnected after ${attemptNumber} attempts`);
-            hideConnectionError();
-            socket.rejoining = true;
-        });
+        // REMOVED the reconnect event handler that was causing duplicate joins
 
         socket.on('error', (error) => {
             console.error('Socket error:', error);
@@ -780,6 +782,86 @@
         socket.on('admin:disconnected', handleAdminDisconnected);
     }
 
+    function joinAsAdmin() {
+        if (!socket || !socket.connected) {
+            setTimeout(() => joinAsAdmin(), 1000);
+            return;
+        }
+        
+        if (hasJoinedTest) return; // Prevent duplicate joins
+        
+        socket.emit('admin:join', {
+            testCode: testData.testCode,
+            adminId: testData.user.id
+        });
+        
+        hasJoinedTest = true;
+    }
+
+    function joinAsParticipant() {
+        if (!socket || !socket.connected) {
+            setTimeout(() => joinAsParticipant(), 1000);
+            return;
+        }
+        
+        if (hasJoinedTest) return; // Prevent duplicate joins
+        
+        const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
+        
+        // MODIFIED: Check for readyToJoin flag
+        if (!testSession.participantName || !testSession.readyToJoin) {
+            window.location.href = `/test/join/${testData.testCode}`;
+            return;
+        }
+        
+        socket.emit('participant:join', {
+            testCode: testData.testCode,
+            participantName: testSession.participantName
+        });
+        
+        // Mark as attempting to join
+        hasJoinedTest = true;
+    }
+
+    // NEW: Handle rejoin for existing participants
+    function rejoinAsParticipant() {
+        if (!socket || !socket.connected || !participantData) {
+            return;
+        }
+        
+        socket.emit('participant:join', {
+            testCode: testData.testCode,
+            participantName: participantData.name
+        });
+    }
+
+    // Event Handlers
+    function handleAdminJoined(data) {
+        updateWaitingRoom(data.waitingRoom);
+    }
+
+    function handleParticipantJoined(data) {
+        
+        if (!testData.isAdmin) {
+            // Store participant data for reconnection
+            participantData = data.participant;
+            
+            // Clear the readyToJoin flag
+            const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
+            delete testSession.readyToJoin;
+            sessionStorage.setItem('testSession', JSON.stringify(testSession));
+        }
+        updateWaitingRoom(data.waitingRoom);
+    }
+
+    function handleParticipantLeft(data) {
+        if (data.waitingRoom) {
+            updateWaitingRoom(data.waitingRoom);
+        }
+    }
+
+    // ... rest of the event handlers remain the same ...
+    
     function setupConnectionHealthCheck() {
         setInterval(() => {
             if (socket && socket.connected) {
@@ -792,69 +874,13 @@
         });
     }
 
-    function joinAsAdmin() {
-        if (!socket || !socket.connected) {
-            setTimeout(() => joinAsAdmin(), 1000);
-            return;
-        }
-        
-        socket.emit('admin:join', {
-            testCode: testData.testCode,
-            adminId: testData.user.id
-        });
-    }
-
-    function joinAsParticipant() {
-        if (!socket || !socket.connected) {
-            setTimeout(() => joinAsParticipant(), 1000);
-            return;
-        }
-        
-        const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
-        
-        if (!testSession.participantName) {
-            window.location.href = `/test/join/${testData.testCode}`;
-            return;
-        }
-
-        socket.emit('participant:join', {
-            testCode: testData.testCode,
-            participantName: testSession.participantName
-        });
-    }
-
-    // Event Handlers
-    function handleAdminJoined(data) {
-        console.log('Admin joined:', data);
-        updateWaitingRoom(data.waitingRoom);
-    }
-
-    function handleParticipantJoined(data) {
-        console.log('Participant joined:', data);
-        if (testData.isAdmin) {
-            updateWaitingRoom(data.waitingRoom);
-        } else {
-            updateWaitingRoom(data.waitingRoom);
-            socket.rejoining = false;
-        }
-    }
-
-    function handleParticipantLeft(data) {
-        console.log('Participant left:', data);
-        if (testData.isAdmin && data.waitingRoom) {
-            updateWaitingRoom(data.waitingRoom);
-        }
-    }
-
     function handleTestStarted(data) {
-        console.log('Test started:', data);
         document.getElementById('waitingRoom').style.display = 'none';
         document.getElementById('quizContent').style.display = 'block';
         startQuestion();
     }
 
     function handleQuestionStarted(data) {
-        console.log('Question started:', data);
         isQuestionActive = true;
         selectedAnswer = null;
         selectedTimeRemaining = 0;
@@ -928,13 +954,11 @@
                     notification.style.display = 'none';
                 }, 3000);
             }
-            console.log(selectedAnswer === data.selectedAnswer ? 'Correct answer submitted' : 'Wrong answer submitted');
             highlightCorrectAnswer(data);
         }
     }
 
     function handleTestCompleted(data) {
-        console.log('Test completed:', data);
         
         Swal.fire({
             icon: 'success',
@@ -972,12 +996,10 @@
     }
 
     function handleQuestionStats(data) {
-        console.log('Question stats updated:', data);
         updateQuestionStats(data.stats);
     }
 
     function handleLeaderboard(data) {
-        console.log('Leaderboard updated:', data);
         updateLeaderboard(data.leaderboard);
     }
 
@@ -1194,7 +1216,6 @@
                 });
                 
                 hasSubmittedAnswer = true;
-                console.log('Time up! No answer submitted');
             }
         }
     }

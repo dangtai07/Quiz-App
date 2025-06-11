@@ -312,6 +312,77 @@ class TestController {
             });
         }
     }
+    async validateTestAvailability(req, res) {
+        try {
+            const { testCode } = req.body;
+            
+            if (!testCode || testCode.length !== 6) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Please enter a valid 6-digit test code'
+                });
+            }
+            
+            // Check if test exists and is available
+            const test = await TestService.getTestByCode(testCode);
+            
+            // Check test availability
+            const availability = test.isAvailable();
+            if (!availability.available) {
+                return res.status(400).json({
+                    success: false,
+                    message: availability.reason
+                });
+            }
+            
+            // Check if test is accessible
+            if (test.mode === 'offline') {
+                const now = new Date();
+                if (test.scheduleSettings) {
+                    if (now < new Date(test.scheduleSettings.startTime)) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Test has not started yet',
+                            startTime: test.scheduleSettings.startTime
+                        });
+                    }
+                    if (now > new Date(test.scheduleSettings.endTime)) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'Test has expired'
+                        });
+                    }
+                }
+            }
+            
+            if (test.status === 'completed') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Test has already completed'
+                });
+            }
+            
+            res.json({
+                success: true,
+                message: 'Test is available',
+                test: {
+                    testCode: test.testCode,
+                    title: test.quizId.title,
+                    mode: test.mode,
+                    status: test.status,
+                    participantCount: test.getActiveParticipants().length,
+                    maxParticipants: test.maxParticipants
+                }
+            });
+            
+        } catch (error) {
+            console.error('Validate test error:', error);
+            res.status(404).json({
+                success: false,
+                message: 'Test not found. Please check your code and try again.'
+            });
+        }
+    }
 }
 
 module.exports = new TestController();

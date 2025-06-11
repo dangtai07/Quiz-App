@@ -29,7 +29,10 @@ router.get('/api/data/:testCode', TestController.getTestData);
 // Join test by code page (for authenticated users)
 router.get('/join', requireAuth, TestController.renderJoinByCode);
 
-// Validate and join test
+// MODIFIED: Validate
+router.post('/validate', TestController.validateTestAvailability);
+
+// Validate and join test (legacy support)
 router.post('/join', TestController.validateAndJoinTest);
 
 // ========================================
