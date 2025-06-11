@@ -708,6 +708,150 @@ class TestService {
             throw error;
         }
     }
+    async checkParticipantNameUniqueness(testCode, participantName) {
+        try {
+            const test = await this.getTestByCode(testCode);
+            const trimmedName = participantName.trim();
+            
+            // Get active participants
+            const activeParticipants = test.getActiveParticipants();
+            
+            // Check if name already exists (case insensitive)
+            const nameExists = activeParticipants.some(p => 
+                p.name.toLowerCase().trim() === trimmedName.toLowerCase()
+            );
+            
+            return {
+                isUnique: !nameExists,
+                conflictingParticipant: nameExists ? 
+                    activeParticipants.find(p => p.name.toLowerCase().trim() === trimmedName.toLowerCase()) : 
+                    null,
+                activeParticipantCount: activeParticipants.length,
+                availableSlots: test.maxParticipants - activeParticipants.length
+            };
+            
+        } catch (error) {
+            console.error('Check name uniqueness error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Validate participant can join test
+     */
+    async validateParticipantCanJoin(testCode, participantName) {
+        try {
+            const test = await this.getTestByCode(testCode);
+            const trimmedName = participantName.trim();
+            
+            // Basic validations
+            if (!trimmedName || trimmedName.length < 2) {
+                return {
+                    canJoin: false,
+                    reason: 'Name must be at least 2 characters long'
+                };
+            }
+            
+            if (trimmedName.length > 50) {
+                return {
+                    canJoin: false,
+                    reason: 'Name is too long (maximum 50 characters)'
+                };
+            }
+            
+            // Test availability check
+            const availability = test.isAvailable();
+            if (!availability.available) {
+                return {
+                    canJoin: false,
+                    reason: availability.reason
+                };
+            }
+            
+            // Status checks
+            if (test.status === 'completed') {
+                return {
+                    canJoin: false,
+                    reason: 'Test has already completed'
+                };
+            }
+            
+            if (test.status === 'cancelled') {
+                return {
+                    canJoin: false,
+                    reason: 'Test has been cancelled'
+                };
+            }
+            
+            if (test.status === 'active') {
+                return {
+                    canJoin: false,
+                    reason: 'Test has already started and is no longer accepting new participants'
+                };
+            }
+            
+            // Capacity check
+            const activeParticipants = test.getActiveParticipants();
+            if (activeParticipants.length >= test.maxParticipants) {
+                return {
+                    canJoin: false,
+                    reason: 'Test is full. No more participants can join.'
+                };
+            }
+            
+            // Name uniqueness check
+            const nameCheck = await this.checkParticipantNameUniqueness(testCode, participantName);
+            if (!nameCheck.isUnique) {
+                return {
+                    canJoin: false,
+                    reason: 'This name is already taken by another participant. Please choose a different name.',
+                    errorType: 'NAME_TAKEN'
+                };
+            }
+            
+            // Schedule check for offline mode
+            if (test.mode === 'offline' && test.scheduleSettings) {
+                const now = new Date();
+                if (now < new Date(test.scheduleSettings.startTime)) {
+                    return {
+                        canJoin: false,
+                        reason: 'Test has not started yet',
+                        startTime: test.scheduleSettings.startTime
+                    };
+                }
+                if (now > new Date(test.scheduleSettings.endTime)) {
+                    return {
+                        canJoin: false,
+                        reason: 'Test has expired'
+                    };
+                }
+            }
+            
+            return {
+                canJoin: true,
+                test: {
+                    testCode: test.testCode,
+                    title: test.quizId.title,
+                    mode: test.mode,
+                    status: test.status,
+                    participantCount: activeParticipants.length,
+                    maxParticipants: test.maxParticipants,
+                    availableSlots: test.maxParticipants - activeParticipants.length
+                },
+                participant: {
+                    name: trimmedName,
+                    canJoin: true
+                }
+            };
+            
+        } catch (error) {
+            console.error('Validate participant can join error:', error);
+            return {
+                canJoin: false,
+                reason: 'Test not found or validation failed'
+            };
+        }
+    }
 }
 
 module.exports = new TestService();

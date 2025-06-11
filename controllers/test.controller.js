@@ -314,8 +314,9 @@ class TestController {
     }
     async validateTestAvailability(req, res) {
         try {
-            const { testCode } = req.body;
+            const { testCode, participantName } = req.body;
             
+            // Basic input validation
             if (!testCode || testCode.length !== 6) {
                 return res.status(400).json({
                     success: false,
@@ -323,63 +324,39 @@ class TestController {
                 });
             }
             
-            // Check if test exists and is available
-            const test = await TestService.getTestByCode(testCode);
-            
-            // Check test availability
-            const availability = test.isAvailable();
-            if (!availability.available) {
+            if (!participantName) {
                 return res.status(400).json({
                     success: false,
-                    message: availability.reason
+                    message: 'Please enter your name'
                 });
             }
             
-            // Check if test is accessible
-            if (test.mode === 'offline') {
-                const now = new Date();
-                if (test.scheduleSettings) {
-                    if (now < new Date(test.scheduleSettings.startTime)) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'Test has not started yet',
-                            startTime: test.scheduleSettings.startTime
-                        });
-                    }
-                    if (now > new Date(test.scheduleSettings.endTime)) {
-                        return res.status(400).json({
-                            success: false,
-                            message: 'Test has expired'
-                        });
-                    }
-                }
-            }
+            // Use TestService helper for comprehensive validation
+            const validation = await TestService.validateParticipantCanJoin(testCode, participantName);
             
-            if (test.status === 'completed') {
+            if (!validation.canJoin) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Test has already completed'
+                    message: validation.reason,
+                    errorType: validation.errorType || 'VALIDATION_ERROR',
+                    startTime: validation.startTime // For scheduled tests
                 });
             }
             
+            // All validations passed
             res.json({
                 success: true,
-                message: 'Test is available',
-                test: {
-                    testCode: test.testCode,
-                    title: test.quizId.title,
-                    mode: test.mode,
-                    status: test.status,
-                    participantCount: test.getActiveParticipants().length,
-                    maxParticipants: test.maxParticipants
-                }
+                message: 'Validation successful - ready to join test',
+                test: validation.test,
+                participant: validation.participant
             });
             
         } catch (error) {
-            console.error('Validate test error:', error);
+            console.error('Validate test availability error:', error);
             res.status(404).json({
                 success: false,
-                message: 'Test not found. Please check your code and try again.'
+                message: 'Test not found. Please check your code and try again.',
+                errorType: 'TEST_NOT_FOUND'
             });
         }
     }

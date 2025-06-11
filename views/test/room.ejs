@@ -646,219 +646,255 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/quiz_preview.js"></script>
     
-<script>
-    // Real-time test functionality - FIXED with single join logic
-    let socket;
-    let testData;
-    let currentQuestion = 0;
-    let questionStartTime = 0;
-    let questionTimer = null;
-    let playerScore = 0;
-    let isQuestionActive = false;
-    let selectedTimeRemaining = 0;
-    let showingLeaderboard = false;
-    let reconnectAttempts = 0;
-    let maxReconnectAttempts = 5;
-    let hasSubmittedAnswer = false;
-    
-    // ADDED: Track join status
-    let hasJoinedTest = false;
-    let participantData = null;
+    <script>
+        // Real-time test functionality - FIXED with single join logic
+        let socket;
+        let testData;
+        let currentQuestion = 0;
+        let questionStartTime = 0;
+        let questionTimer = null;
+        let playerScore = 0;
+        let isQuestionActive = false;
+        let selectedTimeRemaining = 0;
+        let showingLeaderboard = false;
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 5;
+        let hasSubmittedAnswer = false;
+        
+        // ADDED: Track join status
+        let hasJoinedTest = false;
+        let participantData = null;
 
-    document.addEventListener('DOMContentLoaded', function() {
-        testData = JSON.parse(document.getElementById('quiz-data').textContent);
-        initializeSocket();
-        setupConnectionHealthCheck();
-    });
-
-    function initializeSocket() {
-        socket = io({
-            transports: ['websocket', 'polling'],
-            timeout: 20000,
-            reconnection: true,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            maxReconnectionAttempts: 5
+        document.addEventListener('DOMContentLoaded', function() {
+            testData = JSON.parse(document.getElementById('quiz-data').textContent);
+            initializeSocket();
+            setupConnectionHealthCheck();
         });
-        
-        setupSocketEvents();
-        
-        // MODIFIED: Only join on first load
-        if (testData.isAdmin) {
-            joinAsAdmin();
-        } else if (!hasJoinedTest) {
-            joinAsParticipant();
-        }
-    }
 
-    function setupSocketEvents() {
-        // Connection events
-        socket.on('connect', () => {
-            reconnectAttempts = 0;
-            hideConnectionError();
+        function initializeSocket() {
+            socket = io({
+                transports: ['websocket', 'polling'],
+                timeout: 20000,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000,
+                maxReconnectionAttempts: 5
+            });
             
-            // MODIFIED: Handle reconnection properly
-            if (testData.isAdmin && !hasJoinedTest) {
+            setupSocketEvents();
+            
+            // MODIFIED: Only join on first load
+            if (testData.isAdmin) {
                 joinAsAdmin();
-            } else if (!testData.isAdmin && hasJoinedTest && participantData) {
-                // If already joined, just rejoin with existing data
-                rejoinAsParticipant();
-            } else if (!testData.isAdmin && !hasJoinedTest) {
-                // First time join
+            } else if (!hasJoinedTest) {
                 joinAsParticipant();
             }
-        });
+        }
 
-        socket.on('disconnect', (reason) => {
-            if (reason === 'io server disconnect') {
-                socket.connect();
-            }
-            showConnectionError('Connection lost. Attempting to reconnect...');
-        });
+        function setupSocketEvents() {
+            // Connection events
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                reconnectAttempts = 0;
+                hideConnectionError();
+                
+                // MODIFIED: Handle reconnection properly
+                if (testData.isAdmin && !hasJoinedTest) {
+                    joinAsAdmin();
+                } else if (!testData.isAdmin && hasJoinedTest && participantData) {
+                    // If already joined, just rejoin with existing data
+                    console.log('Reconnecting existing participant...');
+                    rejoinAsParticipant();
+                } else if (!testData.isAdmin && !hasJoinedTest) {
+                    // First time join
+                    joinAsParticipant();
+                }
+            });
 
-        socket.on('connect_error', (error) => {
-            console.error('Connection error:', error);
-            reconnectAttempts++;
-            
-            if (reconnectAttempts >= maxReconnectAttempts) {
-                showConnectionError('Unable to connect to server. Please refresh the page.');
+            socket.on('disconnect', (reason) => {
+                console.log('Disconnected from server:', reason);
+                if (reason === 'io server disconnect') {
+                    socket.connect();
+                }
+                showConnectionError('Connection lost. Attempting to reconnect...');
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Connection error:', error);
+                reconnectAttempts++;
+                
+                if (reconnectAttempts >= maxReconnectAttempts) {
+                    showConnectionError('Unable to connect to server. Please refresh the page.');
+                } else {
+                    showConnectionError(`Connection failed. Retrying... (${reconnectAttempts}/${maxReconnectAttempts})`);
+                }
+            });
+
+            // REMOVED the reconnect event handler that was causing duplicate joins
+
+            socket.on('error', (error) => {
+                console.error('Socket error:', error);
+                
+                if (error.message && error.message.includes('Name already taken')) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Name Conflict',
+                        text: 'Someone else is using this name. Please choose a different name.',
+                        confirmButtonColor: '#667eea'
+                    }).then(() => {
+                        window.location.href = `/test/join/${testData.testCode}`;
+                    });
+                } else if (error.message && error.message.includes('Test is full')) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Test Full',
+                        text: 'This test session is full. Please try again later.',
+                        confirmButtonColor: '#667eea'
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.message || 'An unexpected error occurred.',
+                        confirmButtonColor: '#667eea'
+                    });
+                }
+            });
+
+            // Admin events
+            if (testData.isAdmin) {
+                socket.on('admin:joined', handleAdminJoined);
+                socket.on('admin:participant_joined', handleParticipantJoined);
+                socket.on('admin:participant_left', handleParticipantLeft);
+                socket.on('admin:answer_submitted', handleAnswerSubmitted);
+                socket.on('admin:question_stats', handleQuestionStats);
+                socket.on('admin:leaderboard', handleLeaderboard);
             } else {
-                showConnectionError(`Connection failed. Retrying... (${reconnectAttempts}/${maxReconnectAttempts})`);
+                socket.on('participant:joined', handleParticipantJoined);
+                socket.on('participant:answer_submitted', handleAnswerSubmitted);
+                socket.on('participant:leaderboard', handleLeaderboard);
             }
-        });
 
-        // REMOVED the reconnect event handler that was causing duplicate joins
+            // Common events
+            socket.on('test:started', handleTestStarted);
+            socket.on('question:started', handleQuestionStarted);
+            socket.on('question:ended', handleQuestionEnded);
+            socket.on('test:completed', handleTestCompleted);
+            socket.on('participant:user_joined', handleUserJoined);
+            socket.on('participant:user_left', handleUserLeft);
+            socket.on('admin:disconnected', handleAdminDisconnected);
+        }
 
-        socket.on('error', (error) => {
-            console.error('Socket error:', error);
-            
-            if (error.message && error.message.includes('Name already taken')) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Name Conflict',
-                    text: 'Someone else is using this name. Please choose a different name.',
-                    confirmButtonColor: '#667eea'
-                }).then(() => {
-                    window.location.href = `/test/join/${testData.testCode}`;
-                });
-            } else if (error.message && error.message.includes('Test is full')) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Test Full',
-                    text: 'This test session is full. Please try again later.',
-                    confirmButtonColor: '#667eea'
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: error.message || 'An unexpected error occurred.',
-                    confirmButtonColor: '#667eea'
-                });
+        function joinAsAdmin() {
+            if (!socket || !socket.connected) {
+                setTimeout(() => joinAsAdmin(), 1000);
+                return;
             }
-        });
-
-        // Admin events
-        if (testData.isAdmin) {
-            socket.on('admin:joined', handleAdminJoined);
-            socket.on('admin:participant_joined', handleParticipantJoined);
-            socket.on('admin:participant_left', handleParticipantLeft);
-            socket.on('admin:answer_submitted', handleAnswerSubmitted);
-            socket.on('admin:question_stats', handleQuestionStats);
-            socket.on('admin:leaderboard', handleLeaderboard);
-        } else {
-            socket.on('participant:joined', handleParticipantJoined);
-            socket.on('participant:answer_submitted', handleAnswerSubmitted);
-            socket.on('participant:leaderboard', handleLeaderboard);
-        }
-
-        // Common events
-        socket.on('test:started', handleTestStarted);
-        socket.on('question:started', handleQuestionStarted);
-        socket.on('question:ended', handleQuestionEnded);
-        socket.on('test:completed', handleTestCompleted);
-        socket.on('participant:user_joined', handleUserJoined);
-        socket.on('participant:user_left', handleUserLeft);
-        socket.on('admin:disconnected', handleAdminDisconnected);
-    }
-
-    function joinAsAdmin() {
-        if (!socket || !socket.connected) {
-            setTimeout(() => joinAsAdmin(), 1000);
-            return;
-        }
-        
-        if (hasJoinedTest) return; // Prevent duplicate joins
-        
-        socket.emit('admin:join', {
-            testCode: testData.testCode,
-            adminId: testData.user.id
-        });
-        
-        hasJoinedTest = true;
-    }
-
-    function joinAsParticipant() {
-        if (!socket || !socket.connected) {
-            setTimeout(() => joinAsParticipant(), 1000);
-            return;
-        }
-        
-        if (hasJoinedTest) return; // Prevent duplicate joins
-        
-        const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
-        
-        // MODIFIED: Check for readyToJoin flag
-        if (!testSession.participantName || !testSession.readyToJoin) {
-            window.location.href = `/test/join/${testData.testCode}`;
-            return;
-        }
-        
-        socket.emit('participant:join', {
-            testCode: testData.testCode,
-            participantName: testSession.participantName
-        });
-        
-        // Mark as attempting to join
-        hasJoinedTest = true;
-    }
-
-    // NEW: Handle rejoin for existing participants
-    function rejoinAsParticipant() {
-        if (!socket || !socket.connected || !participantData) {
-            return;
-        }
-        
-        socket.emit('participant:join', {
-            testCode: testData.testCode,
-            participantName: participantData.name
-        });
-    }
-
-    // Event Handlers
-    function handleAdminJoined(data) {
-        updateWaitingRoom(data.waitingRoom);
-    }
-
-    function handleParticipantJoined(data) {
-        
-        if (!testData.isAdmin) {
-            // Store participant data for reconnection
-            participantData = data.participant;
             
-            // Clear the readyToJoin flag
+            if (hasJoinedTest) return; // Prevent duplicate joins
+            
+            socket.emit('admin:join', {
+                testCode: testData.testCode,
+                adminId: testData.user.id
+            });
+            
+            hasJoinedTest = true;
+        }
+
+        function joinAsParticipant() {
+            if (!socket || !socket.connected) {
+                setTimeout(() => joinAsParticipant(), 1000);
+                return;
+            }
+            
+            if (hasJoinedTest) return; // Prevent duplicate joins
+            
             const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
-            delete testSession.readyToJoin;
-            sessionStorage.setItem('testSession', JSON.stringify(testSession));
-        }
-        updateWaitingRoom(data.waitingRoom);
-    }
+            
+            // ENHANCED: Check for proper validation
+            if (!testSession.participantName || !testSession.readyToJoin || !testSession.validated) {
+                console.log('Invalid session data, redirecting to join page');
+                window.location.href = `/test/join/${testData.testCode}`;
+                return;
+            }
+            
+            // Check session timeout (5 minutes)
+            const sessionAge = Date.now() - (testSession.timestamp || 0);
+            if (sessionAge > 5 * 60 * 1000) {
+                console.log('Session expired, redirecting to join page');
+                sessionStorage.removeItem('testSession');
+                window.location.href = `/test/join/${testData.testCode}`;
+                return;
+            }
 
-    function handleParticipantLeft(data) {
-        if (data.waitingRoom) {
+            console.log('Joining as participant:', testSession.participantName);
+            
+            socket.emit('participant:join', {
+                testCode: testData.testCode,
+                participantName: testSession.participantName
+            });
+            
+            // Mark as attempting to join
+            hasJoinedTest = true;
+        }
+
+        // NEW: Handle rejoin for existing participants
+        function rejoinAsParticipant() {
+            if (!socket || !socket.connected || !participantData) {
+                return;
+            }
+            
+            console.log('Rejoining as existing participant:', participantData.name);
+            
+            // Don't rejoin if already joined successfully
+            if (hasJoinedTest) {
+                console.log('Already joined, skipping rejoin');
+                return;
+            }
+            
+            socket.emit('participant:join', {
+                testCode: testData.testCode,
+                participantName: participantData.name
+            });
+            
+            hasJoinedTest = true;
+        }
+
+        // Event Handlers
+        function handleAdminJoined(data) {
+            console.log('Admin joined:', data);
             updateWaitingRoom(data.waitingRoom);
         }
-    }
+
+        function handleParticipantJoined(data) {
+            console.log('Participant joined:', data);
+            
+            if (!testData.isAdmin) {
+                // Store participant data for reconnection
+                participantData = data.participant;
+                updateWaitingRoom(data.waitingRoom);
+                
+                // Clear the session flags but keep participant name for reconnection
+                const testSession = JSON.parse(sessionStorage.getItem('testSession') || '{}');
+                const cleanSession = {
+                    testCode: testSession.testCode,
+                    participantName: testSession.participantName
+                    // Remove readyToJoin, validated, timestamp flags
+                };
+                sessionStorage.setItem('testSession', JSON.stringify(cleanSession));
+                
+                console.log('✅ Successfully joined test as participant');
+            } else {
+                updateWaitingRoom(data.waitingRoom);
+            }
+        }
+
+        function handleParticipantLeft(data) {
+            console.log('Participant left:', data);
+            if (testData.isAdmin && data.waitingRoom) {
+                updateWaitingRoom(data.waitingRoom);
+            }
+        }
 
     // ... rest of the event handlers remain the same ...
     

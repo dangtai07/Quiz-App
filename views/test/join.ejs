@@ -405,10 +405,36 @@
             const testCode = '<%= test.testCode %>';
             let isSubmitting = false;
 
-            // Form validation
+            // ENHANCED: Form validation with real-time feedback
             nameInput.addEventListener('input', function() {
-                const isValid = this.value.trim().length >= 2;
+                const name = this.value.trim();
+                const isValid = name.length >= 2 && name.length <= 50;
                 joinBtn.disabled = !isValid || isSubmitting;
+                
+                // Remove existing validation feedback
+                const existingFeedback = document.getElementById('nameValidation');
+                if (existingFeedback) existingFeedback.remove();
+                
+                // Add validation feedback
+                if (name.length > 0) {
+                    const feedback = document.createElement('small');
+                    feedback.id = 'nameValidation';
+                    feedback.style.cssText = 'position: absolute; bottom: -35px; left: 0; font-size: 0.75rem;';
+                    
+                    if (name.length < 2) {
+                        feedback.className = 'text-danger';
+                        feedback.textContent = 'Name must be at least 2 characters';
+                    } else if (name.length > 50) {
+                        feedback.className = 'text-danger';
+                        feedback.textContent = 'Name is too long (maximum 50 characters)';
+                    } else if (isValid) {
+                        feedback.className = 'text-success';
+                        feedback.textContent = '✓ Name looks good';
+                    }
+                    
+                    this.parentElement.style.position = 'relative';
+                    this.parentElement.appendChild(feedback);
+                }
             });
 
             form.addEventListener('submit', function(e) {
@@ -435,13 +461,16 @@
                 joinBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing...';
                 joinBtn.disabled = true;
 
-                // First validate test availability
+                // First validate test availability and name uniqueness
                 fetch('/test/validate', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ testCode: testCode })
+                    body: JSON.stringify({ 
+                        testCode: testCode, 
+                        participantName: participantName 
+                    })
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -450,10 +479,12 @@
                         sessionStorage.setItem('testSession', JSON.stringify({
                             testCode: testCode,
                             participantName: participantName,
-                            readyToJoin: true // Flag to indicate ready to join
+                            readyToJoin: true, // Flag to indicate ready to join
+                            validated: true,   // Flag to indicate validation passed
+                            timestamp: Date.now() // For session timeout
                         }));
 
-                        // Show success message and redirect
+                        // Show enhanced success message with test info
                         Swal.fire({
                             icon: 'success',
                             title: 'Ready to Join!',
@@ -475,11 +506,46 @@
                     joinBtn.innerHTML = originalContent;
                     joinBtn.disabled = false;
                     
+                    let errorTitle = 'Validation Failed';
+                    let errorText = error.message || 'Please check your information and try again.';
+                    
+                    // Handle specific error types with better UX
+                    if (error.message && error.message.includes('name is already taken')) {
+                        errorTitle = 'Name Unavailable';
+                        errorText = 'This name is already being used by another participant. Please choose a different name.';
+                        // Clear and focus on name input for immediate retry
+                        setTimeout(() => {
+                            nameInput.value = '';
+                            nameInput.focus();
+                            // Trigger validation
+                            nameInput.dispatchEvent(new Event('input'));
+                        }, 100);
+                    } else if (error.message && error.message.includes('Test is full')) {
+                        errorTitle = 'Test Full';
+                        errorText = 'This test session is full. Please try again later or contact your instructor.';
+                    } else if (error.message && error.message.includes('Test has already started')) {
+                        errorTitle = 'Test Started';
+                        errorText = 'This test has already started and is no longer accepting new participants.';
+                    } else if (error.message && error.message.includes('Test not found')) {
+                        errorTitle = 'Test Not Found';
+                        errorText = 'No test found with this code. Please check the code and try again.';
+                    } else if (error.message && error.message.includes('Test has not started yet')) {
+                        errorTitle = 'Test Not Started';
+                        errorText = 'This test is scheduled but has not started yet. Please wait for the scheduled start time.';
+                    } else if (error.message && error.message.includes('Test has expired')) {
+                        errorTitle = 'Test Expired';
+                        errorText = 'This test session has ended and is no longer available.';
+                    } else if (error.message && error.message.includes('Test has been cancelled')) {
+                        errorTitle = 'Test Cancelled';
+                        errorText = 'This test session has been cancelled by the administrator.';
+                    }
+                    
                     Swal.fire({
                         icon: 'error',
-                        title: 'Test Not Available',
-                        text: error.message || 'Please check your code and try again.',
-                        confirmButtonColor: '#667eea'
+                        title: errorTitle,
+                        text: errorText,
+                        confirmButtonColor: '#667eea',
+                        confirmButtonText: 'Try Again'
                     });
                 });
             });
