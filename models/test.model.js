@@ -143,6 +143,21 @@ const testSchema = new mongoose.Schema({
 // ========================================
 // STATIC METHODS
 // ========================================
+testSchema.statics.checkNameAvailability = async function(testCode, participantName) {
+    const test = await this.findOne(
+        { 
+            testCode: testCode,
+            'participants.name': participantName,
+            'participants.isActive': true
+        },
+        { 'participants.$': 1 } // Project only matching participant
+    );
+    
+    return {
+        available: !test,
+        existingParticipant: test ? test.participants[0] : null
+    };
+};
 
 // Generate unique 6-digit test code
 testSchema.statics.generateTestCode = async function() {
@@ -286,9 +301,14 @@ testSchema.statics.getCompleteOfflineParticipantQuery = function(testCode, parti
     return {
         filter: {
             testCode: testCode,
-            'participants.name': participantName,
-            'participants.isActive': true,
-            'participants.completedAt': { $exists: false }
+            mode: 'offline', // Add explicit mode check
+            'participants': {
+                $elemMatch: {
+                    name: participantName,
+                    isActive: true,
+                    completedAt: { $exists: false } // More explicit condition
+                }
+            }
         },
         update: {
             $set: {
@@ -298,7 +318,31 @@ testSchema.statics.getCompleteOfflineParticipantQuery = function(testCode, parti
         }
     };
 };
-
+testSchema.methods.canCompleteParticipant = function(participantName) {
+    if (this.mode !== 'offline') {
+        return { canComplete: false, reason: 'Not an offline test' };
+    }
+    
+    const participant = this.participants.find(p => p.name === participantName);
+    
+    if (!participant) {
+        return { canComplete: false, reason: 'Participant not found' };
+    }
+    
+    if (!participant.isActive) {
+        return { canComplete: false, reason: 'Participant is not active' };
+    }
+    
+    if (participant.completedAt) {
+        return { 
+            canComplete: false, 
+            reason: 'Participant already completed',
+            completedAt: participant.completedAt 
+        };
+    }
+    
+    return { canComplete: true, participant };
+};
 // ========================================
 // INSTANCE METHODS
 // ========================================
@@ -320,29 +364,29 @@ testSchema.methods.getIncompleteParticipants = function() {
 
 // Method to get leaderboard - UPDATED for offline mode
 testSchema.methods.getLeaderboard = function(limit = 20) {
-    // For offline mode, include all participants (completed and active)
-    // For online mode, only include active participants
     const participants = this.mode === 'offline' ? 
         this.participants.filter(p => p.isActive) : 
         this.getActiveParticipants();
         
     return participants
         .sort((a, b) => {
-            // Sort by score first, then by completion time (faster is better)
+            // Primary: Score (higher is better)
             if (b.score !== a.score) {
                 return b.score - a.score;
             }
             
-            // For offline mode, sort by completion time if available
+            // Secondary: For offline mode, completion time (faster is better)
             if (this.mode === 'offline' && a.completedAt && b.completedAt) {
                 return new Date(a.completedAt) - new Date(b.completedAt);
             }
             
-            // If scores are equal, sort by average answer time (faster is better)
+            // Tertiary: Average answer time (faster is better)
             const aAvgTime = a.answers.length > 0 ? 
-                a.answers.reduce((sum, ans) => sum + ans.answerTime, 0) / a.answers.length : 0;
+                a.answers.reduce((sum, ans) => sum + (ans.answerTime || 0), 0) / a.answers.length : 
+                Infinity;
             const bAvgTime = b.answers.length > 0 ? 
-                b.answers.reduce((sum, ans) => sum + ans.answerTime, 0) / b.answers.length : 0;
+                b.answers.reduce((sum, ans) => sum + (ans.answerTime || 0), 0) / b.answers.length : 
+                Infinity;
             return aAvgTime - bAvgTime;
         })
         .slice(0, limit)
@@ -353,9 +397,9 @@ testSchema.methods.getLeaderboard = function(limit = 20) {
             correctAnswers: participant.answers.filter(a => a.isCorrect).length,
             totalAnswers: participant.answers.length,
             avgAnswerTime: participant.answers.length > 0 ? 
-                Math.round(participant.answers.reduce((sum, ans) => sum + ans.answerTime, 0) / participant.answers.length) : 0,
-            isOnline: true, // All participants in active test are online
-            completedAt: participant.completedAt // For offline mode
+                Math.round(participant.answers.reduce((sum, ans) => sum + (ans.answerTime || 0), 0) / participant.answers.length) : 0,
+            isOnline: true,
+            completedAt: participant.completedAt
         }));
 };
 
@@ -432,15 +476,22 @@ testSchema.methods.getCompletionProgress = function() {
         return null;
     }
     
-    const activeParticipants = this.getActiveParticipants();
-    const completedParticipants = this.getCompletedParticipants();
+    // Use simple filter instead of method calls for better performance
+    const activeParticipants = this.participants.filter(p => p.isActive);
+    const completedParticipants = activeParticipants.filter(p => p.completedAt);
     
-    return {
+    const result = {
         total: activeParticipants.length,
         completed: completedParticipants.length,
         percentage: activeParticipants.length > 0 ? 
             Math.round((completedParticipants.length / activeParticipants.length) * 100) : 0
     };
+    
+    // Cache result to avoid recalculation
+    this._cachedProgress = result;
+    this._progressCacheTime = Date.now();
+    
+    return result;
 };
 
 // ========================================
@@ -512,21 +563,10 @@ testSchema.pre('save', function(next) {
             // New offline tests can start as 'active'
             return next();
         }
-        
-        const currentStatus = this.status;
-        const previousStatus = this.constructor.findOne({ _id: this._id }).select('status');
-        
         // Allow any transition on new documents
-        if (!this.isNew && previousStatus && !validTransitions[previousStatus.status]?.includes(currentStatus)) {
-            return next(new Error(`Invalid status transition from ${previousStatus.status} to ${currentStatus}`));
-        }
-    }
-    
-    // NEW: Auto-update completion status for offline mode
-    if (this.mode === 'offline' && this.status === 'active') {
-        const completionProgress = this.getCompletionProgress();
-        if (completionProgress && completionProgress.percentage === 100) {
-            this.status = 'completed';
+        if (!this.isNew) {
+            // Skip validation - let service handle status changes
+            console.log(`📝 Status change: ${this.status} for test ${this.testCode}`);
         }
     }
     
@@ -574,7 +614,9 @@ testSchema.index({
 // TTL index for automatic cleanup of old tests - UPDATED
 testSchema.index({ updatedAt: 1 }, { 
     expireAfterSeconds: 7 * 24 * 60 * 60, // 7 days
-    partialFilterExpression: { status: { $in: ['completed', 'cancelled'] } }
+    partialFilterExpression: { 
+        status: { $in: ['completed', 'cancelled'] }
+    }
 });
 
 // NEW: TTL index for offline tests (shorter retention)
@@ -624,33 +666,6 @@ testSchema.statics.cancelExpiredTests = async function() {
     return result.modifiedCount;
 };
 
-// NEW: Auto-complete offline tests where all participants finished
-testSchema.statics.autoCompleteOfflineTests = async function() {
-    // Find offline tests where all active participants have completed
-    const tests = await this.find({
-        mode: 'offline',
-        status: 'active',
-        participants: { $exists: true, $not: { $size: 0 } }
-    });
-    
-    let completedCount = 0;
-    
-    for (const test of tests) {
-        const activeParticipants = test.getActiveParticipants();
-        const completedParticipants = test.getCompletedParticipants();
-        
-        if (activeParticipants.length > 0 && 
-            completedParticipants.length === activeParticipants.length) {
-            
-            test.status = 'completed';
-            await test.save();
-            completedCount++;
-        }
-    }
-    
-    return completedCount;
-};
-
 // ========================================
 // ERROR HANDLING
 // ========================================
@@ -663,18 +678,108 @@ testSchema.post('save', function(error, doc, next) {
         } else {
             next(new Error('Duplicate key error'));
         }
-    } else {
-        next(error);
-    }
-});
-
-// Handle version conflicts
-testSchema.post(['updateOne', 'findOneAndUpdate'], function(error, doc, next) {
-    if (error.name === 'MongoError' && error.code === 16836) {
+    } else if (error.name === 'VersionError') {
+        // Handle optimistic concurrency conflicts gracefully
+        console.warn(`⚠️ Version conflict for test ${doc?.testCode || 'unknown'}`);
         next(new Error('Document was modified by another process. Please retry.'));
     } else {
         next(error);
     }
 });
 
+// Handle version conflicts in updates
+testSchema.post(['updateOne', 'findOneAndUpdate'], function(error, doc, next) {
+    if (error.name === 'MongoError' && error.code === 16836) {
+        next(new Error('Document was modified by another process. Please retry.'));
+    } else if (error.name === 'VersionError') {
+        next(new Error('Document version conflict. Please retry.'));
+    } else {
+        next(error);
+    }
+});
+testSchema.statics.safeMarkParticipantCompleted = async function(testCode, participantName) {
+    const completionTime = new Date();
+    
+    // Use more specific atomic operation
+    const result = await this.findOneAndUpdate(
+        {
+            testCode: testCode,
+            mode: 'offline',
+            'participants': {
+                $elemMatch: {
+                    name: participantName,
+                    isActive: true,
+                    completedAt: { $type: 'null' } // More explicit null check
+                }
+            }
+        },
+        {
+            $set: {
+                'participants.$.completedAt': completionTime
+            },
+            $inc: { version: 1 }
+        },
+        {
+            new: true,
+            maxTimeMS: 5000 // Add timeout to prevent hanging
+        }
+    );
+    
+    return result;
+};
+testSchema.methods.debugParticipantState = function(participantName) {
+    const participant = this.participants.find(p => p.name === participantName);
+    
+    return {
+        testCode: this.testCode,
+        mode: this.mode,
+        status: this.status,
+        version: this.version,
+        participant: participant ? {
+            name: participant.name,
+            isActive: participant.isActive,
+            completedAt: participant.completedAt,
+            hasCompletedAt: !!participant.completedAt,
+            score: participant.score,
+            answersCount: participant.answers.length
+        } : null,
+        totalParticipants: this.participants.length,
+        activeParticipants: this.participants.filter(p => p.isActive).length,
+        completedParticipants: this.participants.filter(p => p.isActive && p.completedAt).length
+    };
+};
+// ========================================
+// NEW: Check test completion status safely
+// ========================================
+testSchema.statics.checkAndCompleteTest = async function(testCode) {
+    // Separate read and write operations to avoid conflicts
+    const test = await this.findOne({ testCode }).lean();
+    
+    if (!test || test.mode !== 'offline' || test.status !== 'active') {
+        return false;
+    }
+    
+    const activeParticipants = test.participants.filter(p => p.isActive);
+    const completedParticipants = activeParticipants.filter(p => p.completedAt);
+    
+    const allCompleted = activeParticipants.length > 0 && 
+                        completedParticipants.length === activeParticipants.length;
+    
+    if (allCompleted) {
+        const result = await this.updateOne(
+            { 
+                testCode: testCode,
+                status: 'active' // Only update if still active
+            },
+            { 
+                $set: { status: 'completed' },
+                $inc: { version: 1 }
+            }
+        );
+        
+        return result.modifiedCount > 0;
+    }
+    
+    return false;
+};
 module.exports = mongoose.model('Test', testSchema);

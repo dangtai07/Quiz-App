@@ -493,6 +493,7 @@
         let autoAdvanceTimer = null;
         let hasSubmittedAnswer = false;
         let selectedTimeRemaining = 0;
+        let isSubmitedTest = false;
 
         document.addEventListener('DOMContentLoaded', function() {
             quizData = JSON.parse(document.getElementById('quiz-data').textContent);
@@ -926,6 +927,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    isSubmitedTest = true;
                     console.log('✅ Test completion submitted successfully:', data.results);
                 } else {
                     console.error('❌ Failed to complete test:', data.message);
@@ -957,7 +959,7 @@
 
         // Handle beforeunload to submit partial completion
         window.addEventListener('beforeunload', function(e) {
-            if (isAnswering || currentQuestionIndex < quizData.quiz.questions.length) {
+            if ((isAnswering || currentQuestionIndex < quizData.quiz.questions.length) && !isSubmitedTest) {
                 // Submit partial completion
                 navigator.sendBeacon('/test/complete-offline-test', JSON.stringify({
                     testCode: quizData.testCode,
