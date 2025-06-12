@@ -148,6 +148,35 @@
             z-index: 2;
         }
 
+        /* NEW: Mode indicator */
+        .mode-indicator {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 3;
+        }
+
+        .mode-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .mode-online {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .mode-offline {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
         .card-body {
             padding: 2rem;
         }
@@ -267,26 +296,6 @@
             box-shadow: none;
         }
 
-        .status-badge {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .status-waiting {
-            background: linear-gradient(135deg, var(--warning-color), #d97706);
-            color: white;
-        }
-
-        .status-active {
-            background: linear-gradient(135deg, var(--success-color), #059669);
-            color: white;
-        }
-
         .alert-custom {
             border: none;
             border-radius: 12px;
@@ -342,12 +351,33 @@
     <div class="join-container fade-in">
         <div class="card join-card">
             <div class="card-header">
+                <!-- NEW: Mode indicator -->
+                <div class="mode-indicator">
+                    <div class="mode-badge mode-<%= test.mode %>">
+                        <% if (test.mode === 'online') { %>
+                            <i class="fas fa-users me-1"></i>Live
+                        <% } else { %>
+                            <i class="fas fa-user-clock me-1"></i>Self-Paced
+                        <% } %>
+                    </div>
+                </div>
+
                 <div class="header-icon">
-                    <i class="fas fa-rocket"></i>
+                    <% if (test.mode === 'online') { %>
+                        <i class="fas fa-rocket"></i>
+                    <% } else { %>
+                        <i class="fas fa-clock"></i>
+                    <% } %>
                 </div>
                 <h1 class="card-title">Join Test</h1>
                 <div class="test-code-badge"><%= test.testCode %></div>
-                <p class="card-subtitle">Ready to start your quiz adventure?</p>
+                <p class="card-subtitle">
+                    <% if (test.mode === 'online') { %>
+                        Ready to start your quiz adventure?
+                    <% } else { %>
+                        Start your self-paced quiz journey!
+                    <% } %>
+                </p>
             </div>
             
             <div class="card-body">
@@ -361,9 +391,11 @@
                                 <li>Enter your name to join the test</li>
                                 <% if (test.mode === 'online') { %>
                                     <li>You'll be placed in a waiting room until the test starts</li>
+                                    <li>Follow along with the instructor's guidance</li>
                                 <% } else { %>
-                                    <li>You can start the test immediately after joining</li>
+                                    <li>You'll start the test immediately after joining</li>
                                     <li>Complete the test at your own pace</li>
+                                    <li>Questions will auto-advance when time expires</li>
                                 <% } %>
                             </ul>
                         </div>
@@ -372,6 +404,14 @@
 
                 <!-- Join Form -->
                 <form id="joinTestForm">
+                    <!-- Show error message if any -->
+                    <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <%= error %>
+                    </div>
+                    <% } %>
+
                     <div class="form-floating">
                         <input type="text" 
                                class="form-control" 
@@ -385,7 +425,11 @@
 
                     <button type="submit" class="btn btn-join" id="joinTestBtn">
                         <i class="fas fa-sign-in-alt me-2"></i>
-                        Join Test
+                        <% if (test.mode === 'online') { %>
+                            Join Test Room
+                        <% } else { %>
+                            Start Test
+                        <% } %>
                     </button>
                 </form>
             </div>
@@ -403,6 +447,7 @@
             const nameInput = document.getElementById('participantName');
             const joinBtn = document.getElementById('joinTestBtn');
             const testCode = '<%= test.testCode %>';
+            const testMode = '<%= test.mode %>';
             let isSubmitting = false;
 
             // ENHANCED: Form validation with real-time feedback
@@ -484,15 +529,20 @@
                             timestamp: Date.now() // For session timeout
                         }));
 
-                        // Show enhanced success message with test info
+                        // Show enhanced success message with mode-specific messaging
+                        const successTitle = testMode === 'online' ? 'Ready to Join!' : 'Ready to Start!';
+                        const successText = testMode === 'online' ? 
+                            'Redirecting to test room...' : 
+                            'Starting your quiz now...';
+
                         Swal.fire({
                             icon: 'success',
-                            title: 'Ready to Join!',
-                            text: 'Redirecting to test room...',
+                            title: successTitle,
+                            text: successText,
                             timer: 1000,
                             showConfirmButton: false
                         }).then(() => {
-                            // Direct redirect without socket connection
+                            // Direct redirect - mode will be handled by controller
                             window.location.href = `/test/room/${testCode}`;
                         });
                     } else {
@@ -525,7 +575,11 @@
                         errorText = 'This test session is full. Please try again later or contact your instructor.';
                     } else if (error.message && error.message.includes('Test has already started')) {
                         errorTitle = 'Test Started';
-                        errorText = 'This test has already started and is no longer accepting new participants.';
+                        if (testMode === 'online') {
+                            errorText = 'This test has already started and is no longer accepting new participants.';
+                        } else {
+                            errorText = 'This test session is currently in progress.';
+                        }
                     } else if (error.message && error.message.includes('Test not found')) {
                         errorTitle = 'Test Not Found';
                         errorText = 'No test found with this code. Please check the code and try again.';

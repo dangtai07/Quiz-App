@@ -29,11 +29,21 @@ router.get('/api/data/:testCode', TestController.getTestData);
 // Join test by code page (for authenticated users)
 router.get('/join', requireAuth, TestController.renderJoinByCode);
 
-// MODIFIED: Validate
+// Validate test availability
 router.post('/validate', TestController.validateTestAvailability);
 
 // Validate and join test (legacy support)
 router.post('/join', TestController.validateAndJoinTest);
+
+// ========================================
+// NEW: OFFLINE MODE ROUTES
+// ========================================
+
+// Submit offline answer
+router.post('/submit-offline-answer', TestController.submitOfflineAnswer);
+
+// Complete offline test
+router.post('/complete-offline-test', TestController.completeOfflineTest);
 
 // ========================================
 // ADMIN ROUTES

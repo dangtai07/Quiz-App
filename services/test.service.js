@@ -47,7 +47,7 @@ class TestService {
             // Generate unique test code
             const testCode = await Test.generateTestCode();
             
-            // Create test
+            // Create test - for offline mode, set initial status as 'active'
             const test = new Test({
                 testCode,
                 quizId: quiz._id,
@@ -56,6 +56,7 @@ class TestService {
                 mode,
                 maxParticipants: Math.min(maxParticipants, 1000), // Cap at 1000
                 scheduleSettings: mode === 'offline' ? scheduleSettings : null,
+                status: mode === 'offline' ? 'active' : 'waiting', // NEW: Offline tests start as active
                 createdBy,
                 participants: []
             });
@@ -98,38 +99,26 @@ class TestService {
     }
     
     /**
-     * Join test as participant - FIXED with atomic operation and reconnect handling
+     * Join test as participant - FIXED validation for offline mode
      */
     async joinTest(testCode, participantName, socketId) {
         try {
             const test = await this.getTestByCode(testCode);
             
-            // Check if test is available for joining
-            if (test.mode === 'offline') {
-                const now = new Date();
-                if (test.scheduleSettings) {
-                    if (now < new Date(test.scheduleSettings.startTime)) {
-                        throw new Error('Test has not started yet');
-                    }
-                    if (now > new Date(test.scheduleSettings.endTime)) {
-                        throw new Error('Test has ended');
-                    }
-                }
+            // FIXED: Validate test availability using comprehensive check
+            const validation = await this.validateParticipantCanJoin(testCode, participantName);
+            if (!validation.canJoin) {
+                throw new Error(validation.reason);
             }
             
-            if (test.status === 'completed') {
-                throw new Error('Test has already completed');
-            }
-            
-            if (test.status === 'cancelled') {
-                throw new Error('Test has been cancelled');
-            }
+            // For offline mode, allow joining even when status is 'active'
+            const allowedStatuses = test.mode === 'offline' ? ['waiting', 'active'] : ['waiting'];
             
             // First, try to reactivate existing inactive participant with same name
             const reactivateResult = await Test.findOneAndUpdate(
                 {
                     testCode: testCode,
-                    status: 'waiting',
+                    status: { $in: allowedStatuses },
                     'participants.name': participantName,
                     'participants.isActive': false
                 },
@@ -160,7 +149,7 @@ class TestService {
             const addResult = await Test.findOneAndUpdate(
                 {
                     testCode: testCode,
-                    status: 'waiting',
+                    status: { $in: allowedStatuses },
                     $expr: { 
                         $and: [
                             { $lt: [{ $size: { $filter: { input: '$participants', as: 'p', cond: '$$p.isActive' } } }, '$maxParticipants'] },
@@ -187,32 +176,7 @@ class TestService {
             );
             
             if (!addResult) {
-                // Get current test state to provide specific error
-                const currentTest = await Test.findOne({ testCode });
-                if (!currentTest) {
-                    throw new Error('Test not found');
-                }
-                if (currentTest.status !== 'waiting') {
-                    throw new Error('Test has already started');
-                }
-                
-                const activeParticipants = currentTest.participants.filter(p => p.isActive);
-                if (activeParticipants.length >= currentTest.maxParticipants) {
-                    throw new Error('Test is full');
-                }
-                if (activeParticipants.some(p => p.name === participantName)) {
-                    throw new Error('Name already taken');
-                }
-                
-                console.error('Join test failed with conditions:', {
-                    testCode,
-                    participantName,
-                    status: currentTest.status,
-                    activeCount: activeParticipants.length,
-                    maxParticipants: currentTest.maxParticipants,
-                    nameExists: activeParticipants.some(p => p.name === participantName)
-                });
-                
+                // This should not happen if validation passed, but just in case
                 throw new Error('Unable to join test. Please try again.');
             }
             
@@ -226,6 +190,662 @@ class TestService {
             
         } catch (error) {
             console.error('Join test error:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * UPDATED: Join offline test directly - Atomic operation
+     */
+    async joinOfflineTest(testCode, participantName) {
+        try {
+            const test = await this.getTestByCode(testCode);
+            
+            if (test.mode !== 'offline') {
+                throw new Error('This method is only for offline tests');
+            }
+            
+            // Use comprehensive validation
+            const validation = await this.validateParticipantCanJoin(testCode, participantName);
+            if (!validation.canJoin) {
+                throw new Error(validation.reason);
+            }
+            
+            // Check if participant already exists and is active
+            const existingParticipant = test.participants.find(p => 
+                p.name === participantName && p.isActive
+            );
+            
+            if (existingParticipant) {
+                // Return existing participant
+                return {
+                    test,
+                    participant: existingParticipant,
+                    isReturning: true
+                };
+            }
+            
+            // ATOMIC: Add new participant with validation
+            const newParticipant = {
+                name: participantName,
+                socketId: `offline_${Date.now()}_${Math.random()}`, // Generate offline socket ID
+                score: 0,
+                answers: [],
+                joinedAt: new Date(),
+                isActive: true
+            };
+            
+            const updateResult = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    mode: 'offline',
+                    status: 'active',
+                    $expr: { 
+                        $and: [
+                            { $lt: [{ $size: { $filter: { input: '$participants', as: 'p', cond: '$p.isActive' } } }, '$maxParticipants'] },
+                            { $not: { $in: [participantName, { $map: { input: { $filter: { input: '$participants', as: 'p', cond: '$p.isActive' } }, as: 'ap', in: '$ap.name' } }] } }
+                        ]
+                    }
+                },
+                {
+                    $push: { participants: newParticipant },
+                    $inc: { version: 1 }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
+            
+            if (!updateResult) {
+                throw new Error('Cannot join test - test full, name taken, or test not available');
+            }
+            
+            // Find the newly added participant
+            const addedParticipant = updateResult.participants[updateResult.participants.length - 1];
+            
+            return {
+                test: updateResult,
+                participant: addedParticipant,
+                isReturning: false
+            };
+            
+        } catch (error) {
+            console.error('Join offline test error:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * UPDATED: Submit offline answer - Atomic operation with better error handling
+     */
+    async submitOfflineAnswer(testCode, participantName, questionNumber, selectedAnswer, timeRemaining) {
+        try {
+            // First, get test data for validation and debugging
+            const test = await Test.findOne({ testCode }).populate('quizId');
+            
+            if (!test) {
+                throw new Error('Test not found');
+            }
+            
+            if (test.mode !== 'offline') {
+                throw new Error('This method is only for offline tests');
+            }
+            
+            // Find participant for debugging
+            const participant = test.participants.find(p => 
+                p.name === participantName && p.isActive
+            );
+            
+            if (!participant) {
+                console.error(`❌ Participant not found:`, {
+                    searchedName: participantName,
+                    availableParticipants: test.participants
+                        .filter(p => p.isActive)
+                        .map(p => ({ name: p.name, isActive: p.isActive }))
+                });
+                throw new Error(`Participant "${participantName}" not found or not active`);
+            }
+            
+            // Check for duplicate answers
+            const alreadyAnswered = participant.answers.some(a => a.questionNumber === questionNumber);
+            if (alreadyAnswered) {
+                console.error(`❌ Already answered:`, {
+                    participantName,
+                    questionNumber,
+                    existingAnswers: participant.answers.map(a => a.questionNumber)
+                });
+                throw new Error(`Already answered question ${questionNumber}`);
+            }
+            
+            // Validate quiz data
+            const quiz = test.quizId;
+            if (!quiz.questions || questionNumber >= quiz.questions.length) {
+                throw new Error('Invalid question number');
+            }
+            
+            const question = quiz.questions[questionNumber];
+            const isCorrect = question.correctAnswer === selectedAnswer;
+            
+            // Calculate points
+            const points = this.calculatePoints(selectedAnswer, timeRemaining, questionNumber, question);
+            
+            const answer = {
+                questionNumber: questionNumber,
+                selectedAnswer: selectedAnswer,
+                isCorrect: isCorrect,
+                answerTime: (question.answerTime || 30) - timeRemaining,
+                timeRemaining: timeRemaining,
+                points: points
+            };
+            
+            console.log(`📤 Submitting answer for ${participantName}:`, {
+                testCode,
+                questionNumber,
+                selectedAnswer,
+                isCorrect,
+                points
+            });
+            
+            // ATOMIC: Submit answer with detailed conditions
+            const updateResult = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    mode: 'offline',
+                    'participants': {
+                        $elemMatch: {
+                            name: participantName,
+                            isActive: true,
+                            'answers.questionNumber': { $ne: questionNumber }
+                        }
+                    }
+                },
+                {
+                    $push: { 
+                        'participants.$.answers': answer 
+                    },
+                    $inc: { 
+                        'participants.$.score': points,
+                        version: 1
+                    }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
+            
+            if (!updateResult) {
+                // Debug why update failed
+                const debugTest = await Test.findOne({ testCode }).lean();
+                const debugParticipant = debugTest.participants.find(p => p.name === participantName);
+                
+                console.error(`❌ Update failed - Debug info:`, {
+                    testCode,
+                    participantName,
+                    questionNumber,
+                    testExists: !!debugTest,
+                    testMode: debugTest?.mode,
+                    participantExists: !!debugParticipant,
+                    participantActive: debugParticipant?.isActive,
+                    existingAnswers: debugParticipant?.answers?.map(a => a.questionNumber) || [],
+                    alreadyAnswered: debugParticipant?.answers?.some(a => a.questionNumber === questionNumber)
+                });
+                
+                throw new Error('Cannot submit answer - conditions not met (see debug info above)');
+            }
+            
+            // Find updated participant
+            const updatedParticipant = updateResult.participants.find(p => p.name === participantName);
+            
+            console.log(`✅ Answer submitted successfully for ${participantName}:`, {
+                newScore: updatedParticipant.score,
+                totalAnswers: updatedParticipant.answers.length
+            });
+            
+            return {
+                isCorrect,
+                points,
+                newScore: updatedParticipant.score,
+                participant: {
+                    name: updatedParticipant.name,
+                    score: updatedParticipant.score,
+                    answers: updatedParticipant.answers
+                }
+            };
+            
+        } catch (error) {
+            console.error('Submit offline answer error:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * UPDATED: Complete offline test - Atomic operation with selective finalResults update
+     */
+    async completeOfflineTest(testCode, participantName) {
+        try {
+            const completionTime = new Date();
+            
+            // ATOMIC: Mark participant as completed and get updated test data
+            const updatedTest = await Test.findOneAndUpdate(
+                {
+                    testCode: testCode,
+                    mode: 'offline',
+                    'participants.name': participantName,
+                    'participants.isActive': true,
+                    'participants.completedAt': { $exists: false } // Ensure not already completed
+                },
+                {
+                    $set: {
+                        'participants.$.completedAt': completionTime
+                    },
+                    $inc: { version: 1 }
+                },
+                { 
+                    new: true,
+                    populate: { path: 'quizId' }
+                }
+            );
+            
+            if (!updatedTest) {
+                throw new Error('Participant not found, already completed, or test not available');
+            }
+            
+            // Find the completed participant
+            const completedParticipant = updatedTest.participants.find(p => 
+                p.name === participantName && p.isActive && p.completedAt
+            );
+            
+            if (!completedParticipant) {
+                throw new Error('Failed to complete participant');
+            }
+            
+            // ATOMIC: Update ONLY this participant's entry in finalResults AND recalculate all ranks
+            const rankingUpdate = await this.updateParticipantInFinalResults(testCode, completedParticipant);
+            
+            // Get updated stats after finalResults update
+            const activeParticipants = updatedTest.participants.filter(p => p.isActive);
+            const completedParticipants = activeParticipants.filter(p => p.completedAt);
+            const allCompleted = completedParticipants.length === activeParticipants.length && activeParticipants.length > 0;
+            
+            // ATOMIC: Mark test as completed if all participants finished
+            if (allCompleted) {
+                await Test.updateOne(
+                    { testCode: testCode },
+                    { 
+                        $set: { status: 'completed' },
+                        $inc: { version: 1 }
+                    }
+                );
+                console.log(`🏁 All participants completed. Test ${testCode} marked as completed.`);
+            }
+            
+            console.log(`✅ ${participantName} completed test ${testCode}. Progress: ${completedParticipants.length}/${activeParticipants.length}`);
+            console.log(`🏆 ${participantName} achieved rank ${rankingUpdate.newParticipantRank} out of ${rankingUpdate.totalParticipants} completed participants`);
+            
+            return {
+                participant: {
+                    name: completedParticipant.name,
+                    score: completedParticipant.score,
+                    correctAnswers: completedParticipant.answers.filter(a => a.isCorrect).length,
+                    totalQuestions: completedParticipant.answers.length,
+                    completionTime: Math.round((completedParticipant.completedAt - completedParticipant.joinedAt) / 1000),
+                    finalRank: rankingUpdate.newParticipantRank // NEW: Include final rank
+                },
+                testCompleted: allCompleted,
+                completionProgress: {
+                    completed: completedParticipants.length,
+                    total: activeParticipants.length,
+                    percentage: Math.round((completedParticipants.length / activeParticipants.length) * 100)
+                },
+                // NEW: Include ranking information for potential notifications
+                ranking: {
+                    participantRank: rankingUpdate.newParticipantRank,
+                    totalRankedParticipants: rankingUpdate.totalParticipants,
+                    updatedLeaderboard: rankingUpdate.updatedRanking.slice(0, 10) // Top 10 for efficiency
+                }
+            };
+            
+        } catch (error) {
+            console.error('Complete offline test error:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * NEW: Update ONLY specific participant in finalResults AND recalculate all ranks (Atomic operation)
+     */
+    async updateParticipantInFinalResults(testCode, completedParticipant) {
+        try {
+            // Calculate participant's result data
+            const newParticipantResult = {
+                name: completedParticipant.name,
+                score: completedParticipant.score,
+                correctAnswers: completedParticipant.answers.filter(a => a.isCorrect).length,
+                totalQuestions: completedParticipant.answers.length,
+                completionTime: Math.round((completedParticipant.completedAt - completedParticipant.joinedAt) / 1000),
+                completedAt: completedParticipant.completedAt
+            };
+            
+            // ATOMIC: Get current test state and update finalResults completely
+            const currentTest = await Test.findOne({ testCode }).lean();
+            const existingResults = (currentTest.finalResults || []).filter(result => 
+                result.name !== completedParticipant.name // Remove existing entry if any
+            );
+            
+            // Add new participant and recalculate ALL ranks
+            const allResults = [...existingResults, newParticipantResult];
+            
+            // Sort by score (desc) and completion time (asc) - faster completion wins ties
+            const sortedResults = allResults.sort((a, b) => {
+                if (b.score !== a.score) {
+                    return b.score - a.score; // Higher score wins
+                }
+                return new Date(a.completedAt) - new Date(b.completedAt); // Faster completion wins
+            });
+            
+            // Assign ranks to ALL participants (handle ties properly)
+            const rankedResults = [];
+            let currentRank = 1;
+            
+            for (let i = 0; i < sortedResults.length; i++) {
+                const result = sortedResults[i];
+                
+                // Check if this participant ties with previous one
+                if (i > 0) {
+                    const prevResult = sortedResults[i - 1];
+                    if (result.score !== prevResult.score || 
+                        new Date(result.completedAt).getTime() !== new Date(prevResult.completedAt).getTime()) {
+                        currentRank = i + 1; // New rank for different score/time
+                    }
+                    // If same score and time, keep same rank as previous
+                }
+                
+                rankedResults.push({
+                    ...result,
+                    rank: currentRank
+                });
+            }
+            
+            // ATOMIC: Update finalResults with complete new ranking
+            const updateResult = await Test.updateOne(
+                { testCode: testCode },
+                {
+                    $set: { finalResults: rankedResults },
+                    $inc: { version: 1 }
+                }
+            );
+            
+            if (updateResult.modifiedCount === 0) {
+                throw new Error('Failed to update finalResults - test may have been modified');
+            }
+            
+            // Log the ranking changes
+            const newParticipantRank = rankedResults.find(r => r.name === completedParticipant.name)?.rank;
+            const rankingPreview = rankedResults.slice(0, 5).map(r => `${r.rank}. ${r.name} (${r.score}pts)`).join(', ');
+            
+            console.log(`📊 Updated finalResults for ${completedParticipant.name} in test ${testCode}`);
+            console.log(`   New participant rank: ${newParticipantRank}`);
+            console.log(`   Top 5 ranking: ${rankingPreview}`);
+            
+            // Return rank changes for potential notifications
+            return {
+                newParticipantRank,
+                totalParticipants: rankedResults.length,
+                updatedRanking: rankedResults
+            };
+            
+        } catch (error) {
+            console.error('Update participant in final results error:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * UPDATED: Update final results in real-time - Now more efficient for single participant updates
+     */
+    async updateFinalResultsRealTime(test) {
+        try {
+            // Get all completed participants
+            const completedParticipants = test.participants.filter(p => 
+                p.isActive && p.completedAt
+            );
+            
+            if (completedParticipants.length === 0) {
+                console.log('No completed participants yet, skipping finalResults update');
+                return;
+            }
+            
+            // Calculate rankings for ALL completed participants (full recalculation)
+            const finalResults = completedParticipants
+                .sort((a, b) => {
+                    // Sort by score first (higher is better)
+                    if (b.score !== a.score) {
+                        return b.score - a.score;
+                    }
+                    // If scores are equal, sort by completion time (faster is better)
+                    return new Date(a.completedAt) - new Date(b.completedAt);
+                })
+                .map((participant, index) => ({
+                    rank: index + 1,
+                    name: participant.name,
+                    score: participant.score,
+                    correctAnswers: participant.answers.filter(a => a.isCorrect).length,
+                    totalQuestions: participant.answers.length,
+                    completionTime: Math.round((participant.completedAt - participant.joinedAt) / 1000),
+                    completedAt: participant.completedAt // Keep completion timestamp
+                }));
+            
+            // ATOMIC: Update test with current final results
+            await Test.updateOne(
+                { testCode: test.testCode },
+                {
+                    $set: { finalResults: finalResults },
+                    $inc: { version: 1 }
+                }
+            );
+            
+            console.log(`📊 Full recalc finalResults for test ${test.testCode}. Current rankings:`, 
+                finalResults.map(r => `${r.rank}. ${r.name} (${r.score}pts)`).join(', ')
+            );
+            
+        } catch (error) {
+            console.error('Update final results real-time error:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * UPDATED: Update final results - Now includes both completed and in-progress participants for offline mode
+     */
+    async updateFinalResults(test) {
+        try {
+            if (test.mode === 'offline') {
+                // For offline mode, use the real-time method
+                return await this.updateFinalResultsRealTime(test);
+            }
+            
+            // For online mode, keep existing logic
+            const completedParticipants = test.participants.filter(p => p.completedAt);
+            
+            if (completedParticipants.length === 0) {
+                return;
+            }
+            
+            // Calculate final results
+            const finalResults = completedParticipants
+                .sort((a, b) => {
+                    // Sort by score first, then by completion time (faster is better)
+                    if (b.score !== a.score) {
+                        return b.score - a.score;
+                    }
+                    return new Date(a.completedAt) - new Date(b.completedAt);
+                })
+                .map((participant, index) => ({
+                    rank: index + 1,
+                    name: participant.name,
+                    score: participant.score,
+                    correctAnswers: participant.answers.filter(a => a.isCorrect).length,
+                    totalQuestions: participant.answers.length,
+                    completionTime: Math.round((participant.completedAt - participant.joinedAt) / 1000)
+                }));
+            
+            // Update test with final results
+            test.finalResults = finalResults;
+            
+            // For online tests, mark as completed when results are calculated
+            if (test.mode === 'online') {
+                test.status = 'completed';
+            }
+            
+            await test.save();
+            
+        } catch (error) {
+            console.error('Update final results error:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * NEW: Get real-time ranking changes for offline test (useful for notifications)
+     */
+    async getRankingChanges(testCode, beforeUpdate, afterUpdate) {
+        try {
+            const changes = [];
+            
+            // Compare before and after rankings
+            const beforeMap = new Map();
+            beforeUpdate.forEach(result => {
+                beforeMap.set(result.name, result.rank);
+            });
+            
+            afterUpdate.forEach(result => {
+                const oldRank = beforeMap.get(result.name);
+                if (oldRank && oldRank !== result.rank) {
+                    changes.push({
+                        name: result.name,
+                        oldRank: oldRank,
+                        newRank: result.rank,
+                        change: oldRank - result.rank, // Positive = moved up, negative = moved down
+                        changeType: oldRank > result.rank ? 'up' : 'down'
+                    });
+                }
+            });
+            
+            return changes;
+            
+        } catch (error) {
+            console.error('Get ranking changes error:', error);
+            return [];
+        }
+    }
+    
+    /**
+     * NEW: Demo method to show how the ranking system works
+     */
+    async demonstrateRankingSystem() {
+        console.log(`
+    🏆 OFFLINE TEST RANKING SYSTEM - How it works:
+    
+    📊 When a participant completes:
+    1. ⚡ ATOMIC: Mark participant as completed (prevent race conditions)
+    2. 🎯 SELECTIVE: Update only that participant in finalResults  
+    3. 🔄 RECALCULATE: All existing participants get new ranks
+    4. 🏁 CHECK: If all completed → mark test as 'completed'
+    
+    🎯 Ranking Algorithm:
+    - Primary: Higher Score wins
+    - Tiebreaker: Faster completion time wins
+    - Handle ties: Same score + same time = same rank
+    
+    ⚡ Performance Benefits:
+    - Only 2-3 atomic operations per completion
+    - No race conditions between multiple completions
+    - Real-time ranking updates
+    - Efficient memory usage
+    
+    📈 Example Scenario:
+    Time 10:00 - Alice completes: 85 pts → Rank 1
+    Time 10:05 - Bob completes: 90 pts → Rank 1, Alice → Rank 2  
+    Time 10:10 - Carol completes: 88 pts → Rank 2, Alice → Rank 3, Bob stays Rank 1
+        `);
+    }
+    async getRealTimeLeaderboard(testCode) {
+        try {
+            const test = await this.getTestByCode(testCode);
+            
+            if (test.mode !== 'offline') {
+                throw new Error('Real-time leaderboard is only for offline tests');
+            }
+            
+            // Get all active participants (both completed and in-progress)
+            const activeParticipants = test.participants.filter(p => p.isActive);
+            
+            // Separate completed and in-progress participants
+            const completedParticipants = activeParticipants.filter(p => p.completedAt);
+            const inProgressParticipants = activeParticipants.filter(p => !p.completedAt);
+            
+            // Create leaderboard entries
+            const leaderboard = [];
+            
+            // Add completed participants (sorted by final ranking)
+            const completedRanked = completedParticipants
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    return new Date(a.completedAt) - new Date(b.completedAt);
+                })
+                .map((participant, index) => ({
+                    rank: index + 1,
+                    name: participant.name,
+                    score: participant.score,
+                    correctAnswers: participant.answers.filter(a => a.isCorrect).length,
+                    totalAnswers: participant.answers.length,
+                    status: 'completed',
+                    completedAt: participant.completedAt,
+                    completionTime: Math.round((participant.completedAt - participant.joinedAt) / 1000)
+                }));
+            
+            // Add in-progress participants (sorted by current score)
+            const inProgressRanked = inProgressParticipants
+                .sort((a, b) => b.score - a.score)
+                .map((participant) => ({
+                    rank: null, // Will be assigned after merging
+                    name: participant.name,
+                    score: participant.score,
+                    correctAnswers: participant.answers.filter(a => a.isCorrect).length,
+                    totalAnswers: participant.answers.length,
+                    status: 'in-progress',
+                    joinedAt: participant.joinedAt
+                }));
+            
+            // Merge and re-rank (completed participants get priority in ties)
+            const allParticipants = [...completedRanked, ...inProgressRanked]
+                .sort((a, b) => {
+                    if (b.score !== a.score) return b.score - a.score;
+                    if (a.status === 'completed' && b.status === 'in-progress') return -1;
+                    if (a.status === 'in-progress' && b.status === 'completed') return 1;
+                    return 0;
+                });
+            
+            // Assign final ranks
+            allParticipants.forEach((participant, index) => {
+                participant.rank = index + 1;
+            });
+            
+            return {
+                leaderboard: allParticipants,
+                stats: {
+                    totalParticipants: activeParticipants.length,
+                    completedCount: completedParticipants.length,
+                    inProgressCount: inProgressParticipants.length,
+                    completionPercentage: activeParticipants.length > 0 ? 
+                        Math.round((completedParticipants.length / activeParticipants.length) * 100) : 0
+                }
+            };
+            
+        } catch (error) {
+            console.error('Get real-time leaderboard error:', error);
             throw error;
         }
     }
@@ -264,9 +884,12 @@ class TestService {
             // First get test to verify admin
             const test = await this.getTestByCode(testCode);
             
-            // Verify admin
-            if (test.adminSocketId !== adminSocketId) {
-                throw new Error('Unauthorized: Only the test creator can start the test');
+            // Skip admin verification for offline tests
+            if (test.mode === 'online') {
+                // Verify admin
+                if (test.adminSocketId !== adminSocketId) {
+                    throw new Error('Unauthorized: Only the test creator can start the test');
+                }
             }
             
             // Update test status atomically
@@ -274,7 +897,7 @@ class TestService {
                 {
                     testCode: testCode,
                     status: 'waiting',
-                    adminSocketId: adminSocketId,
+                    ...(test.mode === 'online' && { adminSocketId: adminSocketId }),
                     $expr: { $gt: [{ $size: { $filter: { input: '$participants', as: 'p', cond: '$$p.isActive' } } }, 0] }
                 },
                 {
@@ -447,15 +1070,6 @@ class TestService {
             );
             
             if (!updateResult) {
-                // More detailed error checking
-                const latestTest = await Test.findOne({ testCode });
-                console.error('Submit answer failed - current state:', {
-                    testCode,
-                    currentQuestion: latestTest.currentQuestion,
-                    isQuestionActive: latestTest.isQuestionActive,
-                    participantFound: !!latestTest.participants.find(p => p.socketId === socketId),
-                    questionNumber
-                });
                 throw new Error('Cannot submit answer - test state changed');
             }
             
@@ -489,8 +1103,8 @@ class TestService {
             // First get the test data to calculate final results
             const test = await this.getTestByCode(testCode);
             
-            // Verify admin
-            if (test.adminSocketId !== adminSocketId) {
+            // Verify admin for online tests
+            if (test.mode === 'online' && test.adminSocketId !== adminSocketId) {
                 throw new Error('Unauthorized');
             }
             
@@ -511,7 +1125,7 @@ class TestService {
             const updateResult = await Test.findOneAndUpdate(
                 {
                     testCode: testCode,
-                    adminSocketId: adminSocketId
+                    ...(test.mode === 'online' && { adminSocketId: adminSocketId })
                 },
                 {
                     $set: {
@@ -683,14 +1297,85 @@ class TestService {
     }
     
     /**
-     * Get test results
+     * Get test results - UPDATED for offline mode with atomic real-time support
      */
     async getTestResults(testCode) {
         try {
             const test = await this.getTestByCode(testCode);
             
-            if (test.status !== 'completed') {
+            // For offline mode, allow viewing results even if not all participants completed
+            if (test.mode === 'online' && test.status !== 'completed') {
                 throw new Error('Test is not completed yet');
+            }
+            
+            // For offline mode with real-time results
+            if (test.mode === 'offline') {
+                // ATOMIC: Get fresh test data and update final results if needed
+                const freshTest = await Test.findOne({ testCode: testCode })
+                    .populate('quizId')
+                    .populate('createdBy', 'name email');
+                
+                // Check if we need to update finalResults (if there are completed participants not in finalResults)
+                const completedParticipants = freshTest.participants.filter(p => p.isActive && p.completedAt);
+                const currentFinalResults = freshTest.finalResults || [];
+                
+                // If there are completed participants not in finalResults, update them
+                if (completedParticipants.length > currentFinalResults.length) {
+                    await this.updateFinalResultsRealTime(freshTest);
+                    
+                    // Get updated test data
+                    const updatedTest = await Test.findOne({ testCode: testCode })
+                        .populate('quizId')
+                        .populate('createdBy', 'name email');
+                    
+                    return {
+                        testCode: updatedTest.testCode,
+                        quiz: {
+                            title: updatedTest.quizId.title,
+                            number: updatedTest.quizNumber
+                        },
+                        mode: updatedTest.mode,
+                        status: updatedTest.status,
+                        completedAt: updatedTest.status === 'completed' ? updatedTest.updatedAt : null,
+                        participantCount: updatedTest.participants.filter(p => p.isActive).length,
+                        completedCount: completedParticipants.length,
+                        results: updatedTest.finalResults || [],
+                        isRealTime: true // Indicates this is real-time results
+                    };
+                }
+                
+                return {
+                    testCode: freshTest.testCode,
+                    quiz: {
+                        title: freshTest.quizId.title,
+                        number: freshTest.quizNumber
+                    },
+                    mode: freshTest.mode,
+                    status: freshTest.status,
+                    completedAt: freshTest.status === 'completed' ? freshTest.updatedAt : null,
+                    participantCount: freshTest.participants.filter(p => p.isActive).length,
+                    completedCount: completedParticipants.length,
+                    results: freshTest.finalResults || [],
+                    isRealTime: true
+                };
+            }
+            
+            // For online mode - existing logic
+            if (!test.finalResults || test.finalResults.length === 0) {
+                await this.updateFinalResults(test);
+                const updatedTest = await this.getTestByCode(testCode);
+                return {
+                    testCode: updatedTest.testCode,
+                    quiz: {
+                        title: updatedTest.quizId.title,
+                        number: updatedTest.quizNumber
+                    },
+                    mode: updatedTest.mode,
+                    status: updatedTest.status,
+                    completedAt: updatedTest.updatedAt,
+                    participantCount: updatedTest.getActiveParticipants().length,
+                    results: updatedTest.finalResults || []
+                };
             }
             
             return {
@@ -699,6 +1384,8 @@ class TestService {
                     title: test.quizId.title,
                     number: test.quizNumber
                 },
+                mode: test.mode,
+                status: test.status,
                 completedAt: test.updatedAt,
                 participantCount: test.getActiveParticipants().length,
                 results: test.finalResults
@@ -708,6 +1395,7 @@ class TestService {
             throw error;
         }
     }
+    
     async checkParticipantNameUniqueness(testCode, participantName) {
         try {
             const test = await this.getTestByCode(testCode);
@@ -737,7 +1425,7 @@ class TestService {
     }
 
     /**
-     * Validate participant can join test
+     * Validate participant can join test - FIXED for offline mode
      */
     async validateParticipantCanJoin(testCode, participantName) {
         try {
@@ -759,35 +1447,69 @@ class TestService {
                 };
             }
             
-            // Test availability check
-            const availability = test.isAvailable();
-            if (!availability.available) {
-                return {
-                    canJoin: false,
-                    reason: availability.reason
-                };
+            // FIXED: Schedule check FIRST for offline mode (most important)
+            if (test.mode === 'offline' && test.scheduleSettings) {
+                const now = new Date();
+                if (now < new Date(test.scheduleSettings.startTime)) {
+                    return {
+                        canJoin: false,
+                        reason: 'Test has not started yet. Please wait for the scheduled start time.',
+                        errorType: 'NOT_STARTED',
+                        startTime: test.scheduleSettings.startTime
+                    };
+                }
+                if (now > new Date(test.scheduleSettings.endTime)) {
+                    return {
+                        canJoin: false,
+                        reason: 'Test has expired and is no longer available.',
+                        errorType: 'EXPIRED'
+                    };
+                }
             }
             
-            // Status checks
+            // Status checks - FIXED: Different logic for offline vs online
             if (test.status === 'completed') {
                 return {
                     canJoin: false,
-                    reason: 'Test has already completed'
+                    reason: 'Test has already completed',
+                    errorType: 'COMPLETED'
                 };
             }
             
             if (test.status === 'cancelled') {
                 return {
                     canJoin: false,
-                    reason: 'Test has been cancelled'
+                    reason: 'Test has been cancelled',
+                    errorType: 'CANCELLED'
                 };
             }
             
-            if (test.status === 'active') {
-                return {
-                    canJoin: false,
-                    reason: 'Test has already started and is no longer accepting new participants'
-                };
+            // FIXED: Mode-specific status validation
+            if (test.mode === 'online') {
+                // Online mode: only allow joining if status is 'waiting'
+                if (test.status === 'active') {
+                    return {
+                        canJoin: false,
+                        reason: 'Test has already started and is no longer accepting new participants',
+                        errorType: 'ALREADY_STARTED'
+                    };
+                }
+                if (test.status !== 'waiting') {
+                    return {
+                        canJoin: false,
+                        reason: 'Test is not available for joining',
+                        errorType: 'NOT_AVAILABLE'
+                    };
+                }
+            } else if (test.mode === 'offline') {
+                // Offline mode: allow joining if status is 'active' (this is normal for offline)
+                if (test.status !== 'active') {
+                    return {
+                        canJoin: false,
+                        reason: 'Test is not currently available',
+                        errorType: 'NOT_AVAILABLE'
+                    };
+                }
             }
             
             // Capacity check
@@ -795,7 +1517,8 @@ class TestService {
             if (activeParticipants.length >= test.maxParticipants) {
                 return {
                     canJoin: false,
-                    reason: 'Test is full. No more participants can join.'
+                    reason: 'Test is full. No more participants can join.',
+                    errorType: 'FULL'
                 };
             }
             
@@ -809,24 +1532,7 @@ class TestService {
                 };
             }
             
-            // Schedule check for offline mode
-            if (test.mode === 'offline' && test.scheduleSettings) {
-                const now = new Date();
-                if (now < new Date(test.scheduleSettings.startTime)) {
-                    return {
-                        canJoin: false,
-                        reason: 'Test has not started yet',
-                        startTime: test.scheduleSettings.startTime
-                    };
-                }
-                if (now > new Date(test.scheduleSettings.endTime)) {
-                    return {
-                        canJoin: false,
-                        reason: 'Test has expired'
-                    };
-                }
-            }
-            
+            // All validations passed
             return {
                 canJoin: true,
                 test: {
@@ -836,7 +1542,8 @@ class TestService {
                     status: test.status,
                     participantCount: activeParticipants.length,
                     maxParticipants: test.maxParticipants,
-                    availableSlots: test.maxParticipants - activeParticipants.length
+                    availableSlots: test.maxParticipants - activeParticipants.length,
+                    scheduleSettings: test.scheduleSettings
                 },
                 participant: {
                     name: trimmedName,
@@ -848,7 +1555,8 @@ class TestService {
             console.error('Validate participant can join error:', error);
             return {
                 canJoin: false,
-                reason: 'Test not found or validation failed'
+                reason: 'Test not found or validation failed',
+                errorType: 'VALIDATION_ERROR'
             };
         }
     }
