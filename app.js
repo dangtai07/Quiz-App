@@ -52,10 +52,49 @@ app.use(i18nextMiddleware.handle(i18next));
 app.use((req, res, next) => {
     res.locals.user = req.session ? req.session.user : null;
     
-    // NEW: i18n helpers for templates
+    // i18n helpers for templates
     res.locals.t = req.t;
     res.locals.lng = req.language;
     res.locals.languages = ['vi', 'en'];
+    
+    // Enhanced translation function with interpolation
+    res.locals.ti = function(key, options = {}) {
+        let translation = req.t(key);
+        
+        // Simple interpolation
+        if (options && typeof options === 'object') {
+            Object.keys(options).forEach(placeholder => {
+                const regex = new RegExp(`{{${placeholder}}}`, 'g');
+                translation = translation.replace(regex, options[placeholder]);
+            });
+        }
+        
+        return translation;
+    };
+    
+    // Helper function để format date theo ngôn ngữ
+    res.locals.formatDate = (date, options = {}) => {
+        if (!date) return '';
+        
+        const defaultOptions = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric'
+        };
+        
+        const formatOptions = { ...defaultOptions, ...options };
+        const locale = req.language === 'vi' ? 'vi-VN' : 'en-US';
+        
+        return new Date(date).toLocaleDateString(locale, formatOptions);
+    };
+    
+    // Helper function để format số theo ngôn ngữ
+    res.locals.formatNumber = (number, options = {}) => {
+        if (number === null || number === undefined) return '';
+        
+        const locale = req.language === 'vi' ? 'vi-VN' : 'en-US';
+        return new Intl.NumberFormat(locale, options).format(number);
+    };
     
     next();
 });

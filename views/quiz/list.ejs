@@ -1,10 +1,10 @@
 <% layout = false %>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= lng %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - Quiz App</title>
+    <title><%= title %> - <%= t('common:app_name') %></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -19,17 +19,18 @@
         <div class="container">
             <a class="navbar-brand" href="/quizzes">
                 <i class="fas fa-brain"></i>
-                Quiz App
+                <%= t('common:app_name') %>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             
             <div class="collapse navbar-collapse" id="navbarNav">
-                <!-- NEW: Room Selection Info -->
+                <!-- Language Switcher -->
                 <ul class="navbar-nav me-auto">
+                    <!-- Room Selection Info -->
                     <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
-                    <li class="nav-item dropdown">
+                    <li class="nav-item dropdown ms-3">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" 
                            href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="d-flex align-items-center">
@@ -41,7 +42,7 @@
                                         <%= roomInfo.code.toUpperCase() %>
                                     </span>
                                     <small class="text-white-50 d-none d-lg-inline" style="font-size: 0.75rem;">
-                                        Selected: <%= new Date(roomInfo.selectedAt).toLocaleTimeString('en-GB', { hour12: false })%>
+                                        <%= t('quiz:selected') %>: <%= new Date(roomInfo.selectedAt).toLocaleTimeString(lng === 'vi' ? 'vi-VN' : 'en-US', { hour12: false })%>
                                     </small>
                                 </div>
                             </div>
@@ -50,19 +51,19 @@
                             <li>
                                 <h6 class="dropdown-header">
                                     <i class="fas fa-building me-2"></i>
-                                    Current Department
+                                    <%= t('quiz:current_department') %>
                                 </h6>
                             </li>
                             <li>
                                 <span class="dropdown-item-text">
                                     <strong><%= roomInfo.name %></strong><br>
-                                    <small class="text-muted">Code: <%= roomInfo.code.toUpperCase() %></small>
+                                    <small class="text-muted"><%= t('quiz:code') %>: <%= roomInfo.code.toUpperCase() %></small>
                                 </span>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item" href="#" onclick="switchDepartment()">
-                                    <i class="fas fa-exchange-alt me-2"></i>Switch Department
+                                    <i class="fas fa-exchange-alt me-2"></i><%= t('quiz:switch_department') %>
                                 </a>
                             </li>
                         </ul>
@@ -84,9 +85,9 @@
                                 </div>
                                 <span class="fw-medium d-none d-sm-inline">
                                     <% if (typeof user !== 'undefined' && user) { %>
-                                        <%= user.name || 'Admin' %>
+                                        <%= user.name || t('quiz:admin') %>
                                     <% } else { %>
-                                        Admin
+                                        <%= t('quiz:admin') %>
                                     <% } %>
                                 </span>
                             </div>
@@ -101,12 +102,15 @@
                                 </h6>
                             </li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i><%= t('common:profile') %></a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i><%= t('common:settings') %></a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                            <li><a class="dropdown-item text-danger" href="/auth/logout"><i class="fas fa-sign-out-alt me-2"></i><%= t('common:logout') %></a></li>
                         </ul>
                     </div>
+                </div>
+                <div class="language-switcher-container" style="text-align: end;">
+                    <%- include('../partials/language-switcher') %>
                 </div>
             </div>
         </div>
@@ -121,11 +125,11 @@
                         <div class="header-content">
                             <h1 class="page-title">
                                 <i class="fas fa-clipboard-list me-3"></i>
-                                Quiz Management
+                                <%= t('quiz:management') %>
                                 <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
                                 <small class="text-white-50 d-block mt-2" style="font-size: 1.2rem; font-weight: 500;">
                                     <i class="fas <%= roomInfo.code === 'hrm' ? 'fa-users' : roomInfo.code === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> me-2"></i>
-                                    <%= roomInfo.name %> Department
+                                    <%= roomInfo.name %> <%= t('quiz:department') %>
                                 </small>
                                 <% } %>
                             </h1>
@@ -135,15 +139,15 @@
                         <div class="header-actions">
                             <a href="/quizzes/create" class="btn btn-primary-custom me-2" style="margin-top: 10px;">
                                 <i class="fas fa-plus me-2"></i>
-                                Create New Quiz
+                                <%= t('quiz:create_new') %>
                             </a>
                             <button class="btn btn-warning-custom me-2" onclick="openCreateTestModal()" style="margin-top: 10px;">
                                 <i class="fas fa-rocket me-2"></i>
-                                Create Test
+                                <%= t('test:create_test') %>
                             </button>
                             <a href="/test/admin/results" class="btn btn-result-custom me-2" style="margin-top: 10px; margin-right: 0 !important;">
                                 <i class="fas fa-chart-bar me-2"></i>
-                                Test Results
+                                <%= t('test:test_results') %>
                             </a>
                         </div>
                     </div>
@@ -158,14 +162,14 @@
                     <div class="filter-header">
                         <h5 class="filter-title">
                             <i class="fas fa-filter me-2"></i>
-                            Filter & Search
+                            <%= t('quiz:filter_and_search') %>
                             <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
-                            <small class="text-muted">(<%= roomInfo.code.toUpperCase() %> Department)</small>
+                            <small class="text-muted">(<%= roomInfo.code.toUpperCase() %> <%= t('quiz:department') %>)</small>
                             <% } %>
                         </h5>
                         <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">
                             <i class="fas fa-times me-1"></i>
-                            Clear All
+                            <%= t('quiz:clear_all') %>
                         </button>
                     </div>
                     <div class="filter-body">
@@ -174,38 +178,35 @@
                                 <div class="search-wrapper">
                                     <i class="fas fa-search search-icon"></i>
                                     <input type="text" class="form-control search-input" id="searchQuiz" 
-                                           placeholder="Search quizzes by title...">
+                                           placeholder="<%= t('quiz:search_placeholder') %>">
                                 </div>
                             </div>
                             <div class="col-lg-2 col-md-3 col-sm-6">
                                 <select class="form-select filter-select" id="filterMode">
-                                    <option value="">All Modes</option>
-                                    <option value="online">Online</option>
-                                    <option value="offline">Offline</option>
+                                    <option value=""><%= t('quiz:all_modes') %></option>
+                                    <option value="online"><%= t('quiz:online') %></option>
+                                    <option value="offline"><%= t('quiz:offline') %></option>
                                 </select>
                             </div>
-                            <div class="col-lg-2 col-md-3 col-sm-6" d>
+                            <div class="col-lg-2 col-md-3 col-sm-6">
                                 <select class="form-select filter-select" id="filterLanguage" disabled>
-                                    <option value="">All Languages</option>
-                                    <option value="vietnamese">Vietnamese</option>
-                                    <option value="english">English</option>
+                                    <option value=""><%= t('quiz:all_languages') %></option>
+                                    <option value="vietnamese"><%= t('quiz:vietnamese') %></option>
+                                    <option value="english"><%= t('quiz:english') %></option>
                                 </select>
                             </div>
                             <div class="col-lg-2 col-md-6 col-sm-6">
                                 <select class="form-select filter-select" id="sortBy">
-                                    <option value="newest">Newest First</option>
-                                    <option value="oldest">Oldest First</option>
-                                    <option value="name">Name A-Z</option>
+                                    <option value="newest"><%= t('quiz:newest_first') %></option>
+                                    <option value="oldest"><%= t('quiz:oldest_first') %></option>
+                                    <option value="name"><%= t('quiz:name_a_z') %></option>
                                 </select>
                             </div>
                             <div class="col-lg-2 col-md-6 col-sm-6">
                                 <div class="view-toggle">
-                                    <button class="view-btn active" data-view="grid" title="Grid View" disabled>
+                                    <button class="view-btn active" data-view="grid" title="<%= t('quiz:grid_view') %>" disabled>
                                         <i class="fas fa-th"></i>
                                     </button>
-                                    <!-- <button class="view-btn" data-view="list" title="List View">
-                                        <i class="fas fa-list"></i>
-                                    </button> -->
                                 </div>
                             </div>
                         </div>
@@ -222,7 +223,7 @@
                     <div class="loading-spinner">
                         <i class="fas fa-spinner fa-spin"></i>
                     </div>
-                    <p>Loading quizzes...</p>
+                    <p><%= t('quiz:loading_quizzes') %></p>
                 </div>
 
                 <!-- Empty State -->
@@ -231,17 +232,17 @@
                     <div class="empty-icon">
                         <i class="fas fa-clipboard-list"></i>
                     </div>
-                    <h3>No Quizzes Yet</h3>
+                    <h3><%= t('quiz:no_quizzes_yet') %></h3>
                     <p>
                         <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
-                            Get started by creating your first quiz for <%= roomInfo.name %> department.
+                            <%= ti('quiz:get_started_department', { department: roomInfo.name }) %>
                         <% } else { %>
-                            Get started by creating your first quiz. It's quick and easy!
+                            <%= t('quiz:get_started_general') %>
                         <% } %>
                     </p>
                     <a href="/quizzes/create" class="btn btn-primary-custom">
                         <i class="fas fa-plus me-2"></i>
-                        Create Your First Quiz
+                        <%= t('quiz:create_first_quiz') %>
                     </a>
                 </div>
                 <% } else { %>
@@ -261,9 +262,9 @@
                             <div class="card-badges">
                                 <span class="badge badge-<%= quiz.mode %>">
                                     <i class="fas <%= quiz.mode === 'online' ? 'fa-globe' : 'fa-desktop' %> me-1"></i>
-                                    <%= quiz.mode.charAt(0).toUpperCase() + quiz.mode.slice(1) %>
+                                    <%= t('quiz:' + quiz.mode) %>
                                 </span>
-                                <!-- NEW: Department Badge -->
+                                <!-- Department Badge -->
                                 <% if (quiz.roomCode) { %>
                                 <span class="badge badge-language" style="background: linear-gradient(135deg, var(--warning-color), #d97706);">
                                     <i class="fas <%= quiz.roomCode === 'hrm' ? 'fa-users' : quiz.roomCode === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> me-1"></i>
@@ -288,7 +289,7 @@
                                 <%= quiz.title %>
                             </h3>
                             
-                            <!-- UPDATED: Quiz Stats - showing number and participants only -->
+                            <!-- Quiz Stats -->
                             <div class="quiz-stats">
                                 <div class="stat">
                                     <i class="fas fa-list-ol"></i>
@@ -296,12 +297,12 @@
                                 </div>
                                 <div class="stat">
                                     <i class="fas fa-users"></i>
-                                    <span><%= quiz.totalCount || 0 %> Participants</span>
+                                    <span><%= quiz.totalCount || 0 %> <%= t('quiz:participants') %></span>
                                 </div>
                                 <% if (quiz.scheduleSettings) { %>
                                 <div class="stat">
                                     <i class="fas fa-calendar"></i>
-                                    <span>Scheduled</span>
+                                    <span><%= t('quiz:scheduled') %></span>
                                 </div>
                                 <% } %>
                                 <div class="stat">
@@ -310,24 +311,22 @@
                                 </div>
                             </div>
 
-                            <!-- REMOVED: Progress Section completely eliminated -->
-
                             <!-- Card Footer -->
                             <div class="card-footer">
+                                <span class="meta-item">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <%= t('quiz:updated') %> <%= new Date(quiz.updatedAt).toLocaleDateString() %>
+                                </span>
                                 <div class="quiz-meta">
-                                    <span class="meta-item">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Updated <%= new Date(quiz.updatedAt).toLocaleDateString() %>
-                                    </span>
                                 </div>
                                 <div class="quick-actions">
                                     <a href="/quizzes/<%= quiz._id %>/preview" class="btn btn-sm btn-outline-primary">
                                         <i class="fas fa-eye me-1"></i>
-                                        Preview
+                                        <%= t('quiz:preview') %>
                                     </a>
                                     <a href="/quizzes/<%= quiz._id %>/edit" class="btn btn-sm btn-primary">
                                         <i class="fas fa-edit me-1"></i>
-                                        Edit
+                                        <%= t('common:edit') %>
                                     </a>
                                 </div>
                             </div>
@@ -342,13 +341,14 @@
                     <div class="empty-icon">
                         <i class="fas fa-search"></i>
                     </div>
-                    <h3>No Quizzes Found</h3>
-                    <p>Try adjusting your search criteria or create a new quiz.</p>
+                    <h3><%= t('quiz:no_quizzes_found') %></h3>
+                    <p><%= t('quiz:try_adjusting_criteria') %></p>
                     <button class="btn btn-outline-primary" onclick="clearFilters()">
                         <i class="fas fa-filter me-2"></i>
-                        Clear Filters
+                        <%= t('quiz:clear_filters') %>
                     </button>
                 </div>
+                
                 <!-- Pagination Section -->
                 <% if (totalPages >= 1) { %>
                     <nav>
@@ -384,14 +384,15 @@
         </div>
     </div>
 
+    <!-- Create Test Modal -->
     <div class="modal fade" id="createTestModal" tabindex="-1" aria-labelledby="createTestModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); color: white;">
                     <h5 class="modal-title" id="createTestModalLabel">
-                        <i class="fas fa-rocket me-2"></i>Create New Test Session
+                        <i class="fas fa-rocket me-2"></i><%= t('test:create_new_test_session') %>
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<%= t('common:close') %>"></button>
                 </div>
                 <div class="modal-body">
                     <form id="createTestForm">
@@ -401,17 +402,17 @@
                                 <div class="card bg-light border-0">
                                     <div class="card-body">
                                         <h6 class="card-title text-primary mb-3">
-                                            <i class="fas fa-list-ol me-2"></i>Quiz Selection
+                                            <i class="fas fa-list-ol me-2"></i><%= t('test:quiz_selection') %>
                                         </h6>
                                         <div class="form-floating">
                                             <input type="number" 
                                                 class="form-control" 
                                                 id="quizNumber" 
                                                 name="quizNumber" 
-                                                placeholder="Quiz Number"
+                                                placeholder="<%= t('test:quiz_number') %>"
                                                 min="1"
                                                 required>
-                                            <label for="quizNumber">Quiz Number</label>
+                                            <label for="quizNumber"><%= t('test:quiz_number') %></label>
                                         </div>
                                     </div>
                                 </div>
@@ -422,7 +423,7 @@
                             <div class="row mb-4">
                                 <div class="col-12">
                                     <h6 class="text-primary mb-3">
-                                        <i class="fas fa-cog me-2"></i>Test Mode
+                                        <i class="fas fa-cog me-2"></i><%= t('test:test_mode') %>
                                     </h6>
                                     <div class="row">
                                         <div class="col-md-6">
@@ -437,7 +438,7 @@
                                                     <div class="d-flex align-items-center">
                                                         <div>
                                                             <i class="fas fa-globe text-success me-2"></i>
-                                                            <strong>Online (Real-time)</strong>
+                                                            <strong><%= t('test:online_realtime') %></strong>
                                                         </div>
                                                     </div>
                                                 </label>
@@ -454,7 +455,7 @@
                                                     <div class="d-flex align-items-center">
                                                         <div>
                                                             <i class="fas fa-clock text-warning me-2"></i>
-                                                            <strong>Offline (Scheduled)</strong>
+                                                            <strong><%= t('test:offline_scheduled') %></strong>
                                                         </div>
                                                     </div>
                                                 </label>
@@ -470,7 +471,7 @@
                                     <div class="card border-warning bg-warning bg-opacity-10">
                                         <div class="card-body">
                                             <h6 class="card-title text-warning mb-3">
-                                                <i class="fas fa-calendar-alt me-2"></i>Schedule Settings
+                                                <i class="fas fa-calendar-alt me-2"></i><%= t('test:schedule_settings') %>
                                             </h6>
                                             <div class="row">
                                                 <div class="col-md-6">
@@ -479,7 +480,7 @@
                                                             class="form-control" 
                                                             id="startTime" 
                                                             name="startTime">
-                                                        <label for="startTime">Start Time</label>
+                                                        <label for="startTime"><%= t('test:start_time') %></label>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
@@ -488,7 +489,7 @@
                                                             class="form-control" 
                                                             id="endTime" 
                                                             name="endTime">
-                                                        <label for="endTime">End Time</label>
+                                                        <label for="endTime"><%= t('test:end_time') %></label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -501,19 +502,19 @@
                             <div class="row mb-4">
                                 <div class="col-12">
                                     <h6 class="text-primary mb-3">
-                                        <i class="fas fa-users me-2"></i>Participant Limit
+                                        <i class="fas fa-users me-2"></i><%= t('test:participant_limit') %>
                                     </h6>
                                     <div class="form-floating">
                                         <input type="number" 
                                             class="form-control" 
                                             id="maxParticipants" 
                                             name="maxParticipants" 
-                                            placeholder="Maximum Participants"
+                                            placeholder="<%= t('test:max_participants') %>"
                                             min="1"
                                             max="1000"
                                             value="50"
                                             required>
-                                        <label for="maxParticipants">Maximum Participants</label>
+                                        <label for="maxParticipants"><%= t('test:max_participants') %></label>
                                     </div>
                                 </div>
                             </div>
@@ -522,10 +523,10 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Cancel
+                        <i class="fas fa-times me-2"></i><%= t('common:cancel') %>
                     </button>
                     <button type="submit" form="createTestForm" class="btn btn-primary" id="createTestBtn">
-                        <i class="fas fa-rocket me-2"></i>Create Test
+                        <i class="fas fa-rocket me-2"></i><%= t('test:create_test') %>
                     </button>
                 </div>
             </div>
@@ -538,17 +539,17 @@
             <div class="modal-content">
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title" id="testCreatedModalLabel">
-                        <i class="fas fa-check-circle me-2"></i>Test Created Successfully!
+                        <i class="fas fa-check-circle me-2"></i><%= t('test:test_created_successfully') %>
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<%= t('common:close') %>"></button>
                 </div>
                 <div class="modal-body" id="testCreatedContent">
                     <!-- Content will be populated by JavaScript -->
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('common:close') %></button>
                     <button type="button" class="btn btn-primary" id="startTestBtn" style="display: none;">
-                        <i class="fas fa-play me-2"></i>Start Test Now
+                        <i class="fas fa-play me-2"></i><%= t('test:start_test_now') %>
                     </button>
                 </div>
             </div>
@@ -562,20 +563,20 @@
                 <div class="col-md-6 text-center text-md-start">
                     <span class="footer-text">
                         <i class="fas fa-brain me-2"></i>
-                        Quiz App © <%= new Date().getFullYear() %> All rights reserved
+                        <%= t('common:app_name') %> © <%= new Date().getFullYear() %> <%= t('quiz:all_rights_reserved') %>
                         <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
                         <small class="text-muted ms-2">
-                            | <%= roomInfo.name %> Department
+                            | <%= roomInfo.name %> <%= t('quiz:department') %>
                         </small>
                         <% } %>
                     </span>
                 </div>
                 <div class="col-md-6">
                     <div class="footer-links">
-                        <a href="/about">About</a>
-                        <a href="/privacy">Privacy</a>
-                        <a href="/terms">Terms</a>
-                        <a href="/contact">Contact</a>
+                        <a href="/about"><%= t('quiz:about') %></a>
+                        <a href="/privacy"><%= t('quiz:privacy') %></a>
+                        <a href="/terms"><%= t('quiz:terms') %></a>
+                        <a href="/contact"><%= t('quiz:contact') %></a>
                     </div>
                 </div>
             </div>
@@ -587,19 +588,59 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/js/modern_quiz_list.js"></script>
     
+    <!-- Translation object for JavaScript -->
+    <script>
+        window.translations = {
+            lng: '<%= lng %>',
+            switchDepartment: '<%= t("quiz:switch_department") %>',
+            switchDepartmentConfirm: '<%= t("quiz:switch_department_confirm") %>',
+            switchDepartmentText: '<%= t("quiz:switch_department_text") %>',
+            yesSwitchBtn: '<%= t("quiz:yes_switch") %>',
+            cancelBtn: '<%= t("common:cancel") %>',
+            errorTitle: '<%= t("common:error") %>',
+            errorSwitchDepartment: '<%= t("quiz:error_switch_department") %>',
+            loadingQuizzes: '<%= t("quiz:loading_quizzes") %>',
+            quizzesRefreshed: '<%= t("quiz:quizzes_refreshed") %>',
+            deleteQuizTitle: '<%= t("quiz:delete_quiz_title") %>',
+            deleteQuizText: '<%= t("quiz:delete_quiz_text") %>',
+            yesDeleteBtn: '<%= t("quiz:yes_delete") %>',
+            deletingQuiz: '<%= t("quiz:deleting_quiz") %>',
+            pleaseWait: '<%= t("quiz:please_wait") %>',
+            quizDeleted: '<%= t("quiz:quiz_deleted") %>',
+            quizDeletedText: '<%= t("quiz:quiz_deleted_text") %>',
+            failedDeleteQuiz: '<%= t("quiz:failed_delete_quiz") %>',
+            creatingTest: '<%= t("test:creating_test") %>',
+            errorCreatingTest: '<%= t("test:error_creating_test") %>',
+            createTest: '<%= t("test:create_test") %>',
+            testCode: '<%= t("test:test_code") %>',
+            schedule: '<%= t("test:schedule") %>',
+            mode: '<%= t("test:mode") %>',
+            maxParticipants: '<%= t("test:max_participants") %>',
+            qrCodeNotAvailable: '<%= t("test:qr_code_not_available") %>',
+            instructionsForParticipants: '<%= t("test:instructions_for_participants") %>',
+            accessViaLink: '<%= t("test:access_via_link") %>',
+            enterTestCode: '<%= t("test:enter_test_code") %>',
+            waitInLobby: '<%= t("test:wait_in_lobby") %>',
+            joinAnytimeScheduled: '<%= t("test:join_anytime_scheduled") %>',
+            startTestNow: '<%= t("test:start_test_now") %>',
+            close: '<%= t("common:close") %>',
+            joinLinkCopied: '<%= t("test:join_link_copied") %>'
+        };
+    </script>
+    
     <!-- Room Management Scripts -->
     <script>
         // Function to switch department
         function switchDepartment() {
             Swal.fire({
-                title: 'Switch Department?',
-                text: 'You will be redirected to select a different department.',
+                title: window.translations.switchDepartmentConfirm,
+                text: window.translations.switchDepartmentText,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#667eea',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: 'Yes, Switch',
-                cancelButtonText: 'Cancel'
+                confirmButtonText: window.translations.yesSwitchBtn,
+                cancelButtonText: window.translations.cancelBtn
             }).then((result) => {
                 if (result.isConfirmed) {
                     fetch('/auth/api/admin/switch-room', {
@@ -619,8 +660,8 @@
                     .catch(error => {
                         Swal.fire({
                             icon: 'error',
-                            title: 'Error',
-                            text: 'Failed to switch department. Please try again.',
+                            title: window.translations.errorTitle,
+                            text: window.translations.errorSwitchDepartment,
                             confirmButtonColor: '#667eea'
                         });
                     });
@@ -636,18 +677,101 @@
             // Show room info in loading message
             const roomInfo = '<%= typeof roomInfo !== "undefined" && roomInfo ? roomInfo.name : "" %>';
             if (roomInfo) {
-                document.querySelector('#loadingState p').textContent = `Loading ${roomInfo} quizzes...`;
+                document.querySelector('#loadingState p').textContent = window.translations.loadingQuizzes.replace('quizzes', roomInfo + ' quizzes');
             }
             
             setTimeout(() => {
                 showLoadingState(false);
-                showNotification('Quizzes refreshed successfully!', 'success');
+                showNotification(window.translations.quizzesRefreshed, 'success');
                 
                 // Re-animate cards
                 document.querySelectorAll('.quiz-card').forEach((card, index) => {
                     card.style.animation = `fadeInUp 0.6s ease-out ${index * 0.1}s both`;
                 });
             }, 1500);
+        };
+
+        // Override delete quiz function with translations
+        window.deleteQuiz = async function(quizId) {
+            try {
+                const result = await Swal.fire({
+                    title: window.translations.deleteQuizTitle,
+                    text: window.translations.deleteQuizText,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#64748b',
+                    confirmButtonText: window.translations.yesDeleteBtn,
+                    cancelButtonText: window.translations.cancelBtn,
+                    customClass: {
+                        popup: 'swal-modern',
+                        confirmButton: 'swal-confirm-modern',
+                        cancelButton: 'swal-cancel-modern'
+                    }
+                });
+
+                if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: window.translations.deletingQuiz,
+                        text: window.translations.pleaseWait,
+                        icon: 'info',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        customClass: {
+                            popup: 'swal-modern'
+                        }
+                    });
+
+                    const response = await fetch(`/quizzes/${quizId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to delete quiz');
+                    }
+
+                    // Remove card with animation
+                    const quizCard = document.querySelector(`[data-quiz-id="${quizId}"]`) || 
+                                    document.querySelector(`.quiz-card:has(a[href*="${quizId}"])`);
+                    
+                    if (quizCard) {
+                        quizCard.style.animation = 'fadeOut 0.5s ease-out';
+                        setTimeout(() => {
+                            quizCard.remove();
+                            updateQuizCount();
+                            applyFilters(); // Reapply filters to update counts
+                        }, 500);
+                    }
+
+                    Swal.fire({
+                        title: window.translations.quizDeleted,
+                        text: window.translations.quizDeletedText,
+                        icon: 'success',
+                        timer: 3000,
+                        timerProgressBar: true,
+                        showConfirmButton: false,
+                        customClass: {
+                            popup: 'swal-modern'
+                        }
+                    });
+
+                }
+            } catch (error) {
+                console.error('Delete quiz error:', error);
+                Swal.fire({
+                    title: window.translations.errorTitle,
+                    text: window.translations.failedDeleteQuiz,
+                    icon: 'error',
+                    confirmButtonColor: '#667eea',
+                    customClass: {
+                        popup: 'swal-modern'
+                    }
+                });
+            }
         };
 
         // Dropdown fix for room selection
@@ -677,7 +801,7 @@
         });
     </script>
     <script>
-        // Create Test Modal functionality
+        // Create Test Modal functionality with translations
         document.addEventListener('DOMContentLoaded', function() {
             const createTestModal = new bootstrap.Modal(document.getElementById('createTestModal'));
             const testCreatedModal = new bootstrap.Modal(document.getElementById('testCreatedModal'));
@@ -733,7 +857,7 @@
                 }
                 
                 // Show loading state
-                createTestBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating Test...';
+                createTestBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + window.translations.creatingTest;
                 createTestBtn.disabled = true;
                 
                 try {
@@ -765,13 +889,13 @@
                     console.error('Create test error:', error);
                     Swal.fire({
                         icon: 'error',
-                        title: 'Error Creating Test',
+                        title: window.translations.errorCreatingTest,
                         text: error.message,
                         confirmButtonColor: '#667eea'
                     });
                 } finally {
                     // Reset button
-                    createTestBtn.innerHTML = '<i class="fas fa-rocket me-2"></i>Create Test';
+                    createTestBtn.innerHTML = '<i class="fas fa-rocket me-2"></i>' + window.translations.createTest;
                     createTestBtn.disabled = false;
                 }
             });
@@ -788,7 +912,7 @@
                     scheduleInfo = `
                         <div class="alert alert-info">
                             <i class="fas fa-clock me-2"></i>
-                            <strong>Schedule:</strong> ${startTime.toLocaleString()} - ${endTime.toLocaleString()}
+                            <strong>${window.translations.schedule}:</strong> ${startTime.toLocaleString()} - ${endTime.toLocaleString()}
                         </div>
                     `;
                 }
@@ -796,17 +920,17 @@
                 contentDiv.innerHTML = `
                     <div class="text-center mb-4">
                         <div class="badge bg-success fs-6 mb-3">
-                            Test Code: <strong>${test.testCode}</strong>
+                            ${window.translations.testCode}: <strong>${test.testCode}</strong>
                         </div>
                         <h6>Quiz #${test.quizNumber}: ${test.quizTitle}</h6>
-                        <p class="text-muted">Mode: ${test.mode.toUpperCase()} | Max Participants: ${test.maxParticipants}</p>
+                        <p class="text-muted">${window.translations.mode}: ${test.mode.toUpperCase()} | ${window.translations.maxParticipants}: ${test.maxParticipants}</p>
                     </div>
                     
                     ${scheduleInfo}
                     
                     <div class="row">
                         <div class="col-md-12" style="text-align: center;">
-                            ${qrCode ? `<img src="${qrCode}" alt="QR Code" class="img-fluid" style="width: 300px;">` : '<p class="text-muted">QR Code not available</p>'}
+                            ${qrCode ? `<img src="${qrCode}" alt="QR Code" class="img-fluid" style="width: 300px;">` : `<p class="text-muted">${window.translations.qrCodeNotAvailable}</p>`}
                         </div>
                         <div class="col-md-12">
                             <div class="input-group mb-3">
@@ -820,11 +944,11 @@
                     
                     <div class="alert alert-warning mt-3">
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Instructions for participants:</strong>
+                        <strong>${window.translations.instructionsForParticipants}</strong>
                         <ul class="mb-0 mt-2">
-                            <li>Access via the join link above</li>
-                            <li>Or visit the app and enter test code: <strong>${test.testCode}</strong></li>
-                            ${test.mode === 'online' ? '<li>Wait in the lobby until you start the test</li>' : '<li>Can join anytime within the scheduled period</li>'}
+                            <li>${window.translations.accessViaLink}</li>
+                            <li>${window.translations.enterTestCode}: <strong>${test.testCode}</strong></li>
+                            ${test.mode === 'online' ? `<li>${window.translations.waitInLobby}</li>` : `<li>${window.translations.joinAnytimeScheduled}</li>`}
                         </ul>
                     </div>
                 `;
@@ -859,7 +983,7 @@
                     button.innerHTML = originalContent;
                 }, 2000);
                 
-                showNotification('Join link copied to clipboard!', 'success');
+                showNotification(window.translations.joinLinkCopied, 'success');
             };
             
             // Global function to open create test modal

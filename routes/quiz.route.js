@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const QuizController = require('../controllers/quiz.controller');
 const upload = require('../config/multer.config');
+const { i18nMiddleware, languageSwitchMiddleware } = require('../middlewares/i18n.middleware');
+
+// Apply i18n middleware to all routes
+router.use(languageSwitchMiddleware);
+router.use(i18nMiddleware);
 
 // Add new route for rendering create page
 router.get('/create', QuizController.renderCreateQuiz);
