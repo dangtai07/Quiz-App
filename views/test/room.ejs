@@ -694,7 +694,6 @@
         function setupSocketEvents() {
             // Connection events
             socket.on('connect', () => {
-                console.log('Connected to server');
                 reconnectAttempts = 0;
                 hideConnectionError();
                 
@@ -703,7 +702,7 @@
                     joinAsAdmin();
                 } else if (!testData.isAdmin && hasJoinedTest && participantData) {
                     // If already joined, just rejoin with existing data
-                    console.log('Reconnecting existing participant...');
+
                     rejoinAsParticipant();
                 } else if (!testData.isAdmin && !hasJoinedTest) {
                     // First time join
@@ -712,7 +711,6 @@
             });
 
             socket.on('disconnect', (reason) => {
-                console.log('Disconnected from server:', reason);
                 if (reason === 'io server disconnect') {
                     socket.connect();
                 }
@@ -813,7 +811,6 @@
             
             // ENHANCED: Check for proper validation
             if (!testSession.participantName || !testSession.readyToJoin || !testSession.validated) {
-                console.log('Invalid session data, redirecting to join page');
                 window.location.href = `/test/join/${testData.testCode}`;
                 return;
             }
@@ -821,14 +818,11 @@
             // Check session timeout (5 minutes)
             const sessionAge = Date.now() - (testSession.timestamp || 0);
             if (sessionAge > 5 * 60 * 1000) {
-                console.log('Session expired, redirecting to join page');
                 sessionStorage.removeItem('testSession');
                 window.location.href = `/test/join/${testData.testCode}`;
                 return;
             }
 
-            console.log('Joining as participant:', testSession.participantName);
-            
             socket.emit('participant:join', {
                 testCode: testData.testCode,
                 participantName: testSession.participantName
@@ -844,11 +838,8 @@
                 return;
             }
             
-            console.log('Rejoining as existing participant:', participantData.name);
-            
             // Don't rejoin if already joined successfully
             if (hasJoinedTest) {
-                console.log('Already joined, skipping rejoin');
                 return;
             }
             
@@ -862,13 +853,10 @@
 
         // Event Handlers
         function handleAdminJoined(data) {
-            console.log('Admin joined:', data);
             updateWaitingRoom(data.waitingRoom);
         }
 
         function handleParticipantJoined(data) {
-            console.log('Participant joined:', data);
-            
             if (!testData.isAdmin) {
                 // Store participant data for reconnection
                 participantData = data.participant;
@@ -883,14 +871,12 @@
                 };
                 sessionStorage.setItem('testSession', JSON.stringify(cleanSession));
                 
-                console.log('✅ Successfully joined test as participant');
             } else {
                 updateWaitingRoom(data.waitingRoom);
             }
         }
 
         function handleParticipantLeft(data) {
-            console.log('Participant left:', data);
             if (testData.isAdmin && data.waitingRoom) {
                 updateWaitingRoom(data.waitingRoom);
             }

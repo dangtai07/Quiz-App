@@ -497,8 +497,6 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             quizData = JSON.parse(document.getElementById('quiz-data').textContent);
-            console.log('Starting offline quiz:', quizData);
-            
             // Start the first question immediately
             showQuestion(0);
         });
@@ -878,12 +876,6 @@
         }
 
         function submitAnswerToServer(selectedAnswer, timeRemaining) {
-            console.log(`📤 Submitting answer for ${quizData.participantName} in test ${quizData.testCode}:`, {
-                questionNumber: currentQuestionIndex,
-                selectedAnswer,
-                timeRemaining
-            });
-            
             fetch('/test/submit-offline-answer', {
                 method: 'POST',
                 headers: {
@@ -898,22 +890,9 @@
                 })
             })
             .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    console.log('✅ Answer submitted successfully:', data.result);
-                } else {
-                    console.error('❌ Failed to submit answer:', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('❌ Error submitting answer:', error);
-                // Continue with offline mode even if server submission fails
-            });
         }
 
         function submitTestCompletion() {
-            console.log(`🏁 Completing test for ${quizData.participantName} in test ${quizData.testCode}`);
-            
             fetch('/test/complete-offline-test', {
                 method: 'POST',
                 headers: {
@@ -925,17 +904,6 @@
                 })
             })
             .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    isSubmitedTest = true;
-                    console.log('✅ Test completion submitted successfully:', data.results);
-                } else {
-                    console.error('❌ Failed to complete test:', data.message);
-                }
-            })
-            .catch(error => {
-                console.error('❌ Error submitting test completion:', error);
-            });
         }
 
         function formatTime(milliseconds) {
@@ -947,15 +915,6 @@
         function viewResults() {
             window.location.href = `/test/results/${quizData.testCode}`;
         }
-
-        // Handle page visibility change (for pausing/resuming)
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                console.log('Page hidden');
-            } else {
-                console.log('Page visible');
-            }
-        });
 
         // Handle beforeunload to submit partial completion
         window.addEventListener('beforeunload', function(e) {

@@ -828,7 +828,6 @@ function previewQuiz() {
     displayCurrentQuestion();
     updateProgress();
     
-    console.log('Preview initialized with', questions.length, 'questions');
 }
 
 /**
@@ -919,8 +918,7 @@ function selectPreviewOption(element, letter) {
         });
         element.classList.add('selected');
     }
-    
-    console.log('Selected option:', letter, 'for question', currentPreviewQuestion + 1);
+
 }
 
 /**
@@ -1031,7 +1029,6 @@ function nextQuestion() {
         selectedAnswer = null; // Reset for next question
         displayCurrentQuestion();
         updateProgress();
-        console.log('Moved to question', currentPreviewQuestion + 1);
     }
 }
 
@@ -1076,7 +1073,6 @@ function finishQuiz() {
         if (modal) modal.hide();
     });
     
-    console.log('Quiz preview finished');
 }
 
 /**
