@@ -1427,24 +1427,38 @@
         if (!statsContent) return;
         
         let statsHTML = `
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body text-center">
-                            <h5>${stats.totalAnswers}</h5>
-                            <small>Total Answers</small>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <div class="modern-stat-card total-answers">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
                         </div>
+                        <div class="stat-content">
+                            <div class="stat-value">${stats.totalAnswers}</div>
+                            <div class="stat-label">Total Answers</div>
+                        </div>
+                        <div class="stat-decoration"></div>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="card bg-success text-white">
-                        <div class="card-body text-center">
-                            <h5>${stats.correctAnswers}</h5>
-                            <small>Correct Answers</small>
+                <div class="col-md-6 mb-3">
+                    <div class="modern-stat-card correct-answers">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
                         </div>
+                        <div class="stat-content">
+                            <div class="stat-value">${stats.correctAnswers}</div>
+                            <div class="stat-label">Correct Answers</div>
+                        </div>
+                        <div class="stat-decoration"></div>
                     </div>
                 </div>
             </div>
+            
+            <div class="answer-distribution">
+                <h6 class="distribution-title">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Answer Distribution
+                </h6>
         `;
         
         const question = testData.quiz.questions[currentQuestion];
@@ -1453,21 +1467,33 @@
                 const count = stats.answerDistribution[option.letter] || 0;
                 const percentage = stats.totalAnswers > 0 ? 
                     Math.round((count / stats.totalAnswers) * 100) : 0;
-                if (count === 0) return; 
+                //if (count === 0) return; 
+                
                 statsHTML += `
-                    <div class="stat-bar">
-                        <div class="stat-label">${option.letter}</div>
-                        <div class="stat-progress">
-                            <div class="stat-fill" style="width: ${percentage}%">
-                                ${count} (${percentage}%)
+                <div class="stat-option-label">
+                    <span class="preview-option-letter letter-${option.letter}">${option.letter}</span>
+                    <div class="stat-progress-container">
+                        <div class="stat-progress-track">
+                            <div class="stat-progress-fill" style="width: ${percentage}% !important" data-percentage="${percentage}">
+                                <span class="progress-text">${count}</span>
                             </div>
                         </div>
+                        <div class="stat-percentage">${percentage}%</div>
                     </div>
+                </div>
                 `;
             });
         }
         
+        statsHTML += `</div>`;
         statsContent.innerHTML = statsHTML;
+        
+        // Animate the progress bars
+        setTimeout(() => {
+            document.querySelectorAll('.stat-progress-fill').forEach(fill => {
+                fill.style.animation = 'fillProgress 1s ease-out forwards';
+            });
+        }, 100);
     }
 
     function updateLeaderboard(leaderboard) {

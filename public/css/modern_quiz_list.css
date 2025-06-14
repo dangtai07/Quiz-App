@@ -460,9 +460,9 @@ body {
 }
 
 .action-btn:hover {
-    background: var(--primary-color);
+    background: var(--danger-color);
     color: white;
-    border-color: var(--primary-color);
+    border-color: var(--danger-color);
 }
 
 /* FIX: Ensure card action dropdowns work properly */
