@@ -462,6 +462,97 @@ class TestController {
             });
         }
     }
+    /**
+     * Render test results list page (admin only)
+     */
+    async renderTestResultsList(req, res) {
+        try {
+            const { getCurrentRoomInfo } = require('./auth.controller');
+            const roomInfo = getCurrentRoomInfo(req);
+            
+            if (!roomInfo) {
+                return res.redirect('/auth/admin/select-room');
+            }
+
+            // Get query parameters for filtering and pagination
+            const page = parseInt(req.query.page) || 1;
+            const limit = 10; // Fixed at 10 records per page
+            const mode = req.query.mode || 'all'; // 'all', 'online', 'offline'
+            const skip = (page - 1) * limit;
+
+            // Build filter criteria
+            const filterCriteria = {
+                roomCode: roomInfo.code
+            };
+
+            // Add mode filter if specified
+            if (mode !== 'all') {
+                filterCriteria.mode = mode;
+            }
+
+            // Get tests with pagination
+            const tests = await TestService.getTestsList(filterCriteria, {
+                skip,
+                limit,
+                sort: { completedAt: -1 } // Most recent first
+            });
+
+            // Get total count for pagination
+            const totalTests = await TestService.getTestsCount(filterCriteria);
+            const totalPages = Math.ceil(totalTests / limit);
+
+            // Format test data for display
+            const formattedTests = tests.map(test => ({
+                id: test._id,
+                testCode: test.testCode,
+                quizTitle: test.quizId ? test.quizId.title : 'Unknown Quiz',
+                mode: test.mode,
+                createdAt: test.createdAt,
+                participantCount: test.finalResults ? test.finalResults.length : 0,
+                totalParticipants: test.participants ? test.participants.length : 0,
+                averageScore: test.getAverageScore ? test.getAverageScore() : 0
+            }));
+
+            // Statistics for header
+            const stats = {
+                total: totalTests,
+                online: await TestService.getTestsCount({ ...filterCriteria, mode: 'online' }),
+                offline: await TestService.getTestsCount({ ...filterCriteria, mode: 'offline' })
+            };
+
+            res.render('test/results-list', {
+                title: `Test Results - ${roomInfo.name} Department`,
+                user: req.user,
+                tests: formattedTests,
+                stats,
+                currentPage: page,
+                totalPages,
+                totalTests,
+                mode,
+                roomInfo,
+                pagination: {
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1,
+                    nextPage: page + 1,
+                    prevPage: page - 1,
+                    pages: Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                        const startPage = Math.max(1, page - 2);
+                        return startPage + i;
+                    }).filter(p => p <= totalPages)
+                },
+                layout: false
+            });
+
+        } catch (error) {
+            console.error('Test results list error:', error);
+            res.status(500).render('error/500', {
+                title: 'Server Error',
+                message: 'Unable to load test results',
+                user: req.user
+            });
+        }
+    }
+
     
     /**
      * API endpoint to get live test data

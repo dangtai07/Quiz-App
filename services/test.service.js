@@ -298,7 +298,89 @@ class TestService {
             throw error;
         }
     }
-    
+    /**
+     * Get paginated list of tests with filtering
+     * @param {Object} filterCriteria - MongoDB filter criteria
+     * @param {Object} options - Pagination and sorting options
+     * @returns {Array} List of tests
+     */
+    async getTestsList(filterCriteria = {}, options = {}) {
+        try {
+            const {
+                skip = 0,
+                limit = 10,
+                sort = { createdAt: -1 }
+            } = options;
+
+            const tests = await Test.find(filterCriteria)
+                .populate('quizId', 'title mode language')
+                .populate('createdBy', 'name email')
+                .sort(sort)
+                .skip(skip)
+                .limit(limit)
+                .lean();
+
+            return tests;
+        } catch (error) {
+            console.error('Error fetching tests list:', error);
+            throw new Error('Failed to fetch tests list');
+        }
+    }
+
+    /**
+     * Get total count of tests matching filter criteria
+     * @param {Object} filterCriteria - MongoDB filter criteria
+     * @returns {Number} Total count
+     */
+    async getTestsCount(filterCriteria = {}) {
+        try {
+            return await Test.countDocuments(filterCriteria);
+        } catch (error) {
+            console.error('Error counting tests:', error);
+            throw new Error('Failed to count tests');
+        }
+    }
+
+    /**
+     * Get test statistics for admin dashboard
+     * @param {string} roomCode - Department code
+     * @returns {Object} Statistics object
+     */
+    async getTestStatistics(roomCode) {
+        try {
+            const baseFilter = { roomCode };
+            
+            const stats = await Promise.all([
+                // Total tests
+                Test.countDocuments(baseFilter),
+                // Completed tests
+                Test.countDocuments({ ...baseFilter, status: 'completed' }),
+                // Active tests
+                Test.countDocuments({ ...baseFilter, status: 'active' }),
+                // Online tests
+                Test.countDocuments({ ...baseFilter, mode: 'online' }),
+                // Offline tests
+                Test.countDocuments({ ...baseFilter, mode: 'offline' }),
+                // Tests created this week
+                Test.countDocuments({
+                    ...baseFilter,
+                    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+                })
+            ]);
+
+            return {
+                total: stats[0],
+                completed: stats[1],
+                active: stats[2],
+                online: stats[3],
+                offline: stats[4],
+                thisWeek: stats[5]
+            };
+        } catch (error) {
+            console.error('Error fetching test statistics:', error);
+            throw new Error('Failed to fetch test statistics');
+        }
+    }
     /**
      * UPDATED: Submit offline answer - Atomic operation with better error handling
      */
@@ -420,11 +502,6 @@ class TestService {
             
             // Find updated participant
             const updatedParticipant = updateResult.participants.find(p => p.name === participantName);
-            
-            console.log(`✅ Answer submitted successfully for ${participantName}:`, {
-                newScore: updatedParticipant.score,
-                totalAnswers: updatedParticipant.answers.length
-            });
             
             return {
                 isCorrect,

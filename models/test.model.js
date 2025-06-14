@@ -782,4 +782,88 @@ testSchema.statics.checkAndCompleteTest = async function(testCode) {
     
     return false;
 };
+// Method to calculate average score across all participants
+testSchema.methods.getAverageScore = function() {
+    const completedParticipants = this.getCompletedParticipants();
+    
+    if (completedParticipants.length === 0) {
+        return 0;
+    }
+    
+    const totalScore = completedParticipants.reduce((sum, participant) => {
+        return sum + (participant.score || 0);
+    }, 0);
+    
+    return Math.round(totalScore / completedParticipants.length);
+};
+
+// Method to get test completion statistics
+testSchema.methods.getCompletionStats = function() {
+    const activeParticipants = this.getActiveParticipants();
+    const completedParticipants = this.getCompletedParticipants();
+    
+    return {
+        total: activeParticipants.length,
+        completed: completedParticipants.length,
+        pending: activeParticipants.length - completedParticipants.length,
+        completionRate: activeParticipants.length > 0 ? 
+            Math.round((completedParticipants.length / activeParticipants.length) * 100) : 0
+    };
+};
+
+// Method to get test performance metrics
+testSchema.methods.getPerformanceMetrics = function() {
+    const completedParticipants = this.getCompletedParticipants();
+    
+    if (completedParticipants.length === 0) {
+        return {
+            averageScore: 0,
+            highestScore: 0,
+            lowestScore: 0,
+            totalQuestions: 0,
+            averageCorrect: 0
+        };
+    }
+    
+    const scores = completedParticipants.map(p => p.score || 0);
+    const correctAnswers = completedParticipants.map(p => p.correctAnswers || 0);
+    
+    return {
+        averageScore: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+        highestScore: Math.max(...scores),
+        lowestScore: Math.min(...scores),
+        totalQuestions: this.questions ? this.questions.length : 0,
+        averageCorrect: correctAnswers.length > 0 ? 
+            Math.round(correctAnswers.reduce((a, b) => a + b, 0) / correctAnswers.length) : 0
+    };
+};
+
+// Virtual field for formatted completion date
+testSchema.virtual('formattedCompletedAt').get(function() {
+    if (!this.completedAt) return null;
+    
+    const date = new Date(this.completedAt);
+    return {
+        date: date.toLocaleDateString(),
+        time: date.toLocaleTimeString(),
+        relative: getRelativeTime(date)
+    };
+});
+
+// Helper function for relative time formatting
+function getRelativeTime(date) {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+    
+    if (diffDays > 0) {
+        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    } else if (diffHours > 0) {
+        return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    } else {
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+    }
+}
 module.exports = mongoose.model('Test', testSchema);

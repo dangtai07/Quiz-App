@@ -227,7 +227,22 @@ body {
     transition: var(--transition);
     box-shadow: var(--shadow-sm);
 }
-
+.btn-result-custom {
+    background: linear-gradient(135deg, #10b981, #3b82f6);
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+    color: white;
+    transition: var(--transition);
+    box-shadow: var(--shadow-sm);
+}
+.btn-result-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    color: white;
+    filter: brightness(1.1);
+}
 .btn-primary-custom:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow);
@@ -417,7 +432,7 @@ body {
 }
 
 .badge-offline {
-    background: linear-gradient(135deg, var(--warning-color), #d97706);
+    background: linear-gradient(135deg, var(--info-color), #1d4ed8);
     color: white;
 }
 
@@ -460,6 +475,7 @@ body {
 }
 
 .quiz-title {
+    height: 56px;
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--dark-color);

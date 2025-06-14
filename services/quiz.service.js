@@ -342,7 +342,7 @@ class QuizService {
         try {
             const quizzes = await Quiz.find()
                 .select('number title mode roomCode questions scheduleSettings createdAt updatedAt metadata')
-                .sort({ number: 1 }); // Sort by quiz number ascending
+                .sort({updatedAt: -1,  number: 1}); // Sort by quiz number ascending
 
             return quizzes.map(quiz => {
                 const quizObject = quiz.toObject();

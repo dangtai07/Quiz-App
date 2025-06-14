@@ -51,5 +51,7 @@ router.post('/complete-offline-test', TestController.completeOfflineTest);
 
 // Create new test
 router.post('/create', requireAuth, requireAdmin, TestController.createTest);
+// Test results list (admin only)
+router.get('/admin/results', requireAuth, requireAdmin, TestController.renderTestResultsList);
 
 module.exports = router;

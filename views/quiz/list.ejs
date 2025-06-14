@@ -68,11 +68,6 @@
                                     <i class="fas fa-exchange-alt me-2"></i>Switch Department
                                 </a>
                             </li>
-                            <li>
-                                <a class="dropdown-item" href="#" onclick="viewDepartmentStats()">
-                                    <i class="fas fa-chart-bar me-2"></i>Department Statistics
-                                </a>
-                            </li>
                         </ul>
                     </li>
                     <% } %>
@@ -125,7 +120,7 @@
         <div class="page-header">
             <div class="container">
                 <div class="row align-items-center">
-                    <div class="col-lg-8">
+                    <div class="col-lg-12">
                         <div class="header-content">
                             <h1 class="page-title">
                                 <i class="fas fa-clipboard-list me-3"></i>
@@ -137,51 +132,22 @@
                                 </small>
                                 <% } %>
                             </h1>
-                            <p class="page-subtitle">
-                                <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
-                                    Manage quizzes for <%= roomInfo.name %> department
-                                <% } else { %>
-                                    Create, manage, and monitor all your quizzes in one place
-                                <% } %>
-                            </p>
-                            <div class="stats-row">
-                                <div class="stat-item">
-                                    <span class="stat-number"><%= quizzes.length %></span>
-                                    <span class="stat-label">Total Quizzes</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-number"><%= quizzes.filter(q => q.mode === 'online').length %></span>
-                                    <span class="stat-label">Online</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="stat-number"><%= quizzes.filter(q => q.mode === 'offline').length %></span>
-                                    <span class="stat-label">Offline</span>
-                                </div>
-                                <% if (typeof roomInfo !== 'undefined' && roomInfo) { %>
-                                <div class="stat-item">
-                                    <span class="stat-number">
-                                        <i class="fas <%= roomInfo.code === 'hrm' ? 'fa-users' : roomInfo.code === 'hse' ? 'fa-shield-alt' : 'fa-crown' %>"></i>
-                                    </span>
-                                    <span class="stat-label"><%= roomInfo.code.toUpperCase() %></span>
-                                </div>
-                                <% } %>
-                            </div>
                         </div>
                     </div>
-                    <div class="col-lg-4 text-lg-end">
+                    <div class="col-lg-12 text-lg-start">
                         <div class="header-actions">
-                            <button class="btn btn-warning-custom me-2" onclick="openCreateTestModal()">
+                            <button class="btn btn-warning-custom me-2" onclick="openCreateTestModal()" style="margin-top: 10px;">
                                 <i class="fas fa-rocket me-2"></i>
                                 Create Test
                             </button>
-                            <a href="/quizzes/create" class="btn btn-primary-custom">
+                            <a href="/quizzes/create" class="btn btn-primary-custom me-2" style="margin-top: 10px;">
                                 <i class="fas fa-plus me-2"></i>
                                 Create New Quiz
                             </a>
-                            <button class="btn btn-outline-light me-2" onclick="refreshQuizzes()">
-                                <i class="fas fa-sync-alt me-2"></i>
-                                Refresh
-                            </button>
+                            <a href="/test/admin/results" class="btn btn-result-custom me-2" style="margin-top: 10px; margin-right: 0 !important;">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Test Results
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -237,12 +203,12 @@
                             </div>
                             <div class="col-lg-2 col-md-6 col-sm-6">
                                 <div class="view-toggle">
-                                    <button class="view-btn active" data-view="grid" title="Grid View">
+                                    <button class="view-btn active" data-view="grid" title="Grid View" disabled>
                                         <i class="fas fa-th"></i>
                                     </button>
-                                    <button class="view-btn" data-view="list" title="List View">
+                                    <!-- <button class="view-btn" data-view="list" title="List View">
                                         <i class="fas fa-list"></i>
-                                    </button>
+                                    </button> -->
                                 </div>
                             </div>
                         </div>
@@ -307,44 +273,6 @@
                                     <%= quiz.roomCode.toUpperCase() %>
                                 </span>
                                 <% } %>
-                            </div>
-                            <div class="card-actions">
-                                <div class="dropdown">
-                                    <button class="action-btn" 
-                                            type="button" 
-                                            data-bs-toggle="dropdown" 
-                                            aria-expanded="false">
-                                        <i class="fas fa-ellipsis-v"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li>
-                                            <a class="dropdown-item" href="/quizzes/<%= quiz._id %>/preview">
-                                                <i class="fas fa-eye me-2"></i>Preview
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="/quizzes/<%= quiz._id %>/edit">
-                                                <i class="fas fa-edit me-2"></i>Edit
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="#" onclick="duplicateQuiz('<%= quiz._id %>')">
-                                                <i class="fas fa-copy me-2"></i>Duplicate
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="#" onclick="shareQuiz('<%= quiz._id %>')">
-                                                <i class="fas fa-share me-2"></i>Share
-                                            </a>
-                                        </li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li>
-                                            <a class="dropdown-item text-danger" href="#" onclick="deleteQuiz('<%= quiz._id %>')">
-                                                <i class="fas fa-trash me-2"></i>Delete
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
                             </div>
                         </div>
 
@@ -673,54 +601,6 @@
                     });
                 }
             });
-        }
-
-        // Function to view department statistics
-        function viewDepartmentStats() {
-            const roomCode = '<%= typeof roomInfo !== "undefined" && roomInfo ? roomInfo.code : "" %>';
-            
-            if (!roomCode) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'No department selected.',
-                    confirmButtonColor: '#667eea'
-                });
-                return;
-            }
-
-            fetch(`/auth/api/admin/room-stats/${roomCode}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const stats = data.stats;
-                        Swal.fire({
-                            title: `${stats.roomName} Statistics`,
-                            html: `
-                                <div class="text-start">
-                                    <p><strong>Total Quizzes:</strong> ${stats.totalQuizzes}</p>
-                                    <p><strong>Total Questions:</strong> ${stats.totalQuestions}</p>
-                                    <p><strong>Online Quizzes:</strong> ${stats.byMode.online || 0}</p>
-                                    <p><strong>Offline Quizzes:</strong> ${stats.byMode.offline || 0}</p>
-                                    <p><strong>Recent Quizzes (7 days):</strong> ${stats.recentQuizzes}</p>
-                                    <p><strong>Total Duration:</strong> ${Math.floor(stats.totalDuration / 60)}m ${stats.totalDuration % 60}s</p>
-                                </div>
-                            `,
-                            icon: 'info',
-                            confirmButtonColor: '#667eea'
-                        });
-                    } else {
-                        throw new Error(data.message);
-                    }
-                })
-                .catch(error => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Failed to fetch department statistics.',
-                        confirmButtonColor: '#667eea'
-                    });
-                });
         }
 
         // Add room info to existing functions

@@ -508,33 +508,20 @@
             
             <div class="leaderboard-content">
                 <!-- Top 3 Podium -->
-                <% if (results.results.length >= 3) { %>
-                <div class="podium">
-                    <div class="podium-item first">
-                        <div class="podium-rank">🥇</div>
-                        <div class="podium-name"><%= results.results[0].name %></div>
-                        <div class="podium-score"><%= results.results[0].score %> pts</div>
-                        <div class="podium-details">
-                            <%= results.results[0].correctAnswers %>/<%= results.results[0].totalQuestions %> correct
-                        </div>
+                <% if (results.results.length > 0) { %>
+                    <div class="podium">
+                        <% const ranks = ['🥇', '🥈', '🥉']; %>
+                        <% results.results.slice(0, 3).forEach(function(result, index) { %>
+                            <div class="podium-item <%= index === 0 ? 'first' : (index === 1 ? 'second' : 'third') %>">
+                                <div class="podium-rank"><%= ranks[index] %></div>
+                                <div class="podium-name"><%= result.name %></div>
+                                <div class="podium-score"><%= result.score %> pts</div>
+                                <div class="podium-details">
+                                    <%= result.correctAnswers %>/<%= result.totalQuestions %> correct
+                                </div>
+                            </div>
+                        <% }); %>
                     </div>
-                    <div class="podium-item second">
-                        <div class="podium-rank">🥈</div>
-                        <div class="podium-name"><%= results.results[1].name %></div>
-                        <div class="podium-score"><%= results.results[1].score %> pts</div>
-                        <div class="podium-details">
-                            <%= results.results[1].correctAnswers %>/<%= results.results[1].totalQuestions %> correct
-                        </div>
-                    </div>
-                    <div class="podium-item third">
-                        <div class="podium-rank">🥉</div>
-                        <div class="podium-name"><%= results.results[2].name %></div>
-                        <div class="podium-score"><%= results.results[2].score %> pts</div>
-                        <div class="podium-details">
-                            <%= results.results[2].correctAnswers %>/<%= results.results[2].totalQuestions %> correct
-                        </div>
-                    </div>
-                </div>
                 <% } %>
 
                 <!-- Full Leaderboard -->
@@ -583,15 +570,15 @@
 
         <!-- Actions Section -->
         <div class="actions-section">
-            <a href="/quizzes" class="btn btn-action btn-primary-custom">
+            <a href="/test/admin/results" class="btn btn-action btn-primary-custom">
                 <i class="fas fa-home"></i>
-                Back to Dashboard
+                Back to Results
             </a>
-            <button onclick="printResults()" class="btn btn-action btn-secondary-custom">
+            <button onclick="printResults()" class="btn btn-action btn-secondary-custom" style="background-color: white;">
                 <i class="fas fa-print"></i>
                 Print Results
             </button>
-            <button onclick="exportResults()" class="btn btn-action btn-secondary-custom">
+            <button onclick="exportResults()" class="btn btn-action btn-secondary-custom" style="background: linear-gradient(to right, #232526 0%, #414345  51%, #232526  100%);color: wheat;">
                 <i class="fas fa-download"></i>
                 Export CSV
             </button>
