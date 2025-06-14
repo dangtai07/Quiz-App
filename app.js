@@ -74,7 +74,8 @@ connectDB().then(async () => {
         console.log('🧹 Starting test cleanup scheduler...');
         setInterval(async () => {
             try {
-                const cleanedCount = await TestService.cleanupExpiredTests();
+                // const cleanedCount = await TestService.cleanupExpiredTests();
+                const cleanedCount = 0;
                 if (cleanedCount > 0) {
                     console.log(`🧹 Cleaned up ${cleanedCount} expired tests`);
                 }
