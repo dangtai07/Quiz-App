@@ -246,18 +246,28 @@ class QuizController {
             const user = req.session.user;
             const roomInfo = req.session?.selectedRoom;
             
+            // Get pagination parameters
+            const page = parseInt(req.query.page) || 1;
+            const limit = 12; // Default 12 quizzes per page
+            const skip = (page - 1) * limit;
+            
             // Lấy roomCode để lọc quiz
             const roomCode = roomInfo?.code;
             if (!roomCode) {
                 return res.redirect('/auth/admin/select-room');
             }
             
-            // Fetch quizzes filtered by room code
+            // Fetch all quizzes filtered by room code
             const allQuizzes = await QuizService.getAllQuizzes();
-            const quizzes = allQuizzes.filter(quiz => quiz.roomCode === roomCode);
+            const filteredQuizzes = allQuizzes.filter(quiz => quiz.roomCode === roomCode);
+            
+            // Apply pagination
+            const totalQuizzes = filteredQuizzes.length;
+            const totalPages = Math.ceil(totalQuizzes / limit);
+            const paginatedQuizzes = filteredQuizzes.slice(skip, skip + limit);
             
             // Add additional stats and formatting with quiz number support
-            const enhancedQuizzes = quizzes.map(quiz => {
+            const enhancedQuizzes = paginatedQuizzes.map(quiz => {
                 // Migrate quiz data if needed
                 const migratedQuiz = migrateQuizData(quiz);
                 
@@ -304,20 +314,23 @@ class QuizController {
                 };
             });
             
-            // Calculate summary statistics for current room
+            // Calculate summary statistics for current room (based on all quizzes, not just current page)
             const stats = {
-                total: enhancedQuizzes.length,
-                online: enhancedQuizzes.filter(q => q.mode === 'online').length,
-                offline: enhancedQuizzes.filter(q => q.mode === 'offline').length,
-                active: enhancedQuizzes.filter(q => q.status === 'active').length,
-                totalParticipants: enhancedQuizzes.reduce((sum, q) => sum + (q.totalCount || 0), 0),
-                averageQuestions: enhancedQuizzes.length > 0 ? 
-                    Math.round(enhancedQuizzes.reduce((sum, q) => sum + q.questions.length, 0) / enhancedQuizzes.length) : 0,
-                totalDuration: enhancedQuizzes.reduce((sum, q) => sum + (q.totalDuration || 0), 0),
+                total: totalQuizzes,
+                online: filteredQuizzes.filter(q => q.mode === 'online').length,
+                offline: filteredQuizzes.filter(q => q.mode === 'offline').length,
+                active: filteredQuizzes.filter(q => q.status === 'active').length,
+                totalParticipants: filteredQuizzes.reduce((sum, q) => sum + (q.totalCount || 0), 0),
+                averageQuestions: filteredQuizzes.length > 0 ? 
+                    Math.round(filteredQuizzes.reduce((sum, q) => sum + q.questions.length, 0) / filteredQuizzes.length) : 0,
+                totalDuration: filteredQuizzes.reduce((sum, q) => {
+                    const duration = q.questions ? q.questions.reduce((qSum, question) => qSum + (question.answerTime || 30), 0) : 0;
+                    return sum + duration;
+                }, 0),
                 // NEW: Quiz number stats
-                numberRange: enhancedQuizzes.length > 0 ? {
-                    lowest: Math.min(...enhancedQuizzes.map(q => q.number || 999999)),
-                    highest: Math.max(...enhancedQuizzes.map(q => q.number || 0))
+                numberRange: filteredQuizzes.length > 0 ? {
+                    lowest: Math.min(...filteredQuizzes.map(q => q.number || 999999)),
+                    highest: Math.max(...filteredQuizzes.map(q => q.number || 0))
                 } : null
             };
             
@@ -327,6 +340,20 @@ class QuizController {
                 quizzes: enhancedQuizzes,
                 stats: stats,
                 roomInfo: roomInfo,
+                // Pagination data
+                currentPage: page,
+                totalPages: totalPages,
+                totalQuizzes: totalQuizzes,
+                pagination: {
+                    hasNext: page < totalPages,
+                    hasPrev: page > 1,
+                    nextPage: page + 1,
+                    prevPage: page - 1,
+                    pages: Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                        const startPage = Math.max(1, page - 2);
+                        return startPage + i;
+                    }).filter(p => p <= totalPages)
+                },
                 layout: false
             });
             
