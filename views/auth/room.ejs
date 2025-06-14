@@ -587,6 +587,9 @@
     </style>
 </head>
 <body>
+    <div class="language-switcher-container" style="text-align: end;">
+            <%- include('../partials/language-switcher') %>
+    </div>
     <div class="room-selection-container fade-in">
         <div class="card selection-card">
             <div class="card-header">
@@ -595,8 +598,8 @@
                         <i class="fas fa-brain"></i>
                     </div>
                     <div class="header-content">
-                        <h1 class="card-title">Select Department</h1>
-                        <p class="card-subtitle">Choose your department and enter the access code to continue to Quiz App.</p>
+                        <h1 class="card-title"><%= t('auth:select_room') %></h1>
+                        <p class="card-subtitle"><%= t('auth:select_room_desc') %></p>
                     </div>
                 </div>
                 <div class="header-right">
@@ -611,11 +614,11 @@
                 <div class="user-info">
                     <div class="welcome-badge">
                         <i class="fas fa-star me-1"></i>
-                        Administrator Access
+                        <%= t('auth:admin_access') %>
                     </div>
                     <div class="user-name">
                         <i class="fas fa-user-tie"></i>
-                        <span>Welcome, John Doe!</span>
+                        <span><%= t('auth:admin_welcome') %>, John Doe!</span>
                     </div>
                     <div class="user-email">admin@example.com</div>
                 </div>
@@ -625,31 +628,31 @@
                     <div class="department-selection">
                         <div class="section-title">
                             <i class="fas fa-building-columns"></i>
-                            Choose Department:
+                            <%= t('auth:choose_room_section') %>
                         </div>
                         <div class="department-grid">
                             <div class="department-card" data-room="hrm" onclick="selectDepartment('hrm')">
                                 <div class="department-icon">
                                     <i class="fas fa-users"></i>
                                 </div>
-                                <div class="department-name">HRM</div>
-                                <div class="department-description">Human Resource Management</div>
+                                <div class="department-name"><%= t('auth:room_hrm') %></div>
+                                <div class="department-description"><%= t('auth:room_hrm_desc') %></div>
                             </div>
                             
                             <div class="department-card" data-room="hse" onclick="selectDepartment('hse')">
                                 <div class="department-icon">
                                     <i class="fas fa-shield-alt"></i>
                                 </div>
-                                <div class="department-name">HSE</div>
-                                <div class="department-description">Health, Safety & Environment</div>
+                                <div class="department-name"><%= t('auth:room_hse') %></div>
+                                <div class="department-description"><%= t('auth:room_hse_desc') %></div>
                             </div>
                             
                             <div class="department-card" data-room="gm" onclick="selectDepartment('gm')">
                                 <div class="department-icon">
                                     <i class="fas fa-crown"></i>
                                 </div>
-                                <div class="department-name">GM</div>
-                                <div class="department-description">General Management</div>
+                                <div class="department-name"><%= t('auth:room_gm') %></div>
+                                <div class="department-description"><%= t('auth:room_gm_desc') %></div>
                             </div>
                         </div>
                     </div>
@@ -658,7 +661,7 @@
                     <div class="password-section" id="passwordSection">
                         <div class="section-title">
                             <i class="fas fa-key"></i>
-                            Enter Department Access Code:
+                            <%= t('auth:enter_department_access_code') %>:
                         </div>
                         <div class="form-floating">
                             <input type="password" 
@@ -673,7 +676,7 @@
                         </div>
                         <small class="text-muted mt-2 d-block">
                             <i class="fas fa-info-circle me-1"></i>
-                            Please enter the 6-digit access code for the selected department.
+                            <%= t('auth:enter_department_access_code_guide') %>
                         </small>
                     </div>
 
@@ -683,16 +686,16 @@
                     <!-- Submit Button -->
                     <button type="submit" class="btn btn-enter-room" id="enterRoomBtn" disabled>
                         <i class="fas fa-door-open me-2"></i>
-                        Enter Department
+                        <%= t('auth:enter_department') %>
                     </button>
                 </form>
 
                 <div class="footer-links">
                     <a href="/auth/logout">
-                        <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        <i class="fas fa-sign-out-alt me-1"></i><%= t('common:logout') %>
                     </a>
                     <a href="/auth/admin/dashboard">
-                        <i class="fas fa-home me-1"></i>Dashboard
+                        <i class="fas fa-home me-1"></i><%= t('common:dashboard') %>
                     </a>
                 </div>
             </div>

@@ -21,8 +21,10 @@ const multer = require('multer');
 const AuthService = require('./services/auth.service');
 const PlayerService = require('./services/player.service');
 const QuizService = require('./services/quiz.service');
-const TestService = require('./services/test.service'); // NEW: Test service
-const TestSocketHandler = require('./sockets/test.socket'); // NEW: Socket handler
+const TestService = require('./services/test.service');
+const TestSocketHandler = require('./sockets/test.socket');
+const i18next = require('./config/i18n');
+const i18nextMiddleware = require('i18next-http-middleware');
 require('dotenv').config();
 
 // Body parser middleware
@@ -44,10 +46,17 @@ app.use(session({
         maxAge: 1000 * 60 * 60 * 24 // 24 hours
     }
 }));
+app.use(i18nextMiddleware.handle(i18next));
 
 // Make user available in all templates
 app.use((req, res, next) => {
     res.locals.user = req.session ? req.session.user : null;
+    
+    // NEW: i18n helpers for templates
+    res.locals.t = req.t;
+    res.locals.lng = req.language;
+    res.locals.languages = ['vi', 'en'];
+    
     next();
 });
 

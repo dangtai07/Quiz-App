@@ -20,7 +20,8 @@ class AuthController {
             title: 'Login - Quiz Management System',
             layout: false,
             error: null,
-            email: ''
+            email: '',
+            lng: req.language,
         });
     };
 
@@ -152,7 +153,8 @@ class AuthController {
         res.render('auth/room', {
             title: 'Select Department - Quiz App',
             user: req.session.user,
-            layout: false
+            layout: false,
+            lng: req.language,
         });
     };
 

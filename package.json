@@ -19,11 +19,14 @@
     "express": "^5.1.0",
     "express-ejs-layouts": "^2.5.1",
     "express-session": "^1.18.0",
+    "i18next": "^25.2.1",
+    "i18next-fs-backend": "^2.6.0",
+    "i18next-http-middleware": "^3.7.4",
     "mongoose": "^7.8.7",
     "multer": "^2.0.0",
     "pg": "^8.16.0",
-    "socket.io": "^4.7.2",
-    "qrcode": "^1.4.4"
+    "qrcode": "^1.4.4",
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

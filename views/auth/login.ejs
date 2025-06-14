@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= lng %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title || 'Login - Quiz Management System' %></title>
+    <title><%= t('auth:title') %> - <%= t('common:app_name') %></title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
@@ -34,21 +34,26 @@
     </style>
 </head>
 <body>
+    <!-- Language Switcher -->
+    <div class="language-switcher-container" style="text-align: end;">
+        <%- include('../partials/language-switcher') %>
+    </div>
     <div class="login-container">
         <div class="login-wrapper">
+            
             <!-- Welcome Section -->
             <div class="welcome-section">
                 <div class="logo">
                     <a class="navbar-brand" href="/quizzes">
                         <i class="fas fa-brain"></i>
-                        Quiz App
+                        <%= t('common:app_name') %>
                     </a>
                 </div>
                 <div class="welcome-content">
-                    <h1 class="welcome-title">WELCOME</h1>
-                    <h2 class="welcome-subtitle">QUIZ MANAGEMENT SYSTEM</h2>
+                    <h1 class="welcome-title"><%= t('common:welcome').toUpperCase() %></h1>
+                    <h2 class="welcome-subtitle"><%= t('auth:title') %></h2>
                     <p class="welcome-description">
-                        Manage and monitor all your quizzes with ease. Create engaging quizzes, track performance, and analyze results all in one powerful platform designed for educators and administrators.
+                        <%= t('auth:welcome_message') %>
                     </p>
                 </div>
             </div>
@@ -56,7 +61,7 @@
             <!-- Form Section -->
             <div class="form-section">
                 <div class="form-header">
-                    <h2 class="form-title">Admin Log In</h2>
+                    <h2 class="form-title"><%= t('auth:admin_login') %></h2>
                 </div>
                 
                 <!-- Display Error Message if exists -->
@@ -74,7 +79,7 @@
                         <input type="email" 
                                class="form-control with-icon" 
                                name="email" 
-                               placeholder="Email Address" 
+                               placeholder="<%= t('auth:email_placeholder') %>" 
                                value="<%= typeof email !== 'undefined' ? email : '' %>"
                                required>
                     </div>
@@ -86,10 +91,10 @@
                                class="form-control with-icon" 
                                name="password" 
                                id="password" 
-                               placeholder="Password" 
+                               placeholder="<%= t('auth:password_placeholder') %>" 
                                required>
                         <button type="button" class="password-toggle" onclick="togglePassword()">
-                            <span id="passwordToggleText">SHOW</span>
+                            <span id="passwordToggleText"><%= t('auth:show_password') %></span>
                         </button>
                     </div>
                     
@@ -97,15 +102,15 @@
                     <div class="checkbox-row">
                         <div class="checkbox-group">
                             <input type="checkbox" id="remember" name="remember">
-                            <label for="remember">Remember me</label>
+                            <label for="remember"><%= t('common:remember_me') %></label>
                         </div>
-                        <a href="#" class="forgot-link">Forgot Password?</a>
+                        <a href="#" class="forgot-link"><%= t('common:forgot_password') %></a>
                     </div>
                     
                     <!-- Sign In Button -->
                     <button type="submit" class="btn-signin" id="signinBtn">
                         <i class="fas fa-sign-in-alt" style="margin-right: 8px;"></i>
-                        Sign In to Dashboard
+                        <%= t('common:login') %>
                     </button>
                 </form>
             </div>
@@ -119,35 +124,36 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <script>
-        // Password toggle functionality
+        // Translation object for JavaScript
+        const translations = {
+            show_password: '<%= t("auth:show_password") %>',
+            hide_password: '<%= t("auth:hide_password") %>',
+            signing_in: '<%= t("auth:signing_in") %>',
+            login_success: '<%= t("auth:login_success") %>',
+            login_failed: '<%= t("auth:login_failed") %>'
+        };
+
         function togglePassword() {
             const passwordInput = document.getElementById('password');
             const toggleText = document.getElementById('passwordToggleText');
             
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
-                toggleText.textContent = 'HIDE';
+                toggleText.textContent = translations.hide_password;
             } else {
                 passwordInput.type = 'password';
-                toggleText.textContent = 'SHOW';
+                toggleText.textContent = translations.show_password;
             }
         }
-        
+
         // Form submission with loading state
         document.getElementById('loginForm').addEventListener('submit', function(e) {
-            const signinBtn = document.getElementById('signinBtn');
-            const originalText = signinBtn.innerHTML;
+            const submitBtn = document.getElementById('signinBtn');
+            const originalText = submitBtn.innerHTML;
             
-            // Add loading state
-            signinBtn.classList.add('loading');
-            signinBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Signing In...';
-            signinBtn.disabled = true;
-            
-            // Form will submit normally, loading state will be reset on page reload
-            // If there's an error, the page will reload with error message
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>' + translations.signing_in;
+            submitBtn.disabled = true;
         });
-        
-        // Add input focus effects
         const inputs = document.querySelectorAll('.form-control');
         inputs.forEach(input => {
             input.addEventListener('focus', function() {
@@ -173,14 +179,12 @@
         
         // Show error message with SweetAlert if error exists
         "<% if (typeof error !== 'undefined' && error) { %>"
-            // Auto-hide error alert after 5 seconds
+            
+            // Re-enable button after 3 seconds in case of error
             setTimeout(() => {
-                const errorAlert = document.querySelector('.alert-danger');
-                if (errorAlert) {
-                    errorAlert.style.opacity = '0';
-                    setTimeout(() => errorAlert.remove(), 300);
-                }
-            }, 5000);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 3000);
         "<% } %>"
     </script>
 </body>
