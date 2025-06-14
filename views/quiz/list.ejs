@@ -33,9 +33,6 @@
                         <a class="nav-link dropdown-toggle d-flex align-items-center" 
                            href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="d-flex align-items-center">
-                                <div class="rounded-circle bg-white bg-opacity-20 p-2 me-2">
-                                    <i class="fas <%= roomInfo.code === 'hrm' ? 'fa-users' : roomInfo.code === 'hse' ? 'fa-shield-alt' : 'fa-crown' %> text-white"></i>
-                                </div>
                                 <div class="d-flex flex-column">
                                     <span class="fw-medium d-none d-md-inline" style="font-size: 0.9rem;">
                                         <%= roomInfo.name %>
@@ -44,7 +41,7 @@
                                         <%= roomInfo.code.toUpperCase() %>
                                     </span>
                                     <small class="text-white-50 d-none d-lg-inline" style="font-size: 0.75rem;">
-                                        Selected: <%= new Date(roomInfo.selectedAt).toLocaleTimeString() %>
+                                        Selected: <%= new Date(roomInfo.selectedAt).toLocaleTimeString('en-GB', { hour12: false })%>
                                     </small>
                                 </div>
                             </div>
@@ -376,10 +373,6 @@
                                                 required>
                                             <label for="quizNumber">Quiz Number</label>
                                         </div>
-                                        <small class="text-muted mt-2 d-block">
-                                            <i class="fas fa-info-circle me-1"></i>
-                                            Enter the number of the quiz you want to create a test for
-                                        </small>
                                     </div>
                                 </div>
                             </div>
@@ -459,10 +452,6 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <small class="text-muted">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                Participants can join and complete the test within this time frame
-                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -486,10 +475,6 @@
                                             required>
                                         <label for="maxParticipants">Maximum Participants</label>
                                     </div>
-                                    <small class="text-muted mt-2 d-block">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        Maximum number of participants that can join this test (1-1000)
-                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -780,33 +765,15 @@
                     ${scheduleInfo}
                     
                     <div class="row">
-                        <div class="col-md-6">
-                            <div class="card border-primary">
-                                <div class="card-header bg-primary text-white">
-                                    <i class="fas fa-link me-2"></i>Join Link
-                                </div>
-                                <div class="card-body">
-                                    <div class="input-group mb-3">
-                                        <input type="text" class="form-control" id="joinLinkInput" value="${joinLink}" readonly>
-                                        <button class="btn btn-outline-primary" onclick="copyJoinLink()">
-                                            <i class="fas fa-copy"></i>
-                                        </button>
-                                    </div>
-                                    <small class="text-muted">Share this link with participants</small>
-                                </div>
-                            </div>
+                        <div class="col-md-12" style="text-align: center;">
+                            ${qrCode ? `<img src="${qrCode}" alt="QR Code" class="img-fluid" style="width: 300px;">` : '<p class="text-muted">QR Code not available</p>'}
                         </div>
-                        <div class="col-md-6">
-                            <div class="card border-secondary">
-                                <div class="card-header bg-secondary text-white">
-                                    <i class="fas fa-qrcode me-2"></i>QR Code
-                                </div>
-                                <div class="card-body text-center">
-                                    ${qrCode ? `<img src="${qrCode}" alt="QR Code" class="img-fluid" style="max-width: 150px;">` : '<p class="text-muted">QR Code not available</p>'}
-                                    <div class="mt-2">
-                                        <small class="text-muted">Scan to join test</small>
-                                    </div>
-                                </div>
+                        <div class="col-md-12">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="joinLinkInput" value="${joinLink}" readonly>
+                                <button class="btn btn-outline-primary" onclick="copyJoinLink()">
+                                    <i class="fas fa-copy"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
