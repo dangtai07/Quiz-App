@@ -613,22 +613,15 @@ class TestService {
             const rankingUpdate = await this.updateParticipantInFinalResults(testCode, completedParticipant);
             
             // STEP 4: Check and complete test if all participants finished
-            const testCompleted = await Test.checkAndCompleteTest(testCode);
+            // const testCompleted = await Test.checkAndCompleteTest(testCode);
             
-            if (testCompleted) {
-                console.log(`🏁 [${requestId}] All participants completed - test marked as completed`);
-            }
+            // if (testCompleted) {
+            //     console.log(`🏁 [${requestId}] All participants completed - test marked as completed`);
+            // }
             
             // STEP 5: Get final stats
             const finalTest = await Test.findOne({ testCode });
             const completionProgress = finalTest.getCompletionProgress();
-            
-            console.log(`✅ [${requestId}] Completion successful:`, {
-                participant: completedParticipant.name,
-                score: completedParticipant.score,
-                rank: rankingUpdate.newParticipantRank,
-                testCompleted
-            });
             
             return {
                 participant: {
@@ -639,7 +632,6 @@ class TestService {
                     completionTime: Math.round((completedParticipant.completedAt - completedParticipant.joinedAt) / 1000),
                     finalRank: rankingUpdate.newParticipantRank
                 },
-                testCompleted: testCompleted,
                 completionProgress: completionProgress,
                 ranking: {
                     participantRank: rankingUpdate.newParticipantRank,

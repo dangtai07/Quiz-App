@@ -1231,13 +1231,13 @@ function submitQuizToServer(isUpdate) {
         scheduleSettings: null
     };
 
-    if (quizInfo.mode === 'offline') {
-        const startTime = document.getElementById('startTime').value;
-        const endTime = document.getElementById('endTime').value;
-        if (startTime && endTime) {
-            quizInfo.scheduleSettings = { startTime, endTime };
-        }
-    }
+    // if (quizInfo.mode === 'offline') {
+    //     const startTime = document.getElementById('startTime').value;
+    //     const endTime = document.getElementById('endTime').value;
+    //     if (startTime && endTime) {
+    //         quizInfo.scheduleSettings = { startTime, endTime };
+    //     }
+    // }
 
     const questionsData = questions.map((question, index) => {
         const imgElement = document.querySelector(`#question-${index + 1} .image-upload-zone img`);
