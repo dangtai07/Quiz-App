@@ -39,5 +39,7 @@
   "close": "Close",
   "open": "Open",
   "yes": "Yes",
-  "no": "No"
+  "no": "No",
+  "instructions": "Instructions",
+  "try_again": "Try Again"
 }

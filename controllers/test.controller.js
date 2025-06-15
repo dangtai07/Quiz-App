@@ -536,7 +536,7 @@ class TestController {
             const tests = await TestService.getTestsList(filterCriteria, {
                 skip,
                 limit,
-                sort: { completedAt: -1 } // Most recent first
+                sort: { updatedAt: -1 } // Most recent first
             });
 
             // Get total count for pagination

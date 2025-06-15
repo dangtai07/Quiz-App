@@ -309,7 +309,7 @@ class TestService {
             const {
                 skip = 0,
                 limit = 10,
-                sort = { createdAt: -1 }
+                sort = { updatedAt: -1 }
             } = options;
 
             const tests = await Test.find(filterCriteria)
@@ -1463,9 +1463,9 @@ class TestService {
             const test = await this.getTestByCode(testCode);
             
             // For offline mode, allow viewing results even if not all participants completed
-            if (test.mode === 'online' && test.status !== 'completed') {
-                throw new Error('Test is not completed yet');
-            }
+            // if (test.mode === 'online' && test.status !== 'completed') {
+            //     throw new Error('Test is not completed yet');
+            // }
             
             // For offline mode with real-time results
             if (test.mode === 'offline') {

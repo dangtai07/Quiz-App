@@ -39,5 +39,7 @@
   "close": "Đóng",
   "open": "Mở",
   "yes": "Có",
-  "no": "Không"
+  "no": "Không",
+  "instructions": "Hướng dẫn",
+  "try_again": "Thử lại"
 }
