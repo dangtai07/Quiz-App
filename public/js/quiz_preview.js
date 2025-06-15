@@ -1,4 +1,4 @@
-// Standalone Quiz Preview JavaScript - Updated with header buttons
+// Standalone Quiz Preview JavaScript - Updated with i18n support
 let questions = [];
 let currentPreviewQuestion = 0;
 let previewTimer = null;
@@ -7,6 +7,9 @@ let isTimerActive = false;
 let selectedAnswer = null;
 
 const DEFAULT_ANSWER_TIME = 30;
+
+// Get translations from global object
+const t = window.translations || {};
 
 document.addEventListener('DOMContentLoaded', function() {
     initializePreview();
@@ -65,7 +68,7 @@ function displayCurrentQuestion() {
             <div class="preview-question-header">
                 <div class="preview-question-number">${currentPreviewQuestion + 1}</div>
                 <div class="preview-question-content">
-                    <h5 class="preview-question-title">${question.content || 'Untitled Question'}</h5>
+                    <h5 class="preview-question-title">${question.content || t.noQuestionsAvailable || 'Untitled Question'}</h5>
                 </div>
             </div>
     `;
@@ -266,15 +269,15 @@ function finishQuiz() {
     
     stopTimer();
     
-    // Show completion message with options
+    // Show completion message with options - using translations
     if (typeof Swal !== 'undefined') {
         Swal.fire({
-            title: 'Quiz Preview Complete!',
-            text: `You've reviewed all ${questions.length} questions.`,
+            title: t.previewComplete || 'Quiz Preview Complete!',
+            text: (t.reviewedAllQuestions || "You've reviewed all {{count}} questions.").replace('{{count}}', questions.length),
             icon: 'success',
             showCancelButton: true,
-            confirmButtonText: 'Restart Preview',
-            cancelButtonText: 'Exit Preview',
+            confirmButtonText: t.restartPreview || 'Restart Preview',
+            cancelButtonText: t.exitPreview || 'Exit Preview',
             confirmButtonColor: '#667eea',
             cancelButtonColor: '#64748b'
         }).then((result) => {
@@ -286,8 +289,10 @@ function finishQuiz() {
             }
         });
     } else {
-        // Fallback if SweetAlert is not available
-        const restart = confirm(`Quiz preview complete! You've reviewed all ${questions.length} questions.\n\nWould you like to restart the preview?`);
+        // Fallback if SweetAlert is not available - using translations
+        const message = (t.reviewedAllQuestions || "You've reviewed all {{count}} questions.").replace('{{count}}', questions.length);
+        const confirmText = (t.previewComplete || 'Quiz preview complete!') + '\n\n' + message + '\n\n' + (t.restartPreview || 'Would you like to restart the preview?');
+        const restart = confirm(confirmText);
         if (restart) {
             restartPreview();
         } else {
@@ -308,17 +313,17 @@ function restartPreview() {
 // =================== RANKING FUNCTION ===================
 
 function showRanking() {
-    // Placeholder for ranking functionality
+    // Placeholder for ranking functionality - using translations
     if (typeof Swal !== 'undefined') {
         Swal.fire({
-            title: 'Ranking',
-            text: 'Ranking feature will be implemented here.',
+            title: t.rankingTitle || 'Ranking',
+            text: t.rankingFeatureText || 'Ranking feature will be implemented here.',
             icon: 'info',
-            confirmButtonText: 'OK',
+            confirmButtonText: t.ok || 'OK',
             confirmButtonColor: '#667eea'
         });
     } else {
-        alert('Ranking feature will be implemented here.');
+        alert(t.rankingFeatureText || 'Ranking feature will be implemented here.');
     }
     
     console.log('Show ranking clicked');
@@ -375,10 +380,10 @@ function showNoQuestionsMessage() {
         <div class="question-display-container">
             <div class="text-center py-5">
                 <i class="fas fa-question-circle fa-3x text-muted mb-3"></i>
-                <h5 class="text-muted">No Questions Available</h5>
-                <p class="text-muted">This quiz doesn't have any questions to preview.</p>
+                <h5 class="text-muted">${t.noQuestionsAvailable || 'No Questions Available'}</h5>
+                <p class="text-muted">${t.noQuestionsPreview || "This quiz doesn't have any questions to preview."}</p>
                 <a href="/quizzes" class="btn btn-primary">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    <i class="fas fa-arrow-left me-2"></i>${t.backToDashboard || 'Back to Dashboard'}
                 </a>
             </div>
         </div>
@@ -401,13 +406,13 @@ function showErrorMessage() {
         <div class="question-display-container">
             <div class="text-center py-5">
                 <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                <h5 class="text-warning">Error Loading Quiz</h5>
-                <p class="text-muted">There was an error loading the quiz data.</p>
+                <h5 class="text-warning">${t.errorLoadingQuiz || 'Error Loading Quiz'}</h5>
+                <p class="text-muted">${t.errorLoadingQuizDesc || 'There was an error loading the quiz data.'}</p>
                 <button onclick="location.reload()" class="btn btn-primary me-2">
-                    <i class="fas fa-refresh me-2"></i>Retry
+                    <i class="fas fa-refresh me-2"></i>${t.retry || 'Retry'}
                 </button>
                 <a href="/quizzes" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    <i class="fas fa-arrow-left me-2"></i>${t.backToDashboard || 'Back to Dashboard'}
                 </a>
             </div>
         </div>

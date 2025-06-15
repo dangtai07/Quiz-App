@@ -414,6 +414,12 @@ class QuizController {
                 user: req.session.user,
                 roomInfo: req.session?.selectedRoom,
                 lng: req.language || 'vi',
+                // Đảm bảo i18n helpers được truyền
+                t: req.t,
+                ti: res.locals.ti,
+                formatDate: res.locals.formatDate,
+                formatNumber: res.locals.formatNumber,
+                buildLangUrl: res.locals.buildLangUrl,
                 layout: false
             });
         } catch (error) {
