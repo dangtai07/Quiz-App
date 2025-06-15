@@ -1,4 +1,4 @@
-// Unified Quiz Form JavaScript for Create & Edit (No Language Selection) - UPDATED WITH ANSWER REVEAL
+// Unified Quiz Form JavaScript for Create & Edit (With i18n Support) - UPDATED WITH ANSWER REVEAL
 let questions = [];
 let questionCount = 0;
 let autoSaveTimer;
@@ -17,6 +17,9 @@ const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 6;
 const DEFAULT_ANSWER_TIME = 30;
+
+// Get translations from global object
+const t = window.translations || {};
 
 document.addEventListener('DOMContentLoaded', function() {
     setupColorObserver();
@@ -60,7 +63,7 @@ function loadInitialData(data) {
         if (endTime) document.getElementById('endTime').value = new Date(endTime).toISOString().slice(0, 16);
     }
     
-    toggleScheduleSettings();
+    // toggleScheduleSettings();
     
     // Load questions
     questions = data.questions.map((q, index) => ({
@@ -166,20 +169,20 @@ function createQuestionHtml(question) {
             <div class="question-header">
                 <div class="d-flex align-items-center flex-grow-1">
                     <div class="question-number">${question.id}</div>
-                    <h5 class="mb-0">Question ${question.id}</h5>
+                    <h5 class="mb-0">${t.question || 'Question'} ${question.id}</h5>
                 </div>
                 
                 <div class="question-actions">
-                    <button class="action-btn" onclick="moveQuestion(${question.id}, 'up')" title="Move Up" type="button">
+                    <button class="action-btn" onclick="moveQuestion(${question.id}, 'up')" title="${t.moveUp || 'Move Up'}" type="button">
                         <i class="fas fa-arrow-up"></i>
                     </button>
-                    <button class="action-btn" onclick="moveQuestion(${question.id}, 'down')" title="Move Down" type="button">
+                    <button class="action-btn" onclick="moveQuestion(${question.id}, 'down')" title="${t.moveDown || 'Move Down'}" type="button">
                         <i class="fas fa-arrow-down"></i>
                     </button>
-                    <button class="action-btn" onclick="duplicateQuestion(${question.id})" title="Duplicate" type="button">
+                    <button class="action-btn" onclick="duplicateQuestion(${question.id})" title="${t.duplicate || 'Duplicate'}" type="button">
                         <i class="fas fa-copy"></i>
                     </button>
-                    <button class="action-btn danger" onclick="deleteQuestion(${question.id})" title="Delete" type="button">
+                    <button class="action-btn danger" onclick="deleteQuestion(${question.id})" title="${t.delete || 'Delete'}" type="button">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -194,7 +197,7 @@ function createQuestionHtml(question) {
                                       placeholder=" " 
                                       rows="3" 
                                       oninput="updateQuestion(${question.id}, 'content', this.value)">${question.content}</textarea>
-                            <label class="form-label-modern">Question Content</label>
+                            <label class="form-label-modern">${t.questionContent || 'Question Content'}</label>
                         </div>
                         
                         <div class="form-floating-modern">
@@ -206,7 +209,7 @@ function createQuestionHtml(question) {
                                    value="${question.answerTime}"
                                    oninput="updateQuestion(${question.id}, 'answerTime', parseInt(this.value))">
                             <label class="form-label-modern">
-                                <i class="fas fa-clock me-1"></i>Answer Time (seconds)
+                                <i class="fas fa-clock me-1"></i>${t.answerTime || 'Answer Time (seconds)'}
                             </label>
                         </div>
                     </div>
@@ -225,15 +228,15 @@ function createQuestionHtml(question) {
                                  <div class="mt-2">
                                      <button class="btn btn-sm btn-outline-danger" 
                                              onclick="removeImage(${question.id}, event)" type="button">
-                                         <i class="fas fa-trash me-1"></i> Remove
+                                         <i class="fas fa-trash me-1"></i> ${t.remove || 'Remove'}
                                      </button>
                                  </div>` :
                                 `<div class="upload-content">
                                      <div class="upload-icon">
                                          <i class="fas fa-cloud-upload-alt"></i>
                                      </div>
-                                     <h6>Upload Image</h6>
-                                     <p class="text-muted small mb-0">Click to select image</p>
+                                     <h6>${t.uploadImage || 'Upload Image'}</h6>
+                                     <p class="text-muted small mb-0">${t.clickSelectImage || 'Click to select image'}</p>
                                  </div>`
                             }
                         </div>
@@ -242,26 +245,26 @@ function createQuestionHtml(question) {
                 
                 <div class="answer-options">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="text-primary mb-0">Answer Options</h6>
+                        <h6 class="text-primary mb-0">${t.answerOptions || 'Answer Options'}</h6>
                         <div class="option-controls">
                             ${question.options.length > MIN_OPTIONS ? 
                                 `<button class="btn btn-sm btn-outline-danger" 
                                 onclick="removeLastOption(${question.id})" type="button">
-                                <i class="fas fa-minus me-1"></i>Remove Option
+                                <i class="fas fa-minus me-1"></i>${t.removeOption || 'Remove Option'}
                                 </button>` :
                                 `<button class="btn btn-sm btn-outline-danger" 
                                 onclick="removeLastOption(${question.id})" type="button" disabled>
-                                <i class="fas fa-minus me-1"></i>Remove Option
+                                <i class="fas fa-minus me-1"></i>${t.removeOption || 'Remove Option'}
                                 </button>`
                             }
                             ${question.options.length < MAX_OPTIONS ? 
                                 `<button class="btn btn-sm btn-outline-primary me-2" 
                                         onclick="addOption(${question.id})" type="button">
-                                    <i class="fas fa-plus me-1"></i>Add Option
+                                    <i class="fas fa-plus me-1"></i>${t.addOption || 'Add Option'}
                                 </button>` : 
                                 `<button class="btn btn-sm btn-outline-primary me-2" 
                                         onclick="addOption(${question.id})" type="button" disabled>
-                                    <i class="fas fa-plus me-1"></i>Add Option
+                                    <i class="fas fa-plus me-1"></i>${t.addOption || 'Add Option'}
                                 </button>`
                             }
                         </div>
@@ -286,7 +289,7 @@ function createOptionsHtml(question) {
             <div class="option-letter ${colorClass}">${option.letter}</div>
             <input type="text" 
                    class="form-control-modern flex-grow-1" 
-                   placeholder="Enter option ${option.letter}" 
+                   placeholder="${t.enterOption || 'Enter option'} ${option.letter}" 
                    id="option-${question.id}-${option.letter}"
                    value="${option.text}"
                    oninput="updateQuestion(${question.id}, 'option${option.letter}', this.value)">
@@ -331,7 +334,7 @@ function populateQuestionData(question) {
                 <div class="mt-2">
                     <button class="btn btn-sm btn-outline-danger" 
                             onclick="removeImage(${question.id}, event)" type="button">
-                        <i class="fas fa-trash me-1"></i> Remove
+                        <i class="fas fa-trash me-1"></i> ${t.remove || 'Remove'}
                     </button>
                 </div>
             `;
@@ -385,21 +388,21 @@ function refreshQuestionOptions(questionId) {
         ${question.options.length > MIN_OPTIONS ? 
             `<button class="btn btn-sm btn-outline-danger" 
                 onclick="removeLastOption(${question.id})" type="button">
-                <i class="fas fa-minus me-1"></i>Remove Option
+                <i class="fas fa-minus me-1"></i>${t.removeOption || 'Remove Option'}
             </button>` :
             `<button class="btn btn-sm btn-outline-danger" 
                 onclick="removeLastOption(${question.id})" type="button" disabled>
-                <i class="fas fa-minus me-1"></i>Remove Option
+                <i class="fas fa-minus me-1"></i>${t.removeOption || 'Remove Option'}
             </button>`
         }
         ${question.options.length < MAX_OPTIONS ? 
             `<button class="btn btn-sm btn-outline-primary me-2" 
                     onclick="addOption(${question.id})" type="button">
-                <i class="fas fa-plus me-1"></i>Add Option
+                <i class="fas fa-plus me-1"></i>${t.addOption || 'Add Option'}
             </button>` : 
             `<button class="btn btn-sm btn-outline-primary me-2" 
                     onclick="addOption(${question.id})" type="button" disabled>
-                <i class="fas fa-plus me-1"></i>Add Option
+                <i class="fas fa-plus me-1"></i>${t.addOption || 'Add Option'}
             </button>`
         }
     `;
@@ -499,7 +502,7 @@ function handleImageUpload(questionId, input) {
                     <div class="mt-2">
                         <button class="btn btn-sm btn-outline-danger" 
                                 onclick="removeImage(${questionId}, event)" type="button">
-                            <i class="fas fa-trash me-1"></i> Remove
+                            <i class="fas fa-trash me-1"></i> ${t.remove || 'Remove'}
                         </button>
                     </div>
                 `;
@@ -530,8 +533,8 @@ function removeImage(questionId, event) {
                     <div class="upload-icon">
                         <i class="fas fa-cloud-upload-alt"></i>
                     </div>
-                    <h6>Upload Image</h6>
-                    <p class="text-muted small mb-0">Click to select image</p>
+                    <h6>${t.uploadImage || 'Upload Image'}</h6>
+                    <p class="text-muted small mb-0">${t.clickSelectImage || 'Click to select image'}</p>
                 </div>
             `;
         }
@@ -551,10 +554,11 @@ function moveQuestion(questionId, direction) {
     } else if (direction === 'down' && idx < questions.length - 1) {
         newIdx = idx + 1;
     } else {
-        showNotification(
-            `Cannot move ${direction}. Question is already at the ${direction === 'up' ? 'top' : 'bottom'}.`,
-            'warning'
-        );
+        const position = direction === 'up' ? t.top || 'top' : t.bottom || 'bottom';
+        const msg = t.cannotMove ? 
+            t.cannotMove.replace('{{direction}}', t[direction] || direction).replace('{{position}}', position) :
+            `Cannot move ${direction}. Question is already at the ${position}.`;
+        showNotification(msg, 'warning');
         return;
     }
     // Swap ids
@@ -563,7 +567,11 @@ function moveQuestion(questionId, direction) {
     [questions[idx], questions[newIdx]] = [questions[newIdx], questions[idx]];
     renderAllQuestions();
     triggerAutoSave();
-    showNotification(`Question moved ${direction} successfully!`, 'success');
+    
+    const msg = t.questionMoved ? 
+        t.questionMoved.replace('{{direction}}', t[direction] || direction) :
+        `Question moved ${direction} successfully!`;
+    showNotification(msg, 'success');
 }
 
 function duplicateQuestion(questionId) {
@@ -573,9 +581,10 @@ function duplicateQuestion(questionId) {
     questionCount++;
     const original = questions[idx];
     
+    const copyLabel = t.copy || 'Copy';
     const newQuestion = {
         id: questionCount,
-        content: original.content + ' (Copy)',
+        content: `${original.content} (${copyLabel})`,
         answerTime: original.answerTime,
         options: original.options.map(opt => ({ ...opt })),
         correctAnswer: original.correctAnswer,
@@ -614,7 +623,7 @@ function duplicateQuestion(questionId) {
         applyOptionColors();
     }, 200);
     
-    showNotification('Question duplicated successfully!', 'success');
+    showNotification(t.questionDuplicated || 'Question duplicated successfully!', 'success');
 }
 
 /**
@@ -658,14 +667,14 @@ function setupColorObserver() {
 
 function deleteQuestion(questionId) {
     Swal.fire({
-        title: 'Delete Question?',
-        text: `Are you sure you want to delete this question? This action cannot be undone.`,
+        title: t.deleteQuestion || 'Delete Question?',
+        text: t.deleteQuestionConfirm || 'Are you sure you want to delete this question? This action cannot be undone.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, Delete',
-        cancelButtonText: 'Cancel'
+        confirmButtonText: t.yesDelete || 'Yes, Delete',
+        cancelButtonText: t.cancel || 'Cancel'
     }).then((result) => {
         if (result.isConfirmed) {
             questions = questions.filter(q => q.id !== questionId);
@@ -678,7 +687,7 @@ function deleteQuestion(questionId) {
             });
             updateQuizStatistics();
             triggerAutoSave();
-            showNotification('Question deleted successfully!', 'success');
+            showNotification(t.questionDeleted || 'Question deleted successfully!', 'success');
         }
     });
 }
@@ -734,14 +743,14 @@ function loadDraftIfExists() {
         try {
             const draftData = JSON.parse(draft);
             Swal.fire({
-                title: 'Draft Found',
-                text: 'Would you like to restore your previous draft?',
+                title: t.draftFound || 'Draft Found',
+                text: t.restoreDraftConfirm || 'Would you like to restore your previous draft?',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#667eea',
                 cancelButtonColor: '#64748b',
-                confirmButtonText: 'Restore Draft',
-                cancelButtonText: 'Start Fresh'
+                confirmButtonText: t.restoreDraft || 'Restore Draft',
+                cancelButtonText: t.startFresh || 'Start Fresh'
             }).then((result) => {
                 if (result.isConfirmed) {
                     restoreDraft(draftData);
@@ -763,7 +772,7 @@ function restoreDraft(draftData) {
     if (draftData.startTime) document.getElementById('startTime').value = draftData.startTime;
     if (draftData.endTime) document.getElementById('endTime').value = draftData.endTime;
     
-    toggleScheduleSettings();
+    // toggleScheduleSettings();
     
     questions = draftData.questions || [];
     questionCount = questions.length > 0 ? Math.max(...questions.map(q => q.id)) : 0;
@@ -788,7 +797,7 @@ function restoreDraft(draftData) {
     });
     updateQuizStatistics();
     
-    showNotification('Draft restored successfully!', 'success');
+    showNotification(t.draftRestored || 'Draft restored successfully!', 'success');
 }
 
 function showAutoSaveIndicator() {
@@ -808,7 +817,7 @@ function showAutoSaveIndicator() {
  */
 function previewQuiz() {
     if (questions.length === 0) {
-        showNotification('Please add at least one question to preview', 'warning');
+        showNotification(t.noQuestionsPreview || 'Please add at least one question to preview', 'warning');
         return;
     }
     
@@ -1062,11 +1071,15 @@ function updateProgress() {
 function finishQuiz() {
     stopTimer();
     
+    const message = t.reviewedAllQuestions ? 
+        t.reviewedAllQuestions.replace('{{count}}', questions.length) :
+        `You've reviewed all ${questions.length} questions.`;
+    
     Swal.fire({
-        title: 'Quiz Preview Complete!',
-        text: `You've reviewed all ${questions.length} questions.`,
+        title: t.previewComplete || 'Quiz Preview Complete!',
+        text: message,
         icon: 'success',
-        confirmButtonText: 'Close Preview',
+        confirmButtonText: t.exitPreview || 'Close Preview',
         confirmButtonColor: '#667eea'
     }).then(() => {
         const modal = bootstrap.Modal.getInstance(document.getElementById('previewModal'));
@@ -1120,13 +1133,13 @@ function publishQuiz() {
     if (!validateQuizData()) return;
     
     Swal.fire({
-        title: 'Publish Quiz?',
-        text: "Your quiz will be available for students to take.",
+        title: t.publishConfirm || 'Publish Quiz?',
+        text: t.publishConfirmText || "Your quiz will be available for students to take.",
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#10b981',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, publish it!'
+        confirmButtonText: t.yesPublish || 'Yes, publish it!'
     }).then((result) => {
         if (result.isConfirmed) {
             submitQuizToServer(false);
@@ -1138,13 +1151,13 @@ function updateQuiz() {
     if (!validateQuizData()) return;
     
     Swal.fire({
-        title: 'Update Quiz?',
-        text: "All changes will be saved.",
+        title: t.updateConfirm || 'Update Quiz?',
+        text: t.updateConfirmText || "All changes will be saved.",
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#667eea',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Yes, update it!'
+        confirmButtonText: t.yesUpdate || 'Yes, update it!'
     }).then((result) => {
         if (result.isConfirmed) {
             submitQuizToServer(true);
@@ -1155,30 +1168,39 @@ function updateQuiz() {
 function validateQuizData() {
     const title = document.getElementById('quizTitle').value.trim();
     if (!title) {
-        showNotification('Please enter a quiz title', 'error');
+        showNotification(t.enterQuizTitle || 'Please enter a quiz title', 'error');
         return false;
     }
     
     if (questions.length === 0) {
-        showNotification('Please add at least one question', 'error');
+        showNotification(t.addAtLeastOneQuestion || 'Please add at least one question', 'error');
         return false;
     }
     
     for (let i = 0; i < questions.length; i++) {
         const question = questions[i];
         if (!question.content.trim()) {
-            showNotification(`Question ${i + 1} is empty`, 'error');
+            const msg = t.questionEmpty ? 
+                t.questionEmpty.replace('{{number}}', i + 1) :
+                `Question ${i + 1} is empty`;
+            showNotification(msg, 'error');
             return false;
         }
         
         const validOptions = question.options.filter(opt => opt.text && opt.text.trim());
         if (validOptions.length < 2) {
-            showNotification(`Question ${i + 1} needs at least 2 answer options`, 'error');
+            const msg = t.needTwoOptions ? 
+                t.needTwoOptions.replace('{{number}}', i + 1) :
+                `Question ${i + 1} needs at least 2 answer options`;
+            showNotification(msg, 'error');
             return false;
         }
         
         if (!question.correctAnswer || !question.options.find(opt => opt.letter === question.correctAnswer && opt.text.trim())) {
-            showNotification(`Question ${i + 1} needs a valid correct answer`, 'error');
+            const msg = t.needValidAnswer ? 
+                t.needValidAnswer.replace('{{number}}', i + 1) :
+                `Question ${i + 1} needs a valid correct answer`;
+            showNotification(msg, 'error');
             return false;
         }
     }
@@ -1187,8 +1209,12 @@ function validateQuizData() {
 }
 
 function submitQuizToServer(isUpdate) {
-    const loadingTitle = isUpdate ? 'Updating Quiz...' : 'Publishing Quiz...';
-    const loadingText = isUpdate ? 'Please wait while we save your changes.' : 'Please wait while we publish your quiz.';
+    const loadingTitle = isUpdate ? 
+        (t.updating || 'Updating Quiz...') : 
+        (t.publishing || 'Publishing Quiz...');
+    const loadingText = isUpdate ? 
+        (t.updatingText || 'Please wait while we save your changes.') : 
+        (t.publishingText || 'Please wait while we publish your quiz.');
     
     Swal.fire({
         title: loadingTitle,
@@ -1258,14 +1284,18 @@ function submitQuizToServer(isUpdate) {
                 localStorage.removeItem('quiz_form_draft');
             }
             
-            const successTitle = isUpdate ? 'Quiz Updated!' : 'Quiz Published!';
-            const successText = isUpdate ? 'Your quiz has been updated successfully.' : 'Your quiz has been published successfully.';
+            const successTitle = isUpdate ? 
+                (t.quizUpdated || 'Quiz Updated!') : 
+                (t.quizPublished || 'Quiz Published!');
+            const successText = isUpdate ? 
+                (t.quizUpdatedText || 'Your quiz has been updated successfully.') : 
+                (t.quizPublishedText || 'Your quiz has been published successfully.');
             
             Swal.fire({
                 title: successTitle,
                 text: successText,
                 icon: 'success',
-                confirmButtonText: 'View Quiz Dashboard'
+                confirmButtonText: t.viewQuizDashboard || 'View Quiz Dashboard'
             }).then(() => {
                 window.location.href = '/quizzes';
             });
@@ -1274,8 +1304,8 @@ function submitQuizToServer(isUpdate) {
             console.error('Error:', error);
             Swal.fire({
                 icon: 'error',
-                title: 'Error!',
-                text: error.message || 'Failed to save quiz. Please try again.',
+                title: t.error || 'Error!',
+                text: error.message || (t.failedSaveQuiz || 'Failed to save quiz. Please try again.'),
                 confirmButtonColor: '#667eea'
             });
         });
@@ -1283,11 +1313,11 @@ function submitQuizToServer(isUpdate) {
 
 // =================== UTILITY FUNCTIONS ===================
 
-function toggleScheduleSettings() {
-    const mode = document.getElementById('quizMode').value;
-    const scheduleSettings = document.getElementById('scheduleSettings');
-    scheduleSettings.style.display = mode === 'offline' ? 'block' : 'none';
-}
+// function toggleScheduleSettings() {
+//     const mode = document.getElementById('quizMode').value;
+//     const scheduleSettings = document.getElementById('scheduleSettings');
+//     scheduleSettings.style.display = mode === 'offline' ? 'block' : 'none';
+// }
 
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
@@ -1375,7 +1405,7 @@ window.previewQuiz = previewQuiz;
 window.editQuiz = editQuiz;
 window.publishQuiz = publishQuiz;
 window.updateQuiz = updateQuiz;
-window.toggleScheduleSettings = toggleScheduleSettings;
+// window.toggleScheduleSettings = toggleScheduleSettings;
 window.nextQuestion = nextQuestion;
 window.finishQuiz = finishQuiz;
 window.selectPreviewOption = selectPreviewOption;

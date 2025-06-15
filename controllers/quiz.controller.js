@@ -100,7 +100,7 @@ class QuizController {
             const roomCode = req.session?.selectedRoom?.code;
             if (!roomCode) {
                 return res.status(400).json({ 
-                    error: 'Room selection required. Please select a department first.' 
+                    error: req.t ? req.t('quiz:room_selection_required') : 'Room selection required. Please select a department first.'
                 });
             }
 
@@ -117,7 +117,9 @@ class QuizController {
             res.status(201).json(quiz);
         } catch (error) {
             console.error('Create quiz error:', error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ 
+                error: req.t ? req.t('quiz:create_quiz_error') : error.message 
+            });
         }
     }
 
@@ -129,7 +131,7 @@ class QuizController {
             const userRoomCode = req.session?.selectedRoom?.code;
             if (userRoomCode && quiz.roomCode && quiz.roomCode !== userRoomCode) {
                 return res.status(403).json({ 
-                    error: 'Access denied. This quiz belongs to a different department.' 
+                    error: req.t ? req.t('quiz:access_denied_different_department') : 'Access denied. This quiz belongs to a different department.'
                 });
             }
 
@@ -137,7 +139,9 @@ class QuizController {
             quiz = migrateQuizData(quiz);
             res.json(quiz);
         } catch (error) {
-            res.status(404).json({ error: error.message });
+            res.status(404).json({ 
+                error: req.t ? req.t('quiz:quiz_not_found') : error.message 
+            });
         }
     }
 
@@ -149,7 +153,7 @@ class QuizController {
             
             if (userRoomCode && quiz.roomCode && quiz.roomCode !== userRoomCode) {
                 return res.status(403).json({ 
-                    error: 'Access denied. You can only edit quizzes from your department.' 
+                    error: req.t ? req.t('quiz:access_denied_edit_department') : 'Access denied. You can only edit quizzes from your department.'
                 });
             }
 
@@ -160,7 +164,9 @@ class QuizController {
             res.json(updatedQuiz);
         } catch (error) {
             console.error('Error updating quiz:', error);
-            res.status(400).json({ error: error.message });
+            res.status(400).json({ 
+                error: req.t ? req.t('quiz:update_quiz_error') : error.message 
+            });
         }
     }
 
@@ -172,7 +178,7 @@ class QuizController {
             
             if (userRoomCode && quiz.roomCode && quiz.roomCode !== userRoomCode) {
                 return res.status(403).json({ 
-                    error: 'Access denied. You can only delete quizzes from your department.' 
+                    error: req.t ? req.t('quiz:access_denied_delete_department') : 'Access denied. You can only delete quizzes from your department.'
                 });
             }
 
@@ -182,7 +188,9 @@ class QuizController {
             
             res.json(result);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            res.status(400).json({ 
+                error: req.t ? req.t('quiz:delete_quiz_error') : error.message 
+            });
         }
     }
 
@@ -194,11 +202,12 @@ class QuizController {
         }
 
         res.render('quiz/form', {
-            title: `Create New Quiz - ${getRoomName(roomInfo.code)}`,
+            title: req.t ? req.t('quiz:create_new_quiz') + ' - ' + getRoomName(roomInfo.code) : `Create New Quiz - ${getRoomName(roomInfo.code)}`,
             isEdit: false,
             quiz: null,
             user: req.session.user,
             roomInfo: roomInfo,
+            lng: req.language || 'vi',
             layout: false
         });
     }
@@ -211,8 +220,9 @@ class QuizController {
             const userRoomCode = req.session?.selectedRoom?.code;
             if (userRoomCode && quiz.roomCode && quiz.roomCode !== userRoomCode) {
                 return res.status(403).render('error/403', {
-                    title: 'Access Denied',
-                    message: 'You can only edit quizzes from your department.',
+                    title: req.t ? req.t('error:access_denied') : 'Access Denied',
+                    message: req.t ? req.t('quiz:access_denied_edit_department') : 'You can only edit quizzes from your department.',
+                    lng: req.language || 'vi',
                     layout: false
                 });
             }
@@ -223,18 +233,22 @@ class QuizController {
             const roomInfo = req.session?.selectedRoom;
             
             res.render('quiz/form', {
-                title: `Edit Quiz #${quiz.number} - ${getRoomName(roomInfo?.code || quiz.roomCode)}`,
+                title: req.t ? 
+                    req.t('quiz:edit_quiz') + ` #${quiz.number} - ` + getRoomName(roomInfo?.code || quiz.roomCode) :
+                    `Edit Quiz #${quiz.number} - ${getRoomName(roomInfo?.code || quiz.roomCode)}`,
                 isEdit: true,
                 quiz: quiz,
                 user: req.session.user,
                 roomInfo: roomInfo,
+                lng: req.language || 'vi',
                 layout: false
             });
         } catch (error) {
             console.error('Error loading quiz for edit:', error);
             res.status(404).render('error/404', {
-                title: 'Quiz Not Found',
-                message: 'The quiz you are looking for does not exist.',
+                title: req.t ? req.t('error:quiz_not_found') : 'Quiz Not Found',
+                message: req.t ? req.t('error:quiz_not_found_desc') : 'The quiz you are looking for does not exist.',
+                lng: req.language || 'vi',
                 layout: false
             });
         }
@@ -284,13 +298,15 @@ class QuizController {
                 const daysDiff = Math.floor((now - updatedDate) / (1000 * 60 * 60 * 24));
                 let relativeTime;
                 if (daysDiff === 0) {
-                    relativeTime = 'Today';
+                    relativeTime = req.t ? req.t('quiz:today') : 'Today';
                 } else if (daysDiff === 1) {
-                    relativeTime = 'Yesterday';
+                    relativeTime = req.t ? req.t('quiz:yesterday') : 'Yesterday';
                 } else if (daysDiff < 7) {
-                    relativeTime = `${daysDiff} days ago`;
+                    relativeTime = req.t ? 
+                        req.t('quiz:days_ago', { count: daysDiff }) : 
+                        `${daysDiff} days ago`;
                 } else {
-                    relativeTime = updatedDate.toLocaleDateString();
+                    relativeTime = updatedDate.toLocaleDateString(req.language === 'vi' ? 'vi-VN' : 'en-US');
                 }
                 
                 return {
@@ -335,11 +351,14 @@ class QuizController {
             };
             
             res.render('quiz/list', {
-                title: `Quiz Management - ${getRoomName(roomCode)}`,
+                title: req.t ? 
+                    req.t('quiz:quiz_management') + ' - ' + getRoomName(roomCode) :
+                    `Quiz Management - ${getRoomName(roomCode)}`,
                 user: user,
                 quizzes: enhancedQuizzes,
                 stats: stats,
                 roomInfo: roomInfo,
+                lng: req.language || 'vi',
                 // Pagination data
                 currentPage: page,
                 totalPages: totalPages,
@@ -360,8 +379,9 @@ class QuizController {
         } catch (error) {
             console.error('Error fetching quizzes:', error);
             res.status(500).render('error/500', {
-                title: 'Server Error',
-                message: 'Unable to load quizzes. Please try again later.',
+                title: req.t ? req.t('error:server_error') : 'Server Error',
+                message: req.t ? req.t('error:unable_load_quizzes') : 'Unable to load quizzes. Please try again later.',
+                lng: req.language || 'vi',
                 layout: false
             });
         }
@@ -375,8 +395,9 @@ class QuizController {
             const userRoomCode = req.session?.selectedRoom?.code;
             if (userRoomCode && quiz.roomCode && quiz.roomCode !== userRoomCode) {
                 return res.status(403).render('error/403', {
-                    title: 'Access Denied',
-                    message: 'You can only preview quizzes from your department.',
+                    title: req.t ? req.t('error:access_denied') : 'Access Denied',
+                    message: req.t ? req.t('quiz:access_denied_preview_department') : 'You can only preview quizzes from your department.',
+                    lng: req.language || 'vi',
                     layout: false
                 });
             }
@@ -385,18 +406,22 @@ class QuizController {
             quiz = migrateQuizData(quiz);
 
             res.render('quiz/preview', {
-                title: `Preview Quiz #${quiz.number} - ${getRoomName(quiz.roomCode)}`,
+                title: req.t ? 
+                    req.t('quiz:preview_quiz') + ` #${quiz.number} - ` + getRoomName(quiz.roomCode) :
+                    `Preview Quiz #${quiz.number} - ${getRoomName(quiz.roomCode)}`,
                 quiz: quiz,
                 isPreview: true,
                 user: req.session.user,
                 roomInfo: req.session?.selectedRoom,
+                lng: req.language || 'vi',
                 layout: false
             });
         } catch (error) {
             console.error('Error loading quiz preview:', error);
             res.status(404).render('error/404', {
-                title: 'Quiz Not Found',
-                message: 'The quiz you are looking for does not exist.',
+                title: req.t ? req.t('error:quiz_not_found') : 'Quiz Not Found',
+                message: req.t ? req.t('error:quiz_not_found_desc') : 'The quiz you are looking for does not exist.',
+                lng: req.language || 'vi',
                 layout: false
             });
         }
@@ -412,7 +437,7 @@ class QuizController {
             if (!originalQuiz) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Original quiz not found'
+                    message: req.t ? req.t('quiz:original_quiz_not_found') : 'Original quiz not found'
                 });
             }
 
@@ -421,7 +446,7 @@ class QuizController {
             if (userRoomCode && originalQuiz.roomCode && originalQuiz.roomCode !== userRoomCode) {
                 return res.status(403).json({
                     success: false,
-                    message: 'You can only duplicate quizzes from your department'
+                    message: req.t ? req.t('quiz:access_denied_duplicate_department') : 'You can only duplicate quizzes from your department'
                 });
             }
             
@@ -429,9 +454,10 @@ class QuizController {
             originalQuiz = migrateQuizData(originalQuiz);
             
             // Create new quiz data in new format with same room code (new quiz number will be auto-generated)
+            const copyLabel = req.t ? req.t('quiz:copy') : 'Copy';
             const duplicateData = {
                 quizInfo: JSON.stringify({
-                    title: `${originalQuiz.title} (Copy)`,
+                    title: `${originalQuiz.title} (${copyLabel})`,
                     mode: originalQuiz.mode,
                     roomCode: originalQuiz.roomCode, // Preserve room code
                     scheduleSettings: originalQuiz.scheduleSettings
@@ -456,7 +482,9 @@ class QuizController {
             
             res.json({
                 success: true,
-                message: `Quiz duplicated successfully as Quiz #${duplicatedQuiz.number}`,
+                message: req.t ? 
+                    req.t('quiz:quiz_duplicated_as_number', { number: duplicatedQuiz.number }) :
+                    `Quiz duplicated successfully as Quiz #${duplicatedQuiz.number}`,
                 quiz: {
                     id: duplicatedQuiz._id,
                     number: duplicatedQuiz.number,
@@ -469,7 +497,7 @@ class QuizController {
             console.error('Duplicate quiz error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to duplicate quiz',
+                message: req.t ? req.t('quiz:failed_duplicate_quiz') : 'Failed to duplicate quiz',
                 error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
             });
         }
@@ -485,7 +513,7 @@ class QuizController {
             if (!quiz) {
                 return res.status(404).json({
                     success: false,
-                    message: 'Quiz not found'
+                    message: req.t ? req.t('quiz:quiz_not_found') : 'Quiz not found'
                 });
             }
 
@@ -494,7 +522,7 @@ class QuizController {
             if (userRoomCode && quiz.roomCode && quiz.roomCode !== userRoomCode) {
                 return res.status(403).json({
                     success: false,
-                    message: 'You can only delete quizzes from your department'
+                    message: req.t ? req.t('quiz:access_denied_delete_department') : 'You can only delete quizzes from your department'
                 });
             }
             
@@ -512,14 +540,16 @@ class QuizController {
             
             res.json({
                 success: true,
-                message: `Quiz #${quiz.number} deleted successfully`
+                message: req.t ? 
+                    req.t('quiz:quiz_number_deleted', { number: quiz.number }) :
+                    `Quiz #${quiz.number} deleted successfully`
             });
             
         } catch (error) {
             console.error('Delete quiz error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to delete quiz',
+                message: req.t ? req.t('quiz:failed_delete_quiz') : 'Failed to delete quiz',
                 error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
             });
         }
@@ -583,7 +613,7 @@ class QuizController {
             console.error('Analytics error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to fetch analytics'
+                message: req.t ? req.t('quiz:failed_fetch_analytics') : 'Failed to fetch analytics'
             });
         }
     }
@@ -625,7 +655,7 @@ class QuizController {
             if (!targetRoom || !['hrm', 'hse', 'gm'].includes(targetRoom)) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Please specify a valid target room (hrm, hse, or gm)'
+                    message: req.t ? req.t('quiz:specify_valid_target_room') : 'Please specify a valid target room (hrm, hse, or gm)'
                 });
             }
 
@@ -663,7 +693,12 @@ class QuizController {
             
             res.json({
                 success: true,
-                message: `Migration completed. ${migratedCount} quizzes were assigned to ${getRoomName(targetRoom)} department.`,
+                message: req.t ? 
+                    req.t('quiz:migration_completed', { 
+                        count: migratedCount,
+                        roomName: getRoomName(targetRoom)
+                    }) :
+                    `Migration completed. ${migratedCount} quizzes were assigned to ${getRoomName(targetRoom)} department.`,
                 migratedCount,
                 totalQuizzes: quizzes.length,
                 targetRoom: targetRoom,
@@ -674,7 +709,7 @@ class QuizController {
             console.error('Migration error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Migration failed',
+                message: req.t ? req.t('quiz:migration_failed') : 'Migration failed',
                 error: error.message
             });
         }
