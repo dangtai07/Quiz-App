@@ -437,20 +437,20 @@
                 <div class="trophy-icon">
                     <i class="fas fa-trophy"></i>
                 </div>
-                <h1 class="results-title">Test Results</h1>
+                <h1 class="results-title"><%= t('test:test_results') %></h1>
                 <p class="results-subtitle"><%= results.quiz.title %></p>
                 <div class="test-info-badges">
                     <div class="info-badge">
                         <i class="fas fa-hashtag me-2"></i>
-                        Code: <%= results.testCode %>
+                        <%= t('test:test_code') %>: <%= results.testCode %>
                     </div>
                     <div class="info-badge">
                         <i class="fas fa-list-ol me-2"></i>
-                        Quiz #<%= results.quiz.number %>
+                        <%= t('test:quiz_number') %> #<%= results.quiz.number %>
                     </div>
                     <div class="info-badge">
                         <i class="fas fa-users me-2"></i>
-                        <%= results.participantCount %> Participants
+                        <%= results.participantCount %> <%= t('test:participants') %>
                     </div>
                     <div class="info-badge">
                         <i class="fas fa-calendar me-2"></i>
@@ -467,14 +467,14 @@
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="stat-value"><%= results.participantCount %></div>
-                <div class="stat-label">Total Participants</div>
+                <div class="stat-label"><%= t('test:total_participants') %></div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon completion">
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="stat-value">100%</div>
-                <div class="stat-label">Completion Rate</div>
+                <div class="stat-label"><%= t('test:complete_rate') %></div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon average">
@@ -483,7 +483,7 @@
                 <div class="stat-value" id="averageScore">
                     <%= results.results.length > 0 ? Math.round(results.results.reduce((sum, r) => sum + r.score, 0) / results.results.length) : 0 %>
                 </div>
-                <div class="stat-label">Average Score</div>
+                <div class="stat-label"><%= t('test:avg_score') %></div>
             </div>
             <div class="stat-card">
                 <div class="stat-icon duration">
@@ -492,7 +492,7 @@
                 <div class="stat-value" id="avgDuration">
                     <%= results.results.length > 0 ? Math.round(results.results.reduce((sum, r) => sum + r.completionTime, 0) / results.results.length / 60) : 0 %>m
                 </div>
-                <div class="stat-label">Avg Duration</div>
+                <div class="stat-label"><%= t('test:avg_duration') %></div>
             </div>
         </div>
 
@@ -501,9 +501,9 @@
             <div class="leaderboard-header">
                 <h2 class="leaderboard-title">
                     <i class="fas fa-trophy me-2"></i>
-                    Final Rankings
+                    <%= t('test:final_ranking') %>
                 </h2>
-                <p class="leaderboard-subtitle">Congratulations to all participants!</p>
+                <p class="leaderboard-subtitle"><%= t('test:final_ranking_desc') %></p>
             </div>
             
             <div class="leaderboard-content">
@@ -517,7 +517,7 @@
                                 <div class="podium-name"><%= result.name %></div>
                                 <div class="podium-score"><%= result.score %> pts</div>
                                 <div class="podium-details">
-                                    <%= result.correctAnswers %>/<%= result.totalQuestions %> correct
+                                    <%= result.correctAnswers %>/<%= result.totalQuestions %> <%= t('test:correct') %>
                                 </div>
                             </div>
                         <% }); %>
@@ -535,8 +535,8 @@
                             <div class="participant-info">
                                 <div class="participant-name"><%= participant.name %></div>
                                 <div class="participant-stats">
-                                    <%= participant.correctAnswers %>/<%= participant.totalQuestions %> correct • 
-                                    <%= Math.round(participant.completionTime / 60) %> min
+                                    <%= participant.correctAnswers %>/<%= participant.totalQuestions %> <%= t('test:correct') %> • 
+                                    <%= Math.round(participant.completionTime / 60) %> <%= t('test:min') %>
                                 </div>
                             </div>
                             <div class="participant-score">
@@ -553,7 +553,7 @@
         <div class="charts-section">
             <!-- Score Distribution Chart -->
             <div class="chart-card">
-                <h3 class="chart-title">Score Distribution</h3>
+                <h3 class="chart-title"><%= t('test:score_distribute') %></h3>
                 <div class="chart-container">
                     <canvas id="scoreChart"></canvas>
                 </div>
@@ -561,7 +561,7 @@
 
             <!-- Performance Overview Chart -->
             <div class="chart-card">
-                <h3 class="chart-title">Performance Overview</h3>
+                <h3 class="chart-title"><%= t('test:performance_overview') %></h3>
                 <div class="chart-container">
                     <canvas id="performanceChart"></canvas>
                 </div>
@@ -572,15 +572,15 @@
         <div class="actions-section">
             <a href="/test/admin/results" class="btn btn-action btn-primary-custom">
                 <i class="fas fa-home"></i>
-                Back to Results
+                <%= t('test:back_to_results') %>
             </a>
             <button onclick="printResults()" class="btn btn-action btn-secondary-custom" style="background-color: white;">
                 <i class="fas fa-print"></i>
-                Print Results
+                <%= t('test:print_results') %>
             </button>
             <button onclick="exportResults()" class="btn btn-action btn-secondary-custom" style="background: linear-gradient(to right, #232526 0%, #414345  51%, #232526  100%);color: wheat;">
                 <i class="fas fa-download"></i>
-                Export CSV
+                <%= t('test:export_csv') %>
             </button>
         </div>
     </div>
@@ -612,7 +612,7 @@
                 data: {
                     labels: scoreRanges,
                     datasets: [{
-                        label: 'Number of Participants',
+                        label: "<%= t('test:number_of_participants') %>",
                         data: scoreDistribution,
                         backgroundColor: [
                             '#ef4444',
@@ -653,7 +653,7 @@
             new Chart(perfCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Correct Answers', 'Incorrect Answers'],
+                    labels: ["<%= t('test:correct_answer') %>", "<%= t('test:incorrect_answer') %>"],
                     datasets: [{
                         data: [
                             Math.round(averageCorrect),
@@ -681,7 +681,7 @@
 
         function exportResults() {
             // Create CSV content
-            const headers = ['Rank', 'Name', 'Score', 'Correct Answers', 'Total Questions', 'Completion Time (minutes)'];
+            const headers = ["<%= t('test:rank') %>", "<%= t('common:name') %>", "<%= t('common:score') %>", "<%= t('test:correct_answer') %>","<%= t('test:total_questions') %>", 'Completion Time (minutes)'];
             const csvContent = [
                 headers.join(','),
                 ...resultsData.results.map((participant, index) => [

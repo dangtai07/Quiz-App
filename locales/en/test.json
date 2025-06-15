@@ -141,5 +141,21 @@
   "no_completed_mode_tests_found": "No completed {{mode}} tests found for this department.",
   "manage_view_results": "Manage and view test results for your department",
   "showing_page": "showing page",
-  "viewing_results": "Viewing Results"
+  "viewing_results": "Viewing Results",
+  "total_participants": "Total Participants",
+  "complete_rate": "Completion Rate",
+  "avg_score": "Average Score",
+  "avg_duration": "Avg Duration",
+  "final_ranking": "Final Rankings",
+  "final_ranking_desc": "Congratulations to all participants!",
+  "score_distribute": "Score Distribution",
+  "performance_overview": "Performance Overview",
+  "correct_answer": "Correct Answers",
+  "incorrect_answer": "Incorrect Answers",
+  "min": "min",
+  "back_to_results": "Back to Results",
+  "print_results": "Print Results",
+  "export_csv": "Export CSV",
+  "number_of_participants": "Number of Participants",
+  "completion_time_min": "Completion Time (minutes)"
 }

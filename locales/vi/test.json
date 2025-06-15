@@ -141,5 +141,21 @@
   "no_completed_mode_tests_found": "Không tìm thấy test {{mode}} đã hoàn thành nào cho phòng ban này.",
   "manage_view_results": "Quản lý và xem kết quả test cho phòng ban của bạn",
   "showing_page": "hiển thị trang",
-  "viewing_results": "Đang xem kết quả"
+  "viewing_results": "Đang xem kết quả",
+  "total_participants": "Tổng số người tham gia",
+  "complete_rate": "Tỷ lệ hoàn thành",
+  "avg_score": "Điểm trung bình",
+  "avg_duration": "Thời gian trung bình",
+  "final_ranking": "Xếp hạng cuối cùng",
+  "final_ranking_desc": "Chúc mừng tất cả người tham gia!",
+  "score_distribute": "Phân bố điểm số",
+  "performance_overview": "Tổng quan hiệu suất",
+  "correct_answer": "Câu trả lời đúng",
+  "incorrect_answer": "Câu trả lời sai",
+  "min": "phút",
+  "back_to_results": "Quay lại kết quả",
+  "print_results": "In kết quả",
+  "export_csv": "Xuất CSV",
+  "number_of_participants": "Số lượng người tham gia",
+  "completion_time_min": "Thời gian hoàn thành (phút)"
 }
