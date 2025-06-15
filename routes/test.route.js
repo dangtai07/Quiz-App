@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const TestController = require('../controllers/test.controller');
 const { requireAuth, requireAdmin } = require('../controllers/auth.controller');
+const { i18nMiddleware, languageSwitchMiddleware } = require('../middlewares/i18n.middleware');
+
+// Apply i18n middleware to all routes
+router.use(languageSwitchMiddleware);
+router.use(i18nMiddleware);
 
 // ========================================
 // PUBLIC ROUTES (No authentication required)
@@ -51,6 +56,7 @@ router.post('/complete-offline-test', TestController.completeOfflineTest);
 
 // Create new test
 router.post('/create', requireAuth, requireAdmin, TestController.createTest);
+
 // Test results list (admin only)
 router.get('/admin/results', requireAuth, requireAdmin, TestController.renderTestResultsList);
 

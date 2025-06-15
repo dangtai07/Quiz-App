@@ -83,8 +83,9 @@ class TestController {
             
             if (!testCode || testCode.length !== 6) {
                 return res.status(404).render('error/404', {
-                    title: 'Test Not Found',
-                    message: 'Invalid test code',
+                    title: req.t ? req.t('error:test_not_found') : 'Test Not Found',
+                    message: req.t ? req.t('test:invalid_test_code') : 'Invalid test code',
+                    lng: req.language || 'vi',
                     layout: false
                 });
             }
@@ -97,16 +98,20 @@ class TestController {
                 if (test.scheduleSettings) {
                     if (now < new Date(test.scheduleSettings.startTime)) {
                         return res.render('test/not_started', {
-                            title: 'Test Not Started',
+                            title: req.t ? req.t('test:test_not_started') : 'Test Not Started',
                             test: test,
                             startTime: test.scheduleSettings.startTime,
+                            lng: req.language || 'vi',
+                            t: req.t,
                             layout: false
                         });
                     }
                     if (now > new Date(test.scheduleSettings.endTime)) {
                         return res.render('test/expired', {
-                            title: 'Test Expired',
+                            title: req.t ? req.t('test:test_ended') : 'Test Ended',
                             test: test,
+                            lng: req.language || 'vi',
+                            t: req.t,
                             layout: false
                         });
                     }
@@ -115,16 +120,24 @@ class TestController {
             
             if (test.status === 'completed') {
                 return res.render('test/completed', {
-                    title: 'Test Completed',
+                    title: req.t ? req.t('test:test_completed') : 'Test Completed',
                     test: test,
+                    lng: req.language || 'vi',
+                    t: req.t,
                     layout: false
                 });
             }
             
             res.render('test/join', {
-                title: `Join Test ${testCode}`,
+                title: `${req.t ? req.t('test:join_test') : 'Join Test'} ${testCode}`,
                 test: test,
                 error: req.session.testError || null, // Pass error message if any
+                lng: req.language || 'vi',
+                // i18n helpers
+                t: req.t,
+                ti: res.locals.ti,
+                formatDate: res.locals.formatDate,
+                formatNumber: res.locals.formatNumber,
                 layout: false
             });
             
@@ -136,8 +149,9 @@ class TestController {
         } catch (error) {
             console.error('Join page error:', error);
             res.status(404).render('error/404', {
-                title: 'Test Not Found',
-                message: 'The test you are looking for does not exist',
+                title: req.t ? req.t('error:test_not_found') : 'Test Not Found',
+                message: req.t ? req.t('test:test_not_found') : 'The test you are looking for does not exist',
+                lng: req.language || 'vi',
                 layout: false
             });
         }
@@ -153,7 +167,8 @@ class TestController {
             
             if (!testCode || testCode.length !== 6) {
                 return res.status(404).render('error/404', {
-                    title: 'Test Not Found',
+                    title: req.t ? req.t('error:test_not_found') : 'Test Not Found',
+                    lng: req.language || 'vi',
                     layout: false
                 });
             }
@@ -189,6 +204,12 @@ class TestController {
                         participantName: testSession.participantName,
                         participant: joinResult.participant,
                         isOfflineMode: true,
+                        lng: req.language || 'vi',
+                        // i18n helpers
+                        t: req.t,
+                        ti: res.locals.ti,
+                        formatDate: res.locals.formatDate,
+                        formatNumber: res.locals.formatNumber,
                         layout: false
                     });
                     
@@ -203,18 +224,25 @@ class TestController {
             
             // Existing room logic for online mode or admin view
             res.render('test/room', {
-                title: `Test ${testCode} - ${test.quizId.title}`,
+                title: `${req.t ? req.t('test:test_room') : 'Test Room'} ${testCode} - ${test.quizId.title}`,
                 test: test,
                 quiz: test.quizId,
                 isAdmin: isAdmin,
                 user: req.session.user || null,
+                lng: req.language || 'vi',
+                // i18n helpers
+                t: req.t,
+                ti: res.locals.ti,
+                formatDate: res.locals.formatDate,
+                formatNumber: res.locals.formatNumber,
                 layout: false
             });
             
         } catch (error) {
             console.error('Test room error:', error);
             res.status(404).render('error/404', {
-                title: 'Test Not Found',
+                title: req.t ? req.t('error:test_not_found') : 'Test Not Found',
+                lng: req.language || 'vi',
                 layout: false
             });
         }
@@ -226,14 +254,21 @@ class TestController {
     async renderJoinByCode(req, res) {
         try {
             res.render('test/join_by_code', {
-                title: 'Join Test by Code',
+                title: req.t ? req.t('test:join_by_code') : 'Join Test by Code',
                 user: req.session.user || null,
+                lng: req.language || 'vi',
+                // i18n helpers
+                t: req.t,
+                ti: res.locals.ti,
+                formatDate: res.locals.formatDate,
+                formatNumber: res.locals.formatNumber,
                 layout: false
             });
         } catch (error) {
             console.error('Join by code error:', error);
             res.status(500).render('error/500', {
-                title: 'Server Error',
+                title: req.t ? req.t('error:server_error') : 'Server Error',
+                lng: req.language || 'vi',
                 layout: false
             });
         }
@@ -448,16 +483,23 @@ class TestController {
             const results = await TestService.getTestResults(testCode);
             
             res.render('test/results', {
-                title: `Test Results - ${testCode}`,
+                title: `${req.t ? req.t('test:test_results') : 'Test Results'} - ${testCode}`,
                 results: results,
+                lng: req.language || 'vi',
+                // i18n helpers
+                t: req.t,
+                ti: res.locals.ti,
+                formatDate: res.locals.formatDate,
+                formatNumber: res.locals.formatNumber,
                 layout: false
             });
             
         } catch (error) {
             console.error('Render test results error:', error);
             res.status(404).render('error/404', {
-                title: 'Results Not Found',
-                message: 'Test results not found or test is not completed yet',
+                title: req.t ? req.t('error:test_not_found') : 'Results Not Found',
+                message: req.t ? req.t('test:test_not_found') : 'Test results not found or test is not completed yet',
+                lng: req.language || 'vi',
                 layout: false
             });
         }
@@ -521,7 +563,7 @@ class TestController {
             };
 
             res.render('test/results-list', {
-                title: `Test Results - ${roomInfo.name} Department`,
+                title: `${req.t ? req.t('test:test_results') : 'Test Results'} - ${roomInfo.name} ${req.t ? req.t('quiz:department') : 'Department'}`,
                 user: req.user,
                 tests: formattedTests,
                 stats,
@@ -530,6 +572,12 @@ class TestController {
                 totalTests,
                 mode,
                 roomInfo,
+                lng: req.language || 'vi',
+                // i18n helpers
+                t: req.t,
+                ti: res.locals.ti,
+                formatDate: res.locals.formatDate,
+                formatNumber: res.locals.formatNumber,
                 pagination: {
                     hasNext: page < totalPages,
                     hasPrev: page > 1,
@@ -546,9 +594,10 @@ class TestController {
         } catch (error) {
             console.error('Test results list error:', error);
             res.status(500).render('error/500', {
-                title: 'Server Error',
-                message: 'Unable to load test results',
-                user: req.user
+                title: req.t ? req.t('error:server_error') : 'Server Error',
+                message: req.t ? req.t('error:server_error_desc') : 'Unable to load test results',
+                user: req.user,
+                lng: req.language || 'vi'
             });
         }
     }

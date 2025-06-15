@@ -158,7 +158,6 @@ class TestSocketHandler {
                     const test = await TestService.getTestByCode(testCode);
                     
                     const stats = TestService.getQuestionStats(test, questionNumber);
-                    
                     socket.emit('admin:question_stats', {
                         questionNumber,
                         stats
