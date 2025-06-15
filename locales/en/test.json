@@ -157,5 +157,25 @@
   "print_results": "Print Results",
   "export_csv": "Export CSV",
   "number_of_participants": "Number of Participants",
-  "completion_time_min": "Completion Time (minutes)"
+  "completion_time_min": "Completion Time (minutes)",
+
+  "moving_to_next": "Moving to next question automatically...",
+  "test_completed_desc": "Great job! You've finished the test.",
+  "final_score" : "Final Score",
+  "total_time": "Total Time",
+  "processing": "Processing...",
+  "time_up": "Time's up!",
+  "great_job": "Great job!",
+  "finished_test": "You've finished the test.",
+  "detailed_results": "View Detailed Results",
+  "time_until_start": "Time until start",
+  "scheduled_test": "Scheduled Test",
+  "please_wait": "Please wait for the scheduled start time",
+  "test_expired": "Test Expired",
+  "test_ended_message": "This test has ended and is no longer accepting participants.",
+  "test_not_started_message": "This test has not started yet. Please wait for the scheduled start time.",
+  "test_cancelled_message": "This test session has been cancelled by the administrator.",
+  "test_full_message": "This test session is full. Please try again later.",
+  "test_unavailable": "Test Unavailable",
+  "test_unavailable_message": "This test is currently not available."
 }

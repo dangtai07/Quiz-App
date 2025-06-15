@@ -46,5 +46,8 @@
   "of": "of",
   "previous": "Previous",
   "next": "Next",
-  "score": "Score"
+  "score": "Score",
+  "refresh": "Refresh",
+  "go_home": "Go Home",
+  "back_home": "Back to Home"
 }

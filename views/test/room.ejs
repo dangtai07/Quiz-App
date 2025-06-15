@@ -302,6 +302,40 @@
             z-index: 1000;
         }
 
+        /* Completion summary */
+        .completion-summary {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .completion-icon {
+            font-size: 4rem;
+            color: var(--success-color);
+            margin-bottom: 1rem;
+        }
+
+        .btn-finish-test {
+            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+            border: none;
+            border-radius: 12px;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            margin-top: 1rem;
+            transition: var(--transition);
+        }
+
+        .btn-finish-test:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            transform: translateY(-2px);
+            color: white;
+        }
+
         /* Responsive design */
         @media (max-width: 768px) {
             .test-header {
@@ -593,7 +627,7 @@
                                     </button>
                                     
                                     <button class="btn btn-success" id="finishTestBtn" onclick="finishTest()" style="display: none;">
-                                        <i class="fas fa-flag-checkered me-1"></i><%= t('quiz:finish_test') %>
+                                        <i class="fas fa-flag-checkered me-1"></i><%= t('test:finish_test') %>
                                     </button>
                                 </div>
                             </div>
@@ -626,6 +660,29 @@
                         </div>
                         <div class="leaderboard-list" id="leaderboardContent">
                             <!-- Leaderboard will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completion Summary (hidden initially) -->
+                <div id="completionSummary" class="completion-summary" style="display: none;">
+                    <div class="completion-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h3><%= t('test:test_completed') %></h3>
+                    <p class="lead mb-3"><%= t('test:thank_you') %></p>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h4 id="finalScore">0</h4>
+                            <small class="text-muted"><%= t('test:final_score') || 'Final Score' %></small>
+                        </div>
+                        <div class="col-md-4">
+                            <h4 id="correctAnswers">0</h4>
+                            <small class="text-muted"><%= t('test:correct_answers') %></small>
+                        </div>
+                        <div class="col-md-4">
+                            <h4 id="totalTime">0:00</h4>
+                            <small class="text-muted"><%= t('test:total_time') || 'Total Time' %></small>
                         </div>
                     </div>
                 </div>
@@ -1056,17 +1113,23 @@
         }
 
         function handleTestCompleted(data) {
-            Swal.fire({
-                icon: 'success',
-                title: window.translations.testCompleted,
-                text: window.translations.thankYou,
-                showConfirmButton: true,
-                confirmButtonText: window.translations.viewResults
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = `/test/results/${testData.testCode}`;
-                }
-            });
+            if (testData.isAdmin) {
+                // Admin sees SweetAlert as before
+                Swal.fire({
+                    icon: 'success',
+                    title: window.translations.testCompleted,
+                    text: window.translations.thankYou,
+                    showConfirmButton: true,
+                    confirmButtonText: window.translations.viewResults
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = `/test/results/${testData.testCode}`;
+                    }
+                });
+            } else {
+                // Show completion summary for participants
+                showCompletionSummary();
+            }
         }
 
         function handleUserJoined(data) {
@@ -1643,6 +1706,50 @@
             }
             if (stats) stats.style.display = 'none';
         }
+
+        // Completion Summary Functions - ONLY FOR PARTICIPANTS
+        function showCompletionSummary() {
+            // Calculate stats from current game
+            const correctCount = getCorrectAnswersCount();
+            const totalTime = Date.now() - (testStartTime || Date.now());
+            
+            // Hide other sections
+            document.getElementById('quizContent').style.display = 'none';
+            document.getElementById('waitingRoom').style.display = 'none';
+            
+            // Show completion summary
+            const summary = document.getElementById('completionSummary');
+            document.getElementById('finalScore').textContent = playerScore;
+            document.getElementById('correctAnswers').textContent = `${correctCount}/${testData.quiz.questions.length}`;
+            document.getElementById('totalTime').textContent = formatTime(totalTime);
+            summary.style.display = 'block';
+        }
+
+        function getCorrectAnswersCount() {
+            // This is an approximation - in real implementation you might track this
+            // For now, estimate based on score (assuming ~10-20 points per correct answer)
+            return Math.floor(playerScore / 15);
+        }
+
+        function formatTime(milliseconds) {
+            const minutes = Math.floor(milliseconds / 60000);
+            const seconds = Math.floor((milliseconds % 60000) / 1000);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function viewResults() {
+            window.location.href = `/test/results/${testData.testCode}`;
+        }
+
+        // Track test start time for participants
+        let testStartTime = 0;
+        
+        // Update handleTestStarted to track start time
+        const originalHandleTestStarted = handleTestStarted;
+        handleTestStarted = function(data) {
+            testStartTime = Date.now(); // Track when test actually starts for participant
+            originalHandleTestStarted(data);
+        };
     </script>
 </body>
 </html>

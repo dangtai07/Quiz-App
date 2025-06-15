@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= lng %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
+    <title><%= title %> - <%= t('common:app_name') %></title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -370,6 +370,22 @@
             transform: translateY(-2px);
             color: white;
         }
+
+        /* Language switcher positioning */
+        .language-switcher-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+
+        /* Responsive design for language switcher */
+        @media (max-width: 768px) {
+            .language-switcher-container {
+                top: 5px;
+                right: 5px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -383,18 +399,18 @@
                             <div class="col-md-8">
                                 <h1 class="h3 mb-1">
                                     <i class="fas fa-clock me-2"></i>
-                                    <%= quiz.title %> (Self-Paced)
+                                    <%= quiz.title %> (<%= t('test:complete_own_pace') %>)
                                 </h1>
                                 <p class="mb-0 opacity-75">
-                                    Test Code: <strong><%= test.testCode %></strong> | 
-                                    Quiz #<%= test.quizNumber %> | 
-                                    <%= quiz.questions.length %> Questions
+                                    <%= t('test:test_code') %>: <strong><%= test.testCode %></strong> | 
+                                    <%= t('test:quiz_number') %> #<%= test.quizNumber %> | 
+                                    <%= quiz.questions.length %> <%= t('quiz:questions') %>
                                 </p>
                             </div>
                             <div class="col-md-4">
                                 <div class="participant-score">
                                     <span class="score-value" id="playerScore">0</span>
-                                    <div class="score-label">Your Score</div>
+                                    <div class="score-label"><%= t('test:your_score') %></div>
                                 </div>
                                 <!-- Timer Section -->
                                 <div class="quiz-timer-section">
@@ -415,7 +431,7 @@
                 <div id="autoAdvanceNotice" class="auto-advance-notice" style="display: none;">
                     <div>
                         <i class="fas fa-info-circle me-2"></i>
-                        <strong>Time's up!</strong> Moving to next question automatically...
+                        <strong><%= t('test:auto_advance') || 'Time\'s up!' %></strong> <%= t('test:moving_to_next') || 'Moving to next question automatically...' %>
                     </div>
                     <div class="auto-advance-timer" id="autoAdvanceTimer">3</div>
                 </div>
@@ -433,25 +449,22 @@
                     <div class="completion-icon">
                         <i class="fas fa-trophy"></i>
                     </div>
-                    <h3>Test Completed!</h3>
-                    <p class="lead mb-3">Great job! You've finished the test.</p>
+                    <h3><%= t('test:test_completed_desc') %></h3>
+                    <p class="lead mb-3"><%= t('test:thank_you') %></p>
                     <div class="row">
                         <div class="col-md-4">
                             <h4 id="finalScore">0</h4>
-                            <small class="text-muted">Final Score</small>
+                            <small class="text-muted"><%= t('test:final_score') || 'Final Score' %></small>
                         </div>
                         <div class="col-md-4">
                             <h4 id="correctAnswers">0</h4>
-                            <small class="text-muted">Correct Answers</small>
+                            <small class="text-muted"><%= t('test:correct_answers') %></small>
                         </div>
                         <div class="col-md-4">
                             <h4 id="totalTime">0:00</h4>
-                            <small class="text-muted">Total Time</small>
+                            <small class="text-muted"><%= t('test:total_time') || 'Total Time' %></small>
                         </div>
                     </div>
-                    <button class="btn btn-finish-test" onclick="viewResults()">
-                        <i class="fas fa-chart-bar me-2"></i>View Detailed Results
-                    </button>
                 </div>
             </div>
         </div>
@@ -476,13 +489,61 @@
         }) %>
     </script>
 
+    <!-- Translation object for JavaScript -->
+    <script>
+        window.translations = {
+            lng: '<%= lng %>',
+            // Test translations
+            testCode: '<%= t("test:test_code") %>',
+            quizTitle: '<%= t("test:quiz_title") %>',
+            questions: '<%= t("quiz:questions") %>',
+            yourScore: '<%= t("test:your_score") %>',
+            testCompleted: '<%= t("test:test_completed") %>',
+            thankYou: '<%= t("test:thank_you") %>',
+            viewResults: '<%= t("test:view_results") %>',
+            finalScore: '<%= t("test:final_score") || "Final Score" %>',
+            correctAnswers: '<%= t("test:correct_answers") %>',
+            totalTime: '<%= t("test:total_time") || "Total Time" %>',
+            
+            // Answer feedback
+            correct: '<%= t("test:correct") %>',
+            incorrect: '<%= t("test:incorrect") %>',
+            score: '<%= t("test:score") %>',
+            
+            // Submission messages
+            answerSubmitted: '<%= t("test:answer_submitted") %>',
+            waitingForOthers: '<%= t("test:waiting_for_others") %>',
+            processing: '<%= t("test:processing") || "Processing..." %>',
+            
+            // Timer and auto-advance
+            timeUp: '<%= t("test:time_up") || "Time\'s up!" %>',
+            movingToNext: '<%= t("test:moving_to_next") || "Moving to next question automatically..." %>',
+            autoAdvance: '<%= t("test:auto_advance") || "Auto advancing" %>',
+            
+            // Navigation
+            question: '<%= t("test:question") %>',
+            nextQuestion: '<%= t("test:next_question") %>',
+            finishTest: '<%= t("test:finish_test") %>',
+            
+            // Common
+            loading: '<%= t("common:loading") %>',
+            error: '<%= t("common:error") %>',
+            success: '<%= t("common:success") %>',
+            
+            // Completion
+            greatJob: '<%= t("test:great_job") || "Great job!" %>',
+            finishedTest: '<%= t("test:finished_test") || "You\'ve finished the test." %>',
+            detailedResults: '<%= t("test:detailed_results") || "View Detailed Results" %>'
+        };
+    </script>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/js/quiz_preview.js"></script>
     
     <script>
-        // Offline Quiz Logic - 100% giống room.ejs nhưng không có admin features
+        // Offline Quiz Logic with multilingual support
         let quizData;
         let currentQuestionIndex = 0;
         let currentScore = 0;
@@ -576,7 +637,6 @@
             }, 100);
         }
 
-        // SAME LOGIC AS room.ejs
         function selectAnswer(letter) {
             if (!isAnswering || hasSubmittedAnswer) return;
             
@@ -818,20 +878,20 @@
         }
 
         function showSubmissionStatus() {
-            // Disable tất cả options
+            // Disable all options
             const options = document.querySelectorAll('.preview-option');
             options.forEach(option => {
                 option.style.pointerEvents = 'none';
                 option.style.opacity = '0.7';
             });
             
-            // Highlight option đã chọn
+            // Highlight selected option
             const selectedOption = document.querySelector(`[data-letter="${selectedAnswer}"]`);
             if (selectedOption) {
                 selectedOption.style.opacity = '1';
                 selectedOption.classList.add('submitted');
                 
-                // Thêm icon submitted
+                // Add submitted icon
                 const statusElement = selectedOption.querySelector('.preview-option-status');
                 if (statusElement) {
                     statusElement.innerHTML = '<i class="fas fa-check text-success"></i>';
@@ -864,7 +924,7 @@
             
             notification.innerHTML = `
                 <i class="fas fa-check-circle me-2"></i>
-                Answer submitted! Processing...
+                ${window.translations.answerSubmitted}! ${window.translations.processing}
             `;
             
             notification.style.display = 'block';
@@ -890,6 +950,9 @@
                 })
             })
             .then(response => response.json())
+            .catch(error => {
+                console.error('Submit answer error:', error);
+            });
         }
 
         function submitTestCompletion() {
@@ -903,7 +966,13 @@
                     participantName: quizData.participantName
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                isSubmitedTest = true;
+                return response.json();
+            })
+            .catch(error => {
+                console.error('Complete test error:', error);
+            });
         }
 
         function formatTime(milliseconds) {

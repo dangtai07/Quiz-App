@@ -444,14 +444,6 @@ class TestService {
                 points: points
             };
             
-            console.log(`📤 Submitting answer for ${participantName}:`, {
-                testCode,
-                questionNumber,
-                selectedAnswer,
-                isCorrect,
-                points
-            });
-            
             // ATOMIC: Submit answer with detailed conditions
             const updateResult = await Test.findOneAndUpdate(
                 {
@@ -570,18 +562,12 @@ class TestService {
         const requestId = `comp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         
         try {
-            console.log(`🚀 [${requestId}] Starting completion for ${participantName} in test ${testCode}`);
-            
             // STEP 1: Use new model method to check if completion is possible
             const test = await Test.findOne({ testCode }).populate('quizId');
             
             if (!test) {
                 throw new Error('Test not found');
             }
-            
-            // Debug current state
-            const debugInfo = test.debugParticipantState(participantName);
-            console.log(`🔍 [${requestId}] Debug state:`, debugInfo);
             
             // Check if participant can complete
             const canComplete = test.canCompleteParticipant(participantName);
