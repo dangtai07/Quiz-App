@@ -124,5 +124,22 @@
   "test_session_ended": "Phiên test này đã kết thúc và không còn khả dụng.",
   "test_cancelled": "Test đã bị hủy",
   "test_cancelled_admin": "Phiên test này đã bị quản trị viên hủy.",
-  "characters": "ký tự"
+  "characters": "ký tự",
+
+  "_comment_results_list": "=== KHÓA MỚI CHO DANH SÁCH KẾT QUẢ ===",
+  "department_statistics": "Thống kê phòng ban",
+  "filter_results": "Lọc kết quả",
+  "all_tests": "Tất cả test",
+  "completed_tests": "Test đã hoàn thành",
+  "total_tests": "Tổng số test",
+  "online_tests": "Test trực tuyến",
+  "offline_tests": "Test ngoại tuyến",
+  "test_information": "Thông tin test",
+  "completed_date": "Ngày hoàn thành",
+  "no_test_results_found": "Không tìm thấy kết quả test nào",
+  "no_completed_tests_found": "Không tìm thấy test đã hoàn thành nào cho phòng ban này.",
+  "no_completed_mode_tests_found": "Không tìm thấy test {{mode}} đã hoàn thành nào cho phòng ban này.",
+  "manage_view_results": "Quản lý và xem kết quả test cho phòng ban của bạn",
+  "showing_page": "hiển thị trang",
+  "viewing_results": "Đang xem kết quả"
 }

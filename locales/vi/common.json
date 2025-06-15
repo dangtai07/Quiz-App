@@ -41,5 +41,9 @@
   "yes": "Có",
   "no": "Không",
   "instructions": "Hướng dẫn",
-  "try_again": "Thử lại"
+  "try_again": "Thử lại",
+  "total": "tổng cộng",
+  "of": "của",
+  "previous": "Trước",
+  "next": "Tiếp"
 }

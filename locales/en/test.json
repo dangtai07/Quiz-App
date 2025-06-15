@@ -124,5 +124,22 @@
   "test_session_ended": "This test session has ended and is no longer available.",
   "test_cancelled": "Test Cancelled",
   "test_cancelled_admin": "This test session has been cancelled by the administrator.",
-  "characters": "characters"
+  "characters": "characters",
+
+  "_comment_results_list": "=== NEW KEYS FOR RESULTS LIST ===",
+  "department_statistics": "Department Statistics",
+  "filter_results": "Filter Results",
+  "all_tests": "All Tests",
+  "completed_tests": "Completed Tests",
+  "total_tests": "Total Tests",
+  "online_tests": "Online Tests",
+  "offline_tests": "Offline Tests",
+  "test_information": "Test Information",
+  "completed_date": "Completed Date",
+  "no_test_results_found": "No Test Results Found",
+  "no_completed_tests_found": "No completed tests found for this department.",
+  "no_completed_mode_tests_found": "No completed {{mode}} tests found for this department.",
+  "manage_view_results": "Manage and view test results for your department",
+  "showing_page": "showing page",
+  "viewing_results": "Viewing Results"
 }

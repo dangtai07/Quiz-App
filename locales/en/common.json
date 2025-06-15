@@ -41,5 +41,9 @@
   "yes": "Yes",
   "no": "No",
   "instructions": "Instructions",
-  "try_again": "Try Again"
+  "try_again": "Try Again",
+  "total": "total",
+  "of": "of",
+  "previous": "Previous",
+  "next": "Next"
 }
