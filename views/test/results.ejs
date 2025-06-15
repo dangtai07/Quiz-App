@@ -681,7 +681,7 @@
 
         function exportResults() {
             // Create CSV content
-            const headers = ["<%= t('test:rank') %>", "<%= t('common:name') %>", "<%= t('common:score') %>", "<%= t('test:correct_answer') %>","<%= t('test:total_questions') %>", 'Completion Time (minutes)'];
+            const headers = ["<%= t('test:rank') %>", "<%= t('common:name') %>", "<%= t('common:score') %>", "<%= t('test:correct_answer') %>","<%= t('test:total_questions') %>", "<%= t('test:completion_time_min') %>"];
             const csvContent = [
                 headers.join(','),
                 ...resultsData.results.map((participant, index) => [

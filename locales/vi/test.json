@@ -170,7 +170,7 @@
   "time_until_start": "Thời gian đến khi bắt đầu", 
   "scheduled_test": "Test Đã Lên Lịch",
   "please_wait": "Vui lòng chờ đến thời gian đã lên lịch",
-    "test_expired": "Test Đã Hết Hạn",
+  "test_expired": "Test Đã Hết Hạn",
   "test_ended_message": "Bài test này đã kết thúc và không còn nhận thêm người tham gia.",
   "test_not_started_message": "Bài test này chưa bắt đầu. Vui lòng chờ đến thời gian đã lên lịch.",
   "test_cancelled_message": "Phiên test này đã bị quản trị viên hủy bỏ.",

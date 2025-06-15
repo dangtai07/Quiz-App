@@ -1082,12 +1082,10 @@ server.listen(PORT, () => {
     console.log(`🔌 Socket.IO server ready for real-time tests`);
     console.log(`\n👤 Demo credentials:`);
     console.log(`   🔑 Admin: admin@quizapp.com / admin123`);
-    console.log(`   🔑 Teacher: teacher@quizapp.com / teacher123`);
-    console.log(`   🔑 Demo Admin: demo@demo.com / demo123`);
-    console.log(`   🎮 Player: player@demo.com / player123`);
+    console.log(`   🔑 Admin1: admin1@quizapp.com / admin123`);
+    console.log(`   🔑 Admin2: admin2@quizapp.com / admin123`);
     console.log(`\n📝 Role-based routing:`);
     console.log(`   👨‍💼 Admins → Quiz Management Dashboard (/quizzes)`);
-    console.log(`   🎮 Players → Player Dashboard (/player/dashboard)`);
     console.log(`\n🔒 Access Control:`);
     console.log(`   ✅ Quiz management now requires admin role`);
     console.log(`   ✅ Players have their own dashboard and features`);
