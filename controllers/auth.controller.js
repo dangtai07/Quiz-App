@@ -1,14 +1,6 @@
 const User = require('../models/user.model');
-const Quiz = require('../models/quiz.model'); // Assuming this exists
-
-// Định nghĩa mật khẩu cho từng phòng ban (6 chữ số)
-const ROOM_PASSWORDS = {
-    'hrm': '123456', // Mật khẩu cho phòng HRM
-    'hse': '234567', // Mật khẩu cho phòng HSE
-    'gm': '345678',   // Mật khẩu cho phòng GM
-    'qasx': '345678',  // Mật khẩu cho phòng GM
-    'sm': '345678'   // Mật khẩu cho phòng GM
-};
+const Quiz = require('../models/quiz.model');
+const AuthService = require('../services/auth.service');
 
 class AuthController {
     // GET login page
@@ -19,11 +11,16 @@ class AuthController {
         }
         
         res.render('auth/login', {
-            title: 'Login - Quiz Management System',
+            title: req.t('auth:title'),
             layout: false,
             error: null,
             email: '',
             lng: req.language,
+            // Pass all i18n helpers
+            t: req.t,
+            ti: res.locals.ti,
+            formatDate: res.locals.formatDate,
+            formatNumber: res.locals.formatNumber
         });
     };
 
@@ -35,60 +32,37 @@ class AuthController {
             // Validate input
             if (!email || !password) {
                 return res.render('auth/login', {
-                    title: 'Login - Quiz Management System',
+                    title: req.t('auth:title'),
                     layout: false,
-                    error: 'Please enter both email and password',
-                    email: email || ''
+                    error: req.t('validation:email_password_required'),
+                    email: email || '',
+                    lng: req.language,
+                    t: req.t,
+                    ti: res.locals.ti,
+                    formatDate: res.locals.formatDate,
+                    formatNumber: res.locals.formatNumber
                 });
             }
 
-            // Find user by email
-            const user = await User.findByEmail(email);
+            // Use AuthService with translation function
+            const result = await AuthService.login(email, password, remember, req.t);
             
-            if (!user) {
+            if (!result.success) {
                 return res.render('auth/login', {
-                    title: 'Login - Quiz Management System',
+                    title: req.t('auth:title'),
                     layout: false,
-                    error: 'Invalid email or password',
-                    email: email
+                    error: result.message,
+                    email: email,
+                    lng: req.language,
+                    t: req.t,
+                    ti: res.locals.ti,
+                    formatDate: res.locals.formatDate,
+                    formatNumber: res.locals.formatNumber
                 });
             }
-
-            // Check if user is active
-            if (!user.isActive) {
-                return res.render('auth/login', {
-                    title: 'Login - Quiz Management System',
-                    layout: false,
-                    error: 'Your account has been deactivated. Please contact support.',
-                    email: email
-                });
-            }
-
-            // Compare password
-            const isPasswordValid = await user.comparePassword(password);
-            
-            if (!isPasswordValid) {
-                return res.render('auth/login', {
-                    title: 'Login - Quiz Management System',
-                    layout: false,
-                    error: 'Invalid email or password',
-                    email: email
-                });
-            }
-
-            // Update last login
-            await user.updateLastLogin();
 
             // Store user in session
-            req.session.user = {
-                id: user._id,
-                user_id: user.user_id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                loginTime: new Date(),
-                rememberMe: remember || false
-            };
+            req.session.user = result.user;
 
             // Configure session based on remember me
             if (remember) {
@@ -97,27 +71,35 @@ class AuthController {
                 req.session.cookie.maxAge = 24 * 60 * 60 * 1000; // 24 hours
             }
 
+            // Log successful login
+            console.log(`✅ ${req.t('auth:login_success')}: ${result.user.email} (${result.user.role})`);
+
             // Redirect based on user role
             return this.redirectBasedOnRole(req, res);
 
         } catch (error) {
             console.error('Login error:', error);
             res.render('auth/login', {
-                title: 'Login - Quiz Management System',
+                title: req.t('auth:title'),
                 layout: false,
-                error: 'An error occurred during login. Please try again.',
-                email: req.body.email || ''
+                error: req.t('auth:login_failed'),
+                email: req.body.email || '',
+                lng: req.language,
+                t: req.t,
+                ti: res.locals.ti,
+                formatDate: res.locals.formatDate,
+                formatNumber: res.locals.formatNumber
             });
         }
     };
 
-    // Role-based redirection logic - UPDATED để chuyển đến room selection cho admin
+    // Role-based redirection logic
     redirectBasedOnRole = async (req, res) => {
         try {
             const user = req.session.user;
             
             if (user.role === 'admin') {
-                // Admin: Chuyển đến trang chọn phòng ban thay vì trực tiếp đến quiz management
+                // Admin: Redirect to room selection
                 return res.redirect('/auth/admin/select-room');
             } 
             else if (user.role === 'player') {
@@ -135,32 +117,38 @@ class AuthController {
         }
     };
 
-    // NEW: GET room selection page
+    // GET room selection page
     getRoomSelectionPage = (req, res) => {
-        // Kiểm tra xem user đã đăng nhập chưa
+        // Check authentication
         if (!req.session || !req.session.user) {
             return res.redirect('/auth/login');
         }
 
-        // Chỉ admin mới được truy cập trang này
+        // Check admin role
         if (req.session.user.role !== 'admin') {
             return res.redirect('/player/dashboard');
         }
 
-        // Kiểm tra xem đã chọn phòng chưa
+        // Check if room already selected
         if (req.session.selectedRoom) {
             return res.redirect('/quizzes');
         }
+
         console.log('Rendering room selection page for admin');
         res.render('auth/room', {
-            title: 'Select Department - Quiz App',
+            title: req.t('auth:select_room') + ' - ' + req.t('common:app_name'),
             user: req.session.user,
             layout: false,
             lng: req.language,
+            // Pass all i18n helpers
+            t: req.t,
+            ti: res.locals.ti,
+            formatDate: res.locals.formatDate,
+            formatNumber: res.locals.formatNumber
         });
     };
 
-    // NEW: POST room selection
+    // POST room selection
     selectRoom = async (req, res) => {
         try { 
             const { selectedRoom, roomPassword } = req.body;
@@ -169,15 +157,7 @@ class AuthController {
             if (!selectedRoom || !roomPassword) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Please select a department and enter the access code'
-                });
-            }
-
-            // Validate room code
-            if (!ROOM_PASSWORDS.hasOwnProperty(selectedRoom)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid department selection'
+                    message: req.t('auth:form_validation.department_required') + ' ' + req.t('auth:form_validation.access_code_required')
                 });
             }
 
@@ -185,31 +165,33 @@ class AuthController {
             if (!/^\d{6}$/.test(roomPassword)) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Access code must be exactly 6 digits'
+                    message: req.t('auth:form_validation.access_code_format')
                 });
             }
 
-            // Check password
-            if (ROOM_PASSWORDS[selectedRoom] !== roomPassword) {
+            // Use AuthService for room validation
+            const result = await AuthService.validateRoomAccess(selectedRoom, roomPassword, req.t);
+            
+            if (!result.success) {
                 return res.status(401).json({
                     success: false,
-                    message: 'Invalid access code for the selected department'
+                    message: result.message
                 });
             }
 
             // Store selected room in session
             req.session.selectedRoom = {
-                code: selectedRoom,
-                name: this.getRoomName(selectedRoom),
+                code: result.roomCode,
+                name: result.roomName,
                 selectedAt: new Date()
             };
 
             // Log successful room selection
-            console.log(`✅ User ${req.session.user.email} accessed ${selectedRoom.toUpperCase()} department at ${new Date().toISOString()}`);
+            console.log(`✅ User ${req.session.user.email} accessed ${result.roomCode.toUpperCase()} department at ${new Date().toISOString()}`);
 
             res.json({
                 success: true,
-                message: `Successfully accessed ${this.getRoomName(selectedRoom)} department`,
+                message: result.message,
                 redirectUrl: '/quizzes'
             });
 
@@ -217,33 +199,30 @@ class AuthController {
             console.error('Room selection error:', error);
             res.status(500).json({
                 success: false,
-                message: 'An error occurred while accessing the department'
+                message: req.t('auth:error_title')
             });
         }
-    };
-
-    // Helper method to get room name
-    getRoomName = (roomCode) => {
-        const roomNames = {
-            'hrm': 'Human Resource Management',
-            'hse': 'Health, Safety & Environment',
-            'gm': 'General Management',
-            'qasx': 'Quality Assurance - Production',
-            'sm': 'Sales Marketing'
-        };
-        return roomNames[roomCode] || roomCode.toUpperCase();
     };
 
     // GET logout
     logout = async (req, res) => {
         try {
             if (req.session && req.session.user) {
+                const userId = req.session.user.id;
+                
+                // Use AuthService for logout
+                const result = await AuthService.logout(userId, req.t);
+                
                 // Destroy session
                 req.session.destroy((err) => {
                     if (err) {
                         console.error('Session destruction error:', err);
                     }
-                    res.clearCookie('connect.sid'); // Clear session cookie
+                    res.clearCookie('connect.sid');
+                    
+                    // Log logout
+                    console.log(`✅ ${result.message}: ${req.session?.user?.email || 'unknown'}`);
+                    
                     res.redirect('/auth/login');
                 });
             } else {
@@ -259,6 +238,14 @@ class AuthController {
     requireAuth = async (req, res, next) => {
         try {
             if (!req.session || !req.session.user) {
+                return res.redirect('/auth/login');
+            }
+            
+            // Use AuthService for session validation
+            const validation = await AuthService.validateSession(req.session, req.t);
+            
+            if (!validation.valid) {
+                req.session.destroy();
                 return res.redirect('/auth/login');
             }
             
@@ -279,7 +266,7 @@ class AuthController {
         }
     };
 
-    // NEW: Middleware to check if admin has selected a room
+    // Middleware to check if admin has selected a room
     requireRoomSelection = (req, res, next) => {
         if (req.session.user.role !== 'admin') {
             return next(); // Players don't need room selection
@@ -294,16 +281,16 @@ class AuthController {
         next();
     };
 
-    // Updated: Middleware to check if user is admin (and has selected room)
+    // Middleware to check if user is admin (and has selected room)
     requireAdmin = (req, res, next) => {
         if (!req.user || req.user.role !== 'admin') {
             return res.status(403).send(`
                 <!DOCTYPE html>
-                <html lang="en">
+                <html lang="${req.language || 'en'}">
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>403 - Access Denied</title>
+                    <title>403 - ${req.t('error:access_denied')}</title>
                     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
                     <style>
                         body { 
@@ -333,10 +320,10 @@ class AuthController {
                 <body>
                     <div class="error-container">
                         <div class="error-code">403</div>
-                        <h2>Access Denied</h2>
-                        <p>You do not have permission to access this page.</p>
-                        <a href="/" class="btn-home">Go Home</a>
-                        <a href="/auth/logout" class="btn-home">Logout</a>
+                        <h2>${req.t('error:access_denied')}</h2>
+                        <p>${req.t('error:access_denied_desc')}</p>
+                        <a href="/" class="btn-home">${req.t('common:go_home')}</a>
+                        <a href="/auth/logout" class="btn-home">${req.t('common:logout')}</a>
                     </div>
                 </body>
                 </html>
@@ -356,11 +343,11 @@ class AuthController {
         if (!req.user || req.user.role !== 'player') {
             return res.status(403).send(`
                 <!DOCTYPE html>
-                <html lang="en">
+                <html lang="${req.language || 'en'}">
                 <head>
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>403 - Access Denied</title>
+                    <title>403 - ${req.t('error:access_denied')}</title>
                     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
                     <style>
                         body { 
@@ -390,10 +377,10 @@ class AuthController {
                 <body>
                     <div class="error-container">
                         <div class="error-code">403</div>
-                        <h2>Access Denied</h2>
-                        <p>This page is only accessible to players.</p>
-                        <a href="/" class="btn-home">Go Home</a>
-                        <a href="/auth/logout" class="btn-home">Logout</a>
+                        <h2>${req.t('error:access_denied')}</h2>
+                        <p>${req.t('error:unauthorized_access_desc')}</p>
+                        <a href="/" class="btn-home">${req.t('common:go_home')}</a>
+                        <a href="/auth/logout" class="btn-home">${req.t('common:logout')}</a>
                     </div>
                 </body>
                 </html>
@@ -412,7 +399,7 @@ class AuthController {
             if (existingUser) {
                 return res.status(400).json({
                     success: false,
-                    message: 'User with this email already exists'
+                    message: req.t('validation:user_exists')
                 });
             }
 
@@ -428,7 +415,7 @@ class AuthController {
 
             res.status(201).json({
                 success: true,
-                message: 'User registered successfully',
+                message: req.t('auth:user_registered'),
                 user: {
                     user_id: newUser.user_id,
                     name: newUser.name,
@@ -441,13 +428,13 @@ class AuthController {
             console.error('Registration error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Registration failed',
+                message: req.t('auth:registration_failed'),
                 error: error.message
             });
         }
     };
 
-    // NEW: Method to clear room selection (for testing or manual reset)
+    // Method to clear room selection (for testing or manual reset)
     clearRoomSelection = (req, res) => {
         if (req.session) {
             delete req.session.selectedRoom;
@@ -455,7 +442,7 @@ class AuthController {
         res.redirect('/auth/admin/select-room');
     };
 
-    // NEW: Get current room info (for templates)
+    // Get current room info (for templates)
     getCurrentRoomInfo = (req) => {
         if (req.session && req.session.selectedRoom) {
             return {
@@ -465,6 +452,18 @@ class AuthController {
             };
         }
         return null;
+    };
+
+    // Helper method to get room name
+    getRoomName = (roomCode) => {
+        const roomNames = {
+            'hrm': 'Human Resource Management',
+            'hse': 'Health, Safety & Environment',
+            'gm': 'General Management',
+            'qasx': 'Quality Assurance - Production',
+            'sm': 'Sales Marketing'
+        };
+        return roomNames[roomCode] || roomCode.toUpperCase();
     };
 }
 

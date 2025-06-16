@@ -18,13 +18,24 @@ const io = socketIo(server, {
 
 const connectDB = require('./config/db.mongdb.cloud');
 const multer = require('multer');
+
+// Import i18n-enabled services
 const AuthService = require('./services/auth.service');
 const PlayerService = require('./services/player.service');
 const QuizService = require('./services/quiz.service');
 const TestService = require('./services/test.service');
+
 const TestSocketHandler = require('./sockets/test.socket');
 const i18next = require('./config/i18n');
 const i18nextMiddleware = require('i18next-http-middleware');
+
+// Import i18n middleware
+const { 
+    i18nMiddleware, 
+    languageSwitchMiddleware, 
+    errorHandler 
+} = require('./middlewares/i18n.middleware');
+
 require('dotenv').config();
 
 // Body parser middleware
@@ -46,13 +57,17 @@ app.use(session({
         maxAge: 1000 * 60 * 60 * 24 // 24 hours
     }
 }));
+
+// IMPORTANT: i18n middleware setup
 app.use(i18nextMiddleware.handle(i18next));
+app.use(languageSwitchMiddleware); // Handle language switching
+app.use(i18nMiddleware); // Enhanced i18n helpers
 
 // Make user available in all templates
 app.use((req, res, next) => {
     res.locals.user = req.session ? req.session.user : null;
     
-    // i18n helpers for templates
+    // Additional i18n helpers for templates (enhanced by i18nMiddleware)
     res.locals.t = req.t;
     res.locals.lng = req.language;
     res.locals.languages = ['vi', 'en'];
@@ -72,30 +87,6 @@ app.use((req, res, next) => {
         return translation;
     };
     
-    // Helper function để format date theo ngôn ngữ
-    res.locals.formatDate = (date, options = {}) => {
-        if (!date) return '';
-        
-        const defaultOptions = { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric'
-        };
-        
-        const formatOptions = { ...defaultOptions, ...options };
-        const locale = req.language === 'vi' ? 'vi-VN' : 'en-US';
-        
-        return new Date(date).toLocaleDateString(locale, formatOptions);
-    };
-    
-    // Helper function để format số theo ngôn ngữ
-    res.locals.formatNumber = (number, options = {}) => {
-        if (number === null || number === undefined) return '';
-        
-        const locale = req.language === 'vi' ? 'vi-VN' : 'en-US';
-        return new Intl.NumberFormat(locale, options).format(number);
-    };
-    
     next();
 });
 
@@ -108,22 +99,29 @@ app.set('layout', 'layouts/main');
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// NEW: Initialize Socket.IO for real-time tests
+// Initialize Socket.IO for real-time tests
 const testSocketHandler = new TestSocketHandler(io);
 
 // Connect to MongoDB and create initial admin user
 connectDB().then(async () => {
     try {
-        // Create initial admin and demo users
-        await AuthService.createInitialAdmin();
-        await AuthService.createInitialUsers();
+        // Create initial admin and demo users using i18n-enabled service
+        const defaultTranslate = (key, options = {}) => {
+            let message = key;
+            Object.keys(options).forEach(placeholder => {
+                message = message.replace(`{{${placeholder}}}`, options[placeholder]);
+            });
+            return message;
+        };
         
-        // NEW: Start test cleanup scheduler
+        await AuthService.createInitialAdmin(defaultTranslate);
+        await AuthService.createInitialUsers(defaultTranslate);
+        
+        // Start test cleanup scheduler
         console.log('🧹 Starting test cleanup scheduler...');
         setInterval(async () => {
             try {
-                // const cleanedCount = await TestService.cleanupExpiredTests();
-                const cleanedCount = 0;
+                const cleanedCount = 0; // await TestService.cleanupExpiredTests();
                 if (cleanedCount > 0) {
                     console.log(`🧹 Cleaned up ${cleanedCount} expired tests`);
                 }
@@ -140,19 +138,16 @@ connectDB().then(async () => {
 // Routes
 const quizRoutes = require('./routes/quiz.route');
 const authRoutes = require('./routes/auth.route');
-const testRoutes = require('./routes/test.route'); // NEW: Test routes
+const testRoutes = require('./routes/test.route');
 const { requireAuth, requireAdmin } = require('./controllers/auth.controller');
 
 // Auth routes (no middleware needed)
 app.use('/auth', authRoutes);
 
-// NEW: Test routes (public and authenticated)
+// Test routes (public and authenticated)
 app.use('/test', testRoutes);
 
-// ========================================
-// QUIZ OPERATION LOGGING MIDDLEWARE
-// ========================================
-// Add this BEFORE your quiz routes for audit trail
+// Quiz operation logging middleware
 app.use('/quizzes', (req, res, next) => {
     const user = req.session?.user;
     const operation = `${req.method} ${req.path}`;
@@ -165,24 +160,21 @@ app.use('/quizzes', (req, res, next) => {
     next();
 });
 
-// ========================================
-// MAIN QUIZ ROUTES (KEEP THIS EXISTING LINE!)
-// ========================================
 // Protected routes (require authentication AND admin role)
 app.use('/quizzes', requireAuth, requireAdmin, quizRoutes);
 
 // ========================================
-// ENHANCED API ROUTES FOR QUIZ MANAGEMENT
+// ENHANCED API ROUTES FOR QUIZ MANAGEMENT WITH I18N
 // ========================================
-// Add these new routes AFTER your main quiz routes
 
-// Enhanced Analytics API
+// Enhanced Analytics API with i18n
 app.get('/api/quizzes/analytics', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const analytics = await QuizService.getQuizAnalytics();
+        // Use QuizService with translation function
+        const analytics = await QuizService.getQuizAnalytics(req.session?.selectedRoom?.code, req.t);
         
         // Additional real-time calculations
-        const quizzes = await QuizService.getAllQuizzes();
+        const quizzes = await QuizService.getAllQuizzes(req.t);
         const enhancedAnalytics = {
             ...analytics,
             realTime: {
@@ -214,22 +206,23 @@ app.get('/api/quizzes/analytics', requireAuth, requireAdmin, async (req, res) =>
         console.error('Analytics error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch analytics'
+            message: req.t('quiz:failed_fetch_analytics')
         });
     }
 });
 
-// Refresh Quiz Data API
+// Refresh Quiz Data API with i18n
 app.get('/api/quizzes/refresh', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const quizzes = await QuizService.getAllQuizzes();
+        // Use QuizService with translation function
+        const quizzes = await QuizService.getAllQuizzes(req.t);
         
         // Simulate some processing time for refresh effect
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         res.json({
             success: true,
-            message: 'Quiz data refreshed successfully',
+            message: req.t('quiz:quizzes_refreshed'),
             count: quizzes.length,
             timestamp: new Date().toISOString()
         });
@@ -238,54 +231,26 @@ app.get('/api/quizzes/refresh', requireAuth, requireAdmin, async (req, res) => {
         console.error('Refresh error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to refresh quiz data'
+            message: req.t('quiz:failed_refresh_quiz_data')
         });
     }
 });
 
-// Advanced Search API
+// Advanced Search API with i18n
 app.get('/api/quizzes/search', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { q, mode, language, status, sortBy, limit = 50 } = req.query;
         
-        let quizzes = await QuizService.getAllQuizzes();
+        // Use QuizService search with translation function
+        const searchParams = {
+            query: q,
+            mode,
+            language,
+            sortBy,
+            roomCode: req.session?.selectedRoom?.code
+        };
         
-        // Apply filters
-        if (q) {
-            const searchTerm = q.toLowerCase();
-            quizzes = quizzes.filter(quiz => 
-                quiz.title.toLowerCase().includes(searchTerm) ||
-                quiz.questions.some(question => 
-                    question.content.toLowerCase().includes(searchTerm)
-                )
-            );
-        }
-        
-        if (mode) {
-            quizzes = quizzes.filter(quiz => quiz.mode === mode);
-        }
-        
-        if (language) {
-            quizzes = quizzes.filter(quiz => quiz.language === language);
-        }
-        
-        // Apply sorting
-        if (sortBy) {
-            switch (sortBy) {
-                case 'newest':
-                    quizzes.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-                    break;
-                case 'oldest':
-                    quizzes.sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt));
-                    break;
-                case 'name':
-                    quizzes.sort((a, b) => a.title.localeCompare(b.title));
-                    break;
-                case 'questions':
-                    quizzes.sort((a, b) => b.questions.length - a.questions.length);
-                    break;
-            }
-        }
+        let quizzes = await QuizService.searchQuizzes(searchParams, req.t);
         
         // Apply limit
         quizzes = quizzes.slice(0, parseInt(limit));
@@ -301,12 +266,12 @@ app.get('/api/quizzes/search', requireAuth, requireAdmin, async (req, res) => {
         console.error('Search error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to search quizzes'
+            message: req.t('quiz:failed_search_quizzes')
         });
     }
 });
 
-// Bulk Operations API
+// Bulk Operations API with i18n
 app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
     try {
         const { action, quizIds } = req.body;
@@ -314,7 +279,7 @@ app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
         if (!action || !quizIds || !Array.isArray(quizIds)) {
             return res.status(400).json({
                 success: false,
-                message: 'Invalid bulk operation parameters'
+                message: req.t('validation:invalid_request')
             });
         }
         
@@ -324,7 +289,7 @@ app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
             case 'delete':
                 for (const quizId of quizIds) {
                     try {
-                        await QuizService.deleteQuiz(quizId);
+                        await QuizService.deleteQuiz(quizId, req.t);
                         results.push({ quizId, success: true });
                     } catch (error) {
                         results.push({ quizId, success: false, error: error.message });
@@ -335,23 +300,24 @@ app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
             case 'duplicate':
                 for (const quizId of quizIds) {
                     try {
-                        const originalQuiz = await QuizService.getQuiz(quizId);
+                        const originalQuiz = await QuizService.getQuiz(quizId, req.t);
+                        const copyLabel = req.t('quiz:copy');
                         const duplicateData = {
                             quizInfo: JSON.stringify({
-                                title: `${originalQuiz.title} (Bulk Copy)`,
+                                title: `${originalQuiz.title} (${copyLabel})`,
                                 mode: originalQuiz.mode,
-                                language: originalQuiz.language,
+                                roomCode: originalQuiz.roomCode,
                                 scheduleSettings: originalQuiz.scheduleSettings
                             }),
                             questionsData: JSON.stringify(originalQuiz.questions.map((q, index) => ({
                                 number: index + 1,
                                 content: q.content,
-                                type: q.type,
+                                answerTime: q.answerTime || 30,
                                 options: q.options || [],
                                 correctAnswer: q.correctAnswer || []
                             })))
                         };
-                        const duplicate = await QuizService.createQuiz(duplicateData, null);
+                        const duplicate = await QuizService.createQuiz(duplicateData, null, req.t);
                         results.push({ quizId, success: true, newQuizId: duplicate._id });
                     } catch (error) {
                         results.push({ quizId, success: false, error: error.message });
@@ -362,7 +328,7 @@ app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
             default:
                 return res.status(400).json({
                     success: false,
-                    message: 'Unsupported bulk operation'
+                    message: req.t('validation:operation_failed')
                 });
         }
         
@@ -371,7 +337,11 @@ app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
         
         res.json({
             success: true,
-            message: `Bulk ${action} completed. ${successCount} successful, ${failureCount} failed.`,
+            message: req.ti('quiz:bulk_operation_completed', { 
+                action: action, 
+                successful: successCount, 
+                failed: failureCount 
+            }),
             results: results,
             summary: {
                 total: results.length,
@@ -384,15 +354,14 @@ app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
         console.error('Bulk operation error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to perform bulk operation'
+            message: req.t('validation:operation_failed')
         });
     }
 });
 
 // ========================================
-// ROOT ROUTE - KEEP EXISTING
+// ROOT ROUTE WITH I18N
 // ========================================
-// Root route - redirect based on authentication and role
 app.get('/', (req, res) => {
     if (req.session && req.session.user) {
         // Redirect based on role
@@ -409,69 +378,69 @@ app.get('/', (req, res) => {
 });
 
 // ========================================
-// ENHANCED PLAYER ROUTES
+// ENHANCED PLAYER ROUTES WITH I18N
 // ========================================
-// Enhanced player dashboard with service integration
 app.get('/player/dashboard', requireAuth, async (req, res) => {
     if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes'); // Redirect admins to quiz management
+        return res.redirect('/quizzes');
     }
     
     try {
         const user = req.session.user;
         
-        // Fetch player statistics
+        // Fetch player statistics using service
         const stats = await PlayerService.getPlayerStats(user.id);
-        
-        // Fetch recent quiz history
         const recentQuizzes = await PlayerService.getRecentQuizzes(user.id, 5);
-        
-        // Fetch player achievements
         const achievements = await PlayerService.getPlayerAchievements(user.id);
         
         // Additional dashboard data
         const dashboardData = {
-            welcomeMessage: getWelcomeMessage(),
-            quickActions: getQuickActions(),
-            notifications: [], // TODO: Implement notifications system
-            upcomingQuizzes: [], // TODO: Implement scheduled quizzes
+            welcomeMessage: getWelcomeMessage(req.t),
+            quickActions: getQuickActions(req.t),
+            notifications: [],
+            upcomingQuizzes: [],
         };
         
         res.render('player/dashboard', {
-            title: 'Player Dashboard',
+            title: req.t('common:dashboard'),
             user: user,
             stats: stats,
             recentQuizzes: recentQuizzes,
             achievements: achievements,
             dashboardData: dashboardData,
-            layout: false // Use custom layout in the template
+            lng: req.language,
+            t: req.t,
+            ti: res.locals.ti,
+            formatDate: res.locals.formatDate,
+            formatNumber: res.locals.formatNumber,
+            layout: false
         });
         
     } catch (error) {
         console.error('Player dashboard error:', error);
         res.status(500).render('error/500', {
-            title: 'Server Error',
-            message: 'Unable to load dashboard. Please try again later.',
+            title: req.t('error:server_error'),
+            message: req.t('error:server_error_desc'),
+            lng: req.language,
             layout: false
         });
     }
 });
 
-// Player join quiz route - KEEP EXISTING
+// Player join quiz route with i18n
 app.get('/player/join-quiz', requireAuth, (req, res) => {
     if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes'); // Redirect admins to quiz management
+        return res.redirect('/quizzes');
     }
     
-    // Render the join quiz page directly
     const user = req.session.user;
     res.send(`
 <!DOCTYPE html>
-<html lang="en">
+<html lang="${req.language || 'en'}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Join a Quiz - Quiz App</title>
+    <title>${req.t('test:join_test')} - ${req.t('common:app_name')}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -661,15 +630,15 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                 <div class="header-icon">
                     <i class="fas fa-gamepad"></i>
                 </div>
-                <h1 class="card-title">Join a Test</h1>
-                <p class="card-subtitle">Enter your 6-digit test code to continue.</p>
+                <h1 class="card-title">${req.t('test:join_test')}</h1>
+                <p class="card-subtitle">${req.t('test:enter_name_to_join')}</p>
             </div>
             
             <div class="card-body">
                 <div class="user-info">
                     <div class="user-name">
                         <i class="fas fa-user-circle me-2"></i>
-                        Welcome, ${user.name}!
+                        ${req.t('common:welcome')}, ${user.name}!
                     </div>
                     <div class="user-email">${user.email}</div>
                 </div>
@@ -685,22 +654,22 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                                pattern="[0-9]{6}"
                                required>
                         <label for="testCode">
-                            <i class="fas fa-key me-2"></i>6-Digit Test Code
+                            <i class="fas fa-key me-2"></i>${req.t('test:test_code')}
                         </label>
                     </div>
 
                     <button type="submit" class="btn btn-start-quiz" id="startTestBtn">
                         <i class="fas fa-play me-2"></i>
-                        Join Test
+                        ${req.t('test:join_test')}
                     </button>
                 </form>
 
                 <div class="footer-links">
                     <a href="/player/dashboard">
-                        <i class="fas fa-home me-1"></i>Dashboard
+                        <i class="fas fa-home me-1"></i>${req.t('common:dashboard')}
                     </a>
                     <a href="/auth/logout">
-                        <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        <i class="fas fa-sign-out-alt me-1"></i>${req.t('common:logout')}
                     </a>
                 </div>
             </div>
@@ -743,15 +712,15 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                 if (!validateForm()) {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Invalid Code',
-                        text: 'Please enter a valid 6-digit test code.',
+                        title: '${req.t('validation:invalid_request')}',
+                        text: '${req.t('validation:test_code_invalid')}',
                         confirmButtonColor: '#667eea'
                     });
                     return;
                 }
 
                 const originalContent = startTestBtn.innerHTML;
-                startTestBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Finding Test...';
+                startTestBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>${req.t('test:preparing')}';
                 startTestBtn.disabled = true;
 
                 fetch('/test/join', {
@@ -770,7 +739,7 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                     } else {
                         Swal.fire({
                             icon: 'error',
-                            title: 'Error',
+                            title: '${req.t('common:error')}',
                             text: data.message,
                             confirmButtonColor: '#667eea'
                         });
@@ -779,8 +748,8 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
                 .catch(error => {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Error',
-                        text: 'Something went wrong. Please try again.',
+                        title: '${req.t('common:error')}',
+                        text: '${req.t('validation:network_error')}',
                         confirmButtonColor: '#667eea'
                     });
                 })
@@ -796,6 +765,7 @@ app.get('/player/join-quiz', requireAuth, (req, res) => {
     `);
 });
 
+// Player join quiz POST route with i18n
 app.post('/player/join-quiz', requireAuth, async (req, res) => {
     try {
         const { testCode } = req.body;
@@ -804,14 +774,14 @@ app.post('/player/join-quiz', requireAuth, async (req, res) => {
         if (!testCode || testCode.toString().length !== 6) {
             return res.status(400).json({
                 success: false,
-                message: 'Please enter a valid 6-digit test code'
+                message: req.t('validation:test_code_invalid')
             });
         }
 
         // Redirect to test join page
         res.json({
             success: true,
-            message: 'Redirecting to test...',
+            message: req.t('test:redirecting_to_room'),
             redirectUrl: `/test/join/${testCode}`
         });
 
@@ -819,12 +789,12 @@ app.post('/player/join-quiz', requireAuth, async (req, res) => {
         console.error('Join test error:', error);
         res.status(500).json({
             success: false,
-            message: 'An error occurred while joining the test'
+            message: req.t('test:join_error')
         });
     }
 });
 
-// Additional player routes (placeholders for now)
+// Additional player routes with i18n
 app.get('/player/history', requireAuth, (req, res) => {
     if (req.session.user.role !== 'player') {
         return res.redirect('/quizzes');
@@ -832,42 +802,23 @@ app.get('/player/history', requireAuth, (req, res) => {
     
     res.send(`
         <!DOCTYPE html>
-        <html><head><title>Quiz History</title>
+        <html lang="${req.language || 'en'}"><head><title>${req.t('test:test_history')}</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
         </head><body class="bg-light">
         <div class="container mt-5 text-center">
-            <h1>🚧 Quiz History</h1>
-            <p class="lead">This feature is coming soon!</p>
-            <a href="/player/dashboard" class="btn btn-primary">Back to Dashboard</a>
+            <h1>🚧 ${req.t('test:test_history')}</h1>
+            <p class="lead">${req.t('common:feature_coming_soon')}</p>
+            <a href="/player/dashboard" class="btn btn-primary">${req.t('common:back_home')}</a>
         </div></body></html>
     `);
 });
 
-app.get('/player/profile', requireAuth, (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.redirect('/quizzes');
-    }
-    
-    res.send(`
-        <!DOCTYPE html>
-        <html><head><title>Player Profile</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head><body class="bg-light">
-        <div class="container mt-5 text-center">
-            <h1>🚧 Player Profile</h1>
-            <p class="lead">Profile settings coming soon!</p>
-            <a href="/player/dashboard" class="btn btn-primary">Back to Dashboard</a>
-        </div></body></html>
-    `);
-});
-
-// ========================================
-// API ENDPOINTS FOR PLAYER STATS
-// ========================================
-// API endpoint for updating player stats (for AJAX calls)
+// API endpoints for player stats with i18n
 app.get('/api/player/stats', requireAuth, async (req, res) => {
     if (req.session.user.role !== 'player') {
-        return res.status(403).json({ error: 'Access denied' });
+        return res.status(403).json({ 
+            error: req.t('error:access_denied') 
+        });
     }
     
     try {
@@ -875,166 +826,77 @@ app.get('/api/player/stats', requireAuth, async (req, res) => {
         res.json({ success: true, stats: stats });
     } catch (error) {
         console.error('API stats error:', error);
-        res.status(500).json({ error: 'Failed to fetch stats' });
-    }
-});
-
-// API endpoint for updating player profile
-app.put('/api/player/profile', requireAuth, async (req, res) => {
-    if (req.session.user.role !== 'player') {
-        return res.status(403).json({ error: 'Access denied' });
-    }
-    
-    try {
-        const updatedUser = await PlayerService.updatePlayerProfile(
-            req.session.user.id, 
-            req.body
-        );
-        
-        // Update session data
-        req.session.user.name = updatedUser.name;
-        req.session.user.email = updatedUser.email;
-        
-        res.json({ 
-            success: true, 
-            message: 'Profile updated successfully',
-            user: {
-                name: updatedUser.name,
-                email: updatedUser.email
-            }
+        res.status(500).json({ 
+            error: req.t('error:server_error') 
         });
-    } catch (error) {
-        console.error('API profile update error:', error);
-        res.status(500).json({ error: 'Failed to update profile' });
     }
 });
 
 // ========================================
-// HELPER FUNCTIONS
+// HELPER FUNCTIONS WITH I18N SUPPORT
 // ========================================
-// Helper function to get time-based welcome message
-function getWelcomeMessage() {
+function getWelcomeMessage(t) {
     const hour = new Date().getHours();
     
     if (hour < 12) {
-        return "Good morning! Ready to start your day with a quiz?";
+        return t('player:good_morning');
     } else if (hour < 17) {
-        return "Good afternoon! How about a quick knowledge check?";
+        return t('player:good_afternoon');
     } else {
-        return "Good evening! End your day with some learning!";
+        return t('player:good_evening');
     }
 }
 
-// Helper function to get available quick actions
-function getQuickActions() {
+function getQuickActions(t) {
     return [
         {
-            name: 'Join Test',
+            name: t('test:join_test'),
             icon: 'fas fa-play',
             url: '/player/join-quiz',
-            description: 'Enter a test code to join',
+            description: t('test:enter_code'),
             primary: true
         },
         {
-            name: 'View History',
+            name: t('test:test_history'),
             icon: 'fas fa-chart-line',
             url: '/player/history',
-            description: 'See your past performance'
+            description: t('player:see_performance')
         },
         {
-            name: 'Leaderboard',
+            name: t('test:leaderboard'),
             icon: 'fas fa-trophy',
             url: '/player/leaderboard',
-            description: 'Check your ranking'
-        },
-        {
-            name: 'Achievements',
-            icon: 'fas fa-medal',
-            url: '/player/achievements',
-            description: 'View your badges'
-        },
-        {
-            name: 'Study Guide',
-            icon: 'fas fa-book',
-            url: '/player/study-guide',
-            description: 'Review topics'
+            description: t('player:check_ranking')
         }
     ];
 }
 
 // ========================================
-// ERROR HANDLING MIDDLEWARE - KEEP EXISTING
+// ERROR HANDLING MIDDLEWARE WITH I18N
 // ========================================
-// Error handling for file uploads
 app.use((error, req, res, next) => {
     if (error instanceof multer.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
             return res.status(400).json({ 
-                error: 'File is too large. Maximum size is 5MB' 
+                error: req.t('validation:file_size_limit', { max: 5 })
             });
         }
     }
     next(error);
 });
 
-// Global error handler
-app.use((error, req, res, next) => {
-    console.error('Global error:', error);
-    
-    res.status(500).send(`
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>500 - Server Error</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-            <style>
-                body { 
-                    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                    min-height: 100vh;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-family: 'Inter', sans-serif;
-                }
-                .error-container { text-align: center; }
-                .error-code { font-size: 5rem; font-weight: bold; margin-bottom: 1rem; }
-                .btn-home { 
-                    background: rgba(255,255,255,0.2);
-                    border: 2px solid white;
-                    color: white;
-                    padding: 0.75rem 2rem;
-                    border-radius: 50px;
-                    text-decoration: none;
-                    margin-top: 2rem;
-                    display: inline-block;
-                }
-                .btn-home:hover { background: white; color: #ef4444; }
-            </style>
-        </head>
-        <body>
-            <div class="error-container">
-                <div class="error-code">500</div>
-                <h2>Internal Server Error</h2>
-                <p>Something went wrong. Please try again later.</p>
-                <a href="/" class="btn-home">Go Back Home</a>
-            </div>
-        </body>
-        </html>
-    `);
-});
+// Global error handler with i18n support
+app.use(errorHandler);
 
-// 404 handler
+// 404 handler with i18n
 app.use((req, res) => {
     res.status(404).send(`
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="${req.language || 'en'}">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>404 - Page Not Found</title>
+            <title>404 - ${req.t('error:page_not_found')}</title>
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
             <style>
                 body { 
@@ -1064,9 +926,9 @@ app.use((req, res) => {
         <body>
             <div class="error-container">
                 <div class="error-code">404</div>
-                <h2>Page Not Found</h2>
-                <p>The page you are looking for does not exist.</p>
-                <a href="/" class="btn-home">Go Back Home</a>
+                <h2>${req.t('error:page_not_found')}</h2>
+                <p>${req.t('error:page_not_found_desc')}</p>
+                <a href="/" class="btn-home">${req.t('common:go_home')}</a>
             </div>
         </body>
         </html>
@@ -1074,28 +936,23 @@ app.use((req, res) => {
 });
 
 // ========================================
-// SERVER STARTUP - UPDATED FOR SOCKET.IO
+// SERVER STARTUP WITH I18N MESSAGES
 // ========================================
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
     console.log(`🔌 Socket.IO server ready for real-time tests`);
+    console.log(`🌍 i18n support enabled (Vietnamese/English)`);
     console.log(`\n👤 Demo credentials:`);
     console.log(`   🔑 Admin: admin@quizapp.com / admin123`);
     console.log(`   🔑 Admin1: admin1@quizapp.com / admin123`);
     console.log(`   🔑 Admin2: admin2@quizapp.com / admin123`);
-    console.log(`\n📝 Role-based routing:`);
-    console.log(`   👨‍💼 Admins → Quiz Management Dashboard (/quizzes)`);
-    console.log(`\n🔒 Access Control:`);
-    console.log(`   ✅ Quiz management now requires admin role`);
-    console.log(`   ✅ Players have their own dashboard and features`);
-    console.log(`\n🚀 Enhanced Features:`);
-    console.log(`   ✅ Modern quiz list with advanced filtering`);
-    console.log(`   ✅ Quiz analytics and statistics`);
-    console.log(`   ✅ Enhanced player dashboard`);
-    console.log(`   ✅ API endpoints for real-time data`);
-    console.log(`   🆕 Real-time test functionality with Socket.IO`);
-    console.log(`   🆕 Test creation and management`);
-    console.log(`   🆕 Live quiz sessions with admin controls`);
-    console.log(`   🆕 Real-time scoring and leaderboards`);
+    console.log(`\n📝 Features:`);
+    console.log(`   ✅ Full internationalization (i18n) support`);
+    console.log(`   ✅ Role-based routing with room selection`);
+    console.log(`   ✅ Real-time test functionality`);
+    console.log(`   ✅ Enhanced error handling with translations`);
+    console.log(`   ✅ Multi-language validation messages`);
 });
+
+module.exports = app;
