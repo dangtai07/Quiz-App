@@ -9,8 +9,8 @@ class QuizService {
             const questionsData = JSON.parse(quizData.questionsData);
             
             // Validate room code (REQUIRED for new quizzes)
-            if (!quizInfo.roomCode || !['hrm', 'hse', 'gm'].includes(quizInfo.roomCode)) {
-                throw new Error('Valid room code (hrm, hse, or gm) is required');
+            if (!quizInfo.roomCode || !['hrm', 'hse', 'gm', 'qasx', 'sm'].includes(quizInfo.roomCode)) {
+                throw new Error('Valid room code (hrm, hse, gm, qasx or sm) is required');
             }
             
             // Process images and save paths
@@ -134,7 +134,7 @@ class QuizService {
     // NEW: Get quizzes by room code
     async getQuizzesByRoom(roomCode) {
         try {
-            if (!roomCode || !['hrm', 'hse', 'gm'].includes(roomCode)) {
+            if (!roomCode || !['hrm', 'hse', 'gm', 'qasx', 'sm'].includes(roomCode)) {
                 throw new Error('Valid room code is required');
             }
             
@@ -160,7 +160,7 @@ class QuizService {
             
             // Preserve existing roomCode if not provided (for backward compatibility)
             let roomCode = quiz.roomCode;
-            if (quizInfo.roomCode && ['hrm', 'hse', 'gm'].includes(quizInfo.roomCode)) {
+            if (quizInfo.roomCode && ['hrm', 'hse', 'gm', 'qasx', 'sm'].includes(quizInfo.roomCode)) {
                 roomCode = quizInfo.roomCode;
             }
             
@@ -388,7 +388,7 @@ class QuizService {
     // NEW: Get quiz statistics by room
     async getQuizStatsByRoom(roomCode) {
         try {
-            if (!roomCode || !['hrm', 'hse', 'gm'].includes(roomCode)) {
+            if (!roomCode || !['hrm', 'hse', 'gm', 'qasx', 'sm'].includes(roomCode)) {
                 throw new Error('Valid room code is required');
             }
 
@@ -426,7 +426,9 @@ class QuizService {
         const roomNames = {
             'hrm': 'Human Resource Management',
             'hse': 'Health, Safety & Environment',
-            'gm': 'General Management'
+            'gm': 'General Management',
+            "qasx": "Quality Assurance - Production",
+            "sm": "Sales Marketing",
         };
         return roomNames[roomCode] || roomCode?.toUpperCase() || 'Unknown';
     }
@@ -833,8 +835,8 @@ class QuizService {
     // NEW: Method to migrate existing quizzes without roomCode
     async assignRoomCodeToQuizzes(targetRoomCode, quizIds = null) {
         try {
-            if (!['hrm', 'hse', 'gm'].includes(targetRoomCode)) {
-                throw new Error('Invalid room code. Must be hrm, hse, or gm');
+            if (!['hrm', 'hse', 'gm', 'qasx', 'sm'].includes(targetRoomCode)) {
+                throw new Error('Invalid room code. Must be hrm, hse, gm, qasx or sm');
             }
 
             let filter = {};

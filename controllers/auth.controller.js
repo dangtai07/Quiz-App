@@ -5,7 +5,9 @@ const Quiz = require('../models/quiz.model'); // Assuming this exists
 const ROOM_PASSWORDS = {
     'hrm': '123456', // Mật khẩu cho phòng HRM
     'hse': '234567', // Mật khẩu cho phòng HSE
-    'gm': '345678'   // Mật khẩu cho phòng GM
+    'gm': '345678',   // Mật khẩu cho phòng GM
+    'qasx': '345678',  // Mật khẩu cho phòng GM
+    'sm': '345678'   // Mật khẩu cho phòng GM
 };
 
 class AuthController {
@@ -225,7 +227,9 @@ class AuthController {
         const roomNames = {
             'hrm': 'Human Resource Management',
             'hse': 'Health, Safety & Environment',
-            'gm': 'General Management'
+            'gm': 'General Management',
+            'qasx': 'Quality Assurance - Production',
+            'sm': 'Sales Marketing'
         };
         return roomNames[roomCode] || roomCode.toUpperCase();
     };

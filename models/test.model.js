@@ -59,7 +59,7 @@ const testSchema = new mongoose.Schema({
     roomCode: {
         type: String,
         required: true,
-        enum: ['hrm', 'hse', 'gm']
+        enum: ['hrm', 'hse', 'gm', 'qasx', 'sm']
     },
     
     // Test configuration

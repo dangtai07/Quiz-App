@@ -88,7 +88,9 @@ function getRoomName(roomCode) {
     const roomNames = {
         'hrm': 'Human Resource Management',
         'hse': 'Health, Safety & Environment',
-        'gm': 'General Management'
+        'gm': 'General Management',
+        'qasx': 'Quality Assurance - Production',
+        'sm': 'Sales Marketing'
     };
     return roomNames[roomCode] || roomCode.toUpperCase();
 }
@@ -658,10 +660,10 @@ class QuizController {
         try {
             const { targetRoom } = req.body; // Room code to assign to all existing quizzes
             
-            if (!targetRoom || !['hrm', 'hse', 'gm'].includes(targetRoom)) {
+            if (!targetRoom || !['hrm', 'hse', 'gm', 'qasx', 'sm'].includes(targetRoom)) {
                 return res.status(400).json({
                     success: false,
-                    message: req.t ? req.t('quiz:specify_valid_target_room') : 'Please specify a valid target room (hrm, hse, or gm)'
+                    message: req.t ? req.t('quiz:specify_valid_target_room') : 'Please specify a valid target room (hrm, hse, gm, qasx or sm)'
                 });
             }
 

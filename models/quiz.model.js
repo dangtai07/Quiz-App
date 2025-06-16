@@ -72,7 +72,7 @@ const quizSchema = new mongoose.Schema({
     roomCode: {
         type: String,
         required: true,
-        enum: ['hrm', 'hse', 'gm'],
+        enum: ['hrm', 'hse', 'gm', 'qasx', 'sm'],
         index: true // Tạo index để tìm kiếm nhanh hơn
     },
     scheduleSettings: {
