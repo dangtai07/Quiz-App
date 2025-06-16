@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<%= lng %>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Select Department - Quiz App</title>
+    <title><%= t('auth:select_room') %> - <%= t('common:app_name') %></title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -603,7 +603,7 @@
 </head>
 <body>
     <div class="language-switcher-container" style="text-align: end;">
-            <%- include('../partials/language-switcher') %>
+        <%- include('../partials/language-switcher') %>
     </div>
     <div class="room-selection-container fade-in">
         <div class="card selection-card">
@@ -633,9 +633,9 @@
                     </div>
                     <div class="user-name">
                         <i class="fas fa-user-tie"></i>
-                        <span><%= t('auth:admin_welcome') %>, John Doe!</span>
+                        <span><%= t('auth:admin_welcome') %>, <%= user.name || 'Admin' %>!</span>
                     </div>
-                    <div class="user-email">admin@example.com</div>
+                    <div class="user-email"><%= user.email || 'admin@example.com' %></div>
                 </div>
 
                 <form id="roomSelectionForm" action="/auth/admin/select-room" method="POST">
@@ -701,11 +701,14 @@
                                    maxlength="6"
                                    pattern="[0-9]{6}"
                                    required>
-                            <!-- <label for="roomPassword">6-Digit Access Code</label> -->
                         </div>
                         <small class="text-muted mt-2 d-block">
                             <i class="fas fa-info-circle me-1"></i>
                             <%= t('auth:enter_department_access_code_guide') %>
+                        </small>
+                        <small class="text-muted mt-1 d-block">
+                            <i class="fas fa-keyboard me-1"></i>
+                            <%= t('auth:keyboard_shortcuts_info') %>
                         </small>
                     </div>
 
@@ -723,8 +726,8 @@
                     <a href="/auth/logout">
                         <i class="fas fa-sign-out-alt me-1"></i><%= t('common:logout') %>
                     </a>
-                    <a href="/auth/admin/dashboard">
-                        <i class="fas fa-home me-1"></i><%= t('common:dashboard') %>
+                    <a href="/">
+                        <i class="fas fa-home me-1"></i><%= t('common:home') %>
                     </a>
                 </div>
             </div>
@@ -736,6 +739,34 @@
     
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Pass translation strings to JavaScript -->
+    <script>
+        // Translation strings for JavaScript
+        window.i18n = {
+            invalidInput: '<%= t("auth:invalid_input") %>',
+            selectDepartmentAndCode: '<%= t("auth:select_department_and_code") %>',
+            accessGranted: '<%= t("auth:access_granted") %>',
+            welcomeToDepartment: '<%= t("auth:welcome_to_department") %>',
+            accessDenied: '<%= t("auth:access_denied_title") %>',
+            invalidAccessCode: '<%= t("auth:invalid_access_code") %>',
+            errorTitle: '<%= t("auth:error_title") %>',
+            somethingWentWrong: '<%= t("auth:something_went_wrong") %>',
+            accessingDepartment: '<%= t("auth:accessing_department") %>',
+            departmentNames: {
+                hrm: '<%= t("auth:department_names.hrm") %>',
+                hse: '<%= t("auth:department_names.hse") %>',
+                gm: '<%= t("auth:department_names.gm") %>',
+                qasx: '<%= t("auth:department_names.qasx") %>',
+                sm: '<%= t("auth:department_names.sm") %>'
+            },
+            loadingStates: {
+                validating: '<%= t("auth:loading_states.validating") %>',
+                connecting: '<%= t("auth:loading_states.connecting") %>',
+                redirecting: '<%= t("auth:loading_states.redirecting") %>'
+            }
+        };
+    </script>
 
     <script>
         let selectedDepartment = null;
@@ -769,15 +800,15 @@
                 if (!validateForm()) {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Invalid Input',
-                        text: 'Please select a department and enter a valid 6-digit access code.',
+                        title: window.i18n.invalidInput,
+                        text: window.i18n.selectDepartmentAndCode,
                         confirmButtonColor: '#667eea'
                     });
                     return;
                 }
 
                 const originalContent = enterRoomBtn.innerHTML;
-                enterRoomBtn.innerHTML = '<span class="loading-spinner"></span>Accessing Department...';
+                enterRoomBtn.innerHTML = '<span class="loading-spinner"></span>' + window.i18n.accessingDepartment;
                 enterRoomBtn.disabled = true;
 
                 // Submit form
@@ -794,10 +825,11 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        const departmentName = getDepartmentName(selectedDepartment);
                         Swal.fire({
                             icon: 'success',
-                            title: 'Access Granted!',
-                            text: `Welcome to ${getDepartmentName(selectedDepartment)} Department`,
+                            title: window.i18n.accessGranted,
+                            text: window.i18n.welcomeToDepartment.replace('{{department}}', departmentName),
                             timer: 2000,
                             timerProgressBar: true,
                             showConfirmButton: false,
@@ -808,8 +840,8 @@
                     } else {
                         Swal.fire({
                             icon: 'error',
-                            title: 'Access Denied',
-                            text: data.message || 'Invalid access code. Please try again.',
+                            title: window.i18n.accessDenied,
+                            text: data.message || window.i18n.invalidAccessCode,
                             confirmButtonColor: '#667eea'
                         });
                     }
@@ -818,8 +850,8 @@
                     console.error('Error:', error);
                     Swal.fire({
                         icon: 'error',
-                        title: 'Error',
-                        text: 'Something went wrong. Please try again.',
+                        title: window.i18n.errorTitle,
+                        text: window.i18n.somethingWentWrong,
                         confirmButtonColor: '#667eea'
                     });
                 })
@@ -880,14 +912,7 @@
         }
 
         function getDepartmentName(code) {
-            const departments = {
-                'hrm': 'Human Resource Management',
-                'hse': 'Health, Safety & Environment',
-                'gm': 'General Management',
-                'qasx': 'Quality Assurance - Production',
-                'sm': 'Sales Marketing'
-            };
-            return departments[code] || code.toUpperCase();
+            return window.i18n.departmentNames[code] || code.toUpperCase();
         }
 
         function validateForm() {
