@@ -91,8 +91,8 @@
         }
 
         .card-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
+            background: white;
+            color: black;
             padding: 2.5rem;
             border: none;
             position: relative;
@@ -183,6 +183,7 @@
         }
 
         .card-body {
+            background: white;
             padding: 3rem 2rem;
             position: relative;
             z-index: 2;
@@ -609,19 +610,17 @@
         <div class="card selection-card">
             <div class="card-header">
                 <div class="header-left">
-                    <div class="header-icon">
-                        <i class="fas fa-brain"></i>
-                    </div>
+                    <img src="/images/logo.png" style="width: 120px;">
                     <div class="header-content">
-                        <h1 class="card-title"><%= t('auth:select_room') %></h1>
+                        <h1 class="card-title">Công ty TNHH NTPM (Việt Nam)</h1>
                         <p class="card-subtitle"><%= t('auth:select_room_desc') %></p>
                     </div>
                 </div>
-                <div class="header-right">
+                <!-- <div class="header-right">
                     <div class="header-decoration">
                         <i class="fas fa-key"></i>
                     </div>
-                </div>
+                </div> -->
             </div>
             
             <div class="card-body">
