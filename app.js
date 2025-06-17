@@ -115,7 +115,6 @@ connectDB().then(async () => {
         };
         
         await AuthService.createInitialAdmin(defaultTranslate);
-        await AuthService.createInitialUsers(defaultTranslate);
         
         // Start test cleanup scheduler
         console.log('🧹 Starting test cleanup scheduler...');
