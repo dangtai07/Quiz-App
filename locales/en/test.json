@@ -155,7 +155,7 @@
   "min": "min",
   "back_to_results": "Back to Results",
   "print_results": "Print Results",
-  "export_csv": "Export CSV",
+  "export_csv": "Export XLSX",
   "number_of_participants": "Number of Participants",
   "completion_time_min": "Completion Time (minutes)",
 

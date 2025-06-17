@@ -155,7 +155,7 @@
   "min": "phút",
   "back_to_results": "Quay lại kết quả",
   "print_results": "In kết quả",
-  "export_csv": "Xuất CSV",
+  "export_csv": "Xuất XLSX",
   "number_of_participants": "Số lượng người tham gia",
   "completion_time_min": "Thời gian hoàn thành (phút)",
   "moving_to_next": "Đang tự động chuyển sang câu hỏi tiếp theo...",
