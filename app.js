@@ -944,8 +944,6 @@ server.listen(PORT, () => {
     console.log(`🌍 i18n support enabled (Vietnamese/English)`);
     console.log(`\n👤 Demo credentials:`);
     console.log(`   🔑 Admin: admin@quizapp.com / admin123`);
-    console.log(`   🔑 Admin1: admin1@quizapp.com / admin123`);
-    console.log(`   🔑 Admin2: admin2@quizapp.com / admin123`);
     console.log(`\n📝 Features:`);
     console.log(`   ✅ Full internationalization (i18n) support`);
     console.log(`   ✅ Role-based routing with room selection`);
