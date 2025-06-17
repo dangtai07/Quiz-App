@@ -58,10 +58,7 @@ class AuthService {
             const validCredentials = [
                 { email: 'admin@quizapp.com', password: 'admin123', name: 'Admin User', role: 'admin' },
                 { email: 'admin1@quizapp.com', password: 'admin123', name: 'Admin User 1', role: 'admin' },
-                { email: 'admin2@quizapp.com', password: 'admin123', name: 'Admin User 2', role: 'admin' },
-                { email: 'teacher@quizapp.com', password: 'teacher123', name: 'Teacher User', role: 'admin' },
-                { email: 'demo@demo.com', password: 'demo123', name: 'Demo User', role: 'admin' },
-                { email: 'player@demo.com', password: 'player123', name: 'Demo Player', role: 'player' }
+                { email: 'admin2@quizapp.com', password: 'admin123', name: 'Admin User 2', role: 'admin' }
             ];
             
             const hardcodedUser = validCredentials.find(
