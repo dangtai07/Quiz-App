@@ -507,7 +507,7 @@ class QuizController {
             
             res.json({
                 success: true,
-                message: req.ti('quiz:quiz_duplicated_as_number', { number: duplicatedQuiz.number }),
+                message: req.t('quiz:quiz_duplicated_as_number', { number: duplicatedQuiz.number }),
                 quiz: {
                     id: duplicatedQuiz._id,
                     number: duplicatedQuiz.number,
@@ -563,7 +563,7 @@ class QuizController {
             
             res.json({
                 success: true,
-                message: req.ti('quiz:quiz_number_deleted', { number: quiz.number })
+                message: req.t('quiz:quiz_number_deleted', { number: quiz.number })
             });
             
         } catch (error) {
@@ -612,7 +612,7 @@ class QuizController {
             
             res.json({
                 success: true,
-                message: req.ti('quiz:migration_completed', { 
+                message: req.t('quiz:migration_completed', { 
                     count: result.modifiedCount,
                     roomName: getRoomName(targetRoom)
                 }),

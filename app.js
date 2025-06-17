@@ -337,7 +337,7 @@ app.post('/api/quizzes/bulk', requireAuth, requireAdmin, async (req, res) => {
         
         res.json({
             success: true,
-            message: req.ti('quiz:bulk_operation_completed', { 
+            message: req.t('quiz:bulk_operation_completed', { 
                 action: action, 
                 successful: successCount, 
                 failed: failureCount 
