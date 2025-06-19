@@ -1378,7 +1378,7 @@ class TestService {
      * Generate join link
      */
     generateJoinLink(testCode) {
-        const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.BASE_URL || 'http://112.213.87.91/';
         return `${baseUrl}/test/join/${testCode}`;
     }
     
