@@ -8,7 +8,7 @@ const socketIo = require('socket.io');
 const app = express();
 
 // Create HTTP server and Socket.IO
-c
+const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
         origin: "*",
@@ -938,8 +938,8 @@ app.use((req, res) => {
 // SERVER STARTUP WITH I18N MESSAGES
 // ========================================
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running at http://112.213.87.91/`);
+server.listen(PORT, () => {
+    console.log(`🚀 Server running at http://localhost:${PORT}`);
     console.log(`🔌 Socket.IO server ready for real-time tests`);
     console.log(`🌍 i18n support enabled (Vietnamese/English)`);
     console.log(`\n👤 Demo credentials:`);
